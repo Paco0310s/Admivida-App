@@ -19,4 +19,5 @@ class Routes {
   static final String saleDetail = '/sale_detail';
   static final String addSale = '/add_sale';
   static final String productDetailSale = '/product_detail_sale';
+  static final String addTransaction = '/add_transaction';
 }

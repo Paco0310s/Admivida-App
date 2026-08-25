@@ -1,3 +1,4 @@
+import 'package:admivida/business/features/transactions/models/account_model.dart';
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
 import 'package:admivida/business/features/transactions/models/transactions_list_state.dart';
 import 'package:admivida/business/features/transactions/transactions_service.dart';
@@ -60,4 +61,11 @@ class TransactionsList extends _$TransactionsList {
     ref.invalidateSelf();
     await future;
   }
+}
+
+@riverpod
+Future<List<AccountModel>> accounts(Ref ref, {String? businessId}) async {
+  final result = await TransactionsService.getAccounts(businessId: businessId);
+
+  return result.when((failure) => throw failure, (accounts) => accounts);
 }

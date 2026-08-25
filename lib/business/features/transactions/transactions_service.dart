@@ -1,3 +1,4 @@
+import 'package:admivida/business/features/transactions/models/account_model.dart';
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/errors/http_failure.dart';
@@ -25,5 +26,11 @@ class TransactionsService {
     );
 
     return response.when((failure) => EitherUtil.failure(failure), (pageResponse) => EitherUtil.success(pageResponse));
+  }
+
+  static Future<EitherUtil<HttpFailure, List<AccountModel>>> getAccounts({String? businessId}) async {
+    final response = await DioService.getList<AccountModel>(AppConfig.myAccountsEndpoint(businessId), AccountModel.fromJson);
+
+    return response.when((failure) => EitherUtil.failure(failure), (accounts) => EitherUtil.success(accounts));
   }
 }

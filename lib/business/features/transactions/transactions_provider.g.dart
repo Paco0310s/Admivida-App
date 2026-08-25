@@ -104,3 +104,80 @@ abstract class _$TransactionsList
     element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
   }
 }
+
+@ProviderFor(accounts)
+final accountsProvider = AccountsFamily._();
+
+final class AccountsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<AccountModel>>,
+          List<AccountModel>,
+          FutureOr<List<AccountModel>>
+        >
+    with
+        $FutureModifier<List<AccountModel>>,
+        $FutureProvider<List<AccountModel>> {
+  AccountsProvider._({
+    required AccountsFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: null,
+         name: r'accountsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountsHash();
+
+  @override
+  String toString() {
+    return r'accountsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<AccountModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<AccountModel>> create(Ref ref) {
+    final argument = this.argument as String?;
+    return accounts(ref, businessId: argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AccountsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$accountsHash() => r'86589835755511a3a58776298a992e6fa232e5a3';
+
+final class AccountsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<AccountModel>>, String?> {
+  AccountsFamily._()
+    : super(
+        retry: null,
+        name: r'accountsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  AccountsProvider call({String? businessId}) =>
+      AccountsProvider._(argument: businessId, from: this);
+
+  @override
+  String toString() => r'accountsProvider';
+}

@@ -2,6 +2,8 @@ import 'package:admivida/business/features/transactions/models/paginated_transac
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -26,6 +28,13 @@ class TransactionsScreen extends StatelessWidget {
       mobile: TransactionsListView(businessId: businessId),
       tablet: TransactionsListView(businessId: businessId),
       desktop: TransactionsListView(businessId: businessId),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          NavigationService.navigateTo(context, Routes.addTransaction, arguments: businessId);
+        },
+        backgroundColor: AppColors.kPrimaryColor,
+        child: const Icon(Icons.add, color: AppColors.kNeutral100),
+      ),
     );
   }
 }
@@ -64,6 +73,8 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsListProvider(widget.businessId, _selectedAccountId));
+    final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
+
     final accountOptions = <String, String>{};
 
     for (final tx in transactionsAsync.value?.transactions ?? const <Transaction>[]) {
@@ -109,25 +120,46 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
               ),
             ),
             const Gap(12),
+
+            // Recuerda leer tu provider al inicio de tu método build():
+            // final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
             AppCard(
               padding: const EdgeInsets.all(12),
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId ?? '',
-                decoration: InputDecoration(
-                  labelText: 'Cuenta',
-                  filled: true,
-                  fillColor: AppColors.kNeutral50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              child: accountsAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                items: [
-                  const DropdownMenuItem<String>(value: '', child: Text('Todas')),
-                  ...accountOptions.entries.map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.value))),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAccountId = value == '' ? null : value;
-                    ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
-                  });
+                error: (error, stack) => Text('Error al cargar cuentas', style: const TextStyle(color: Colors.red)),
+                data: (accounts) {
+                  return DropdownButtonFormField<String>(
+                    initialValue: _selectedAccountId ?? '',
+                    decoration: InputDecoration(
+                      labelText: 'Cuenta',
+                      filled: true,
+                      fillColor: AppColors.kNeutral50,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: [
+                      // 1. La opción por defecto (Todas) hasta arriba
+                      const DropdownMenuItem<String>(
+                        value: '',
+                        child: Text('Todas las cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      // 2. Mapeamos las cuentas reales obtenidas de tu backend
+                      ...accounts.map((acc) => DropdownMenuItem<String>(value: acc.id, child: Text(acc.name))),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        // Si elige 'Todas' (valor vacío), lo pasamos a null
+                        _selectedAccountId = (value == null || value.isEmpty) ? null : value;
+
+                        // Invalidamos el provider de transacciones para que vuelva a disparar el GET
+                        // con o sin el accountId según corresponda
+                        ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
+                      });
+                    },
+                  );
                 },
               ),
             ),
