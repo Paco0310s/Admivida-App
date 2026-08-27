@@ -50,7 +50,7 @@ final class ProductsListProvider
   }
 }
 
-String _$productsListHash() => r'd17b98e26d3489bb92860a4f15f7399579a813ab';
+String _$productsListHash() => r'9a646e52f402d8064b37d21ec7d2aad22edf0306';
 
 final class ProductsListFamily extends $Family
     with
@@ -97,4 +97,136 @@ abstract class _$ProductsList extends $AsyncNotifier<ProductsListState> {
             >;
     element.handleCreate(ref, () => build(_$args));
   }
+}
+
+@ProviderFor(StockAdjustment)
+final stockAdjustmentProvider = StockAdjustmentProvider._();
+
+final class StockAdjustmentProvider
+    extends $AsyncNotifierProvider<StockAdjustment, void> {
+  StockAdjustmentProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'stockAdjustmentProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$stockAdjustmentHash();
+
+  @$internal
+  @override
+  StockAdjustment create() => StockAdjustment();
+}
+
+String _$stockAdjustmentHash() => r'a8dcd381049c07b1be8f8bea8787d91c206bef77';
+
+abstract class _$StockAdjustment extends $AsyncNotifier<void> {
+  FutureOr<void> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<void>, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<void>, void>,
+              AsyncValue<void>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(productDetail)
+final productDetailProvider = ProductDetailFamily._();
+
+final class ProductDetailProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProductModel>,
+          ProductModel,
+          FutureOr<ProductModel>
+        >
+    with $FutureModifier<ProductModel>, $FutureProvider<ProductModel> {
+  ProductDetailProvider._({
+    required ProductDetailFamily super.from,
+    required ({String businessId, String productId}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'productDetailProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$productDetailHash();
+
+  @override
+  String toString() {
+    return r'productDetailProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<ProductModel> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ProductModel> create(Ref ref) {
+    final argument = this.argument as ({String businessId, String productId});
+    return productDetail(
+      ref,
+      businessId: argument.businessId,
+      productId: argument.productId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProductDetailProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$productDetailHash() => r'9d8cc6c6a104840292475465b5b0b4e908e5740c';
+
+final class ProductDetailFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<ProductModel>,
+          ({String businessId, String productId})
+        > {
+  ProductDetailFamily._()
+    : super(
+        retry: null,
+        name: r'productDetailProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ProductDetailProvider call({
+    required String businessId,
+    required String productId,
+  }) => ProductDetailProvider._(
+    argument: (businessId: businessId, productId: productId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'productDetailProvider';
 }

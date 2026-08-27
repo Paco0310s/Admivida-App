@@ -1,5 +1,5 @@
 import 'package:admivida/business/features/add_business/add_business_screen.dart';
-import 'package:admivida/business/features/add_product/add_product_screen.dart';
+import 'package:admivida/business/features/add_product/product_form_screen.dart';
 import 'package:admivida/business/features/add_sale/add_sale_screen.dart';
 import 'package:admivida/business/features/add_sale/product_detail/product_detail_screen.dart';
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
@@ -11,8 +11,8 @@ import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/sales/sales_screen.dart';
 import 'package:admivida/business/features/transactions/transactions_screen.dart';
 import 'package:admivida/business/models/business_model.dart';
-import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/features/choose_platform_role/choose_platform_role_screen.dart';
+import 'package:admivida/common/features/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/forgot_password/forgot_password_screen.dart';
 import 'package:admivida/common/features/sign_in/sign_in_screen.dart';
@@ -30,7 +30,7 @@ class AppRoutes {
       Routes.signUp: (context) => const SignUpScreen(),
       Routes.forgotPassword: (context) => const ForgotPasswordScreen(),
       Routes.choosePlatformRole: (context) => const ChoosePlatformRoleScreen(),
-      Routes.home: (context) => const BusinessesScreen(),
+      Routes.home: (context) => const HomeScreen(),
       Routes.businesses: (context) => const BusinessesScreen(),
       Routes.businessDetail: (context) {
         final business = ModalRoute.of(context)?.settings.arguments as BusinessModel?;
@@ -44,27 +44,18 @@ class AppRoutes {
         return ProductsScreen(businessId: businessId);
       },
       Routes.productDetail: (context) {
-        final product = ModalRoute.of(context)?.settings.arguments as ProductModel?;
-        return ProductDetailScreen(
-          product:
-              product ??
-              ProductModel(
-                id: '',
-                name: AppTexts.noData,
-                unitOfMeasure: '',
-                isActive: false,
-                variants: [],
-                images: [],
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                businessId: '',
-                productTypeId: '',
-              ),
-        );
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        return ProductDetailScreen(businessId: args['businessId'], productId: args['productId']);
       },
-      Routes.addProduct: (context) {
-        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
-        return AddProductScreen(businessId: businessId);
+      Routes.createOrUpdateProduct: (context) {
+        // 1. Get the arguments from the route settings
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+        // 2. Extract the businessId and product from the arguments
+        final String businessId = args['businessId'] as String;
+        final ProductModel? product = args['product'] as ProductModel?;
+
+        return ProductFormScreen(businessId: businessId, product: product);
       },
       Routes.addBusiness: (context) {
         return AddBusinessScreen();

@@ -130,3 +130,100 @@ final class ProductCategoriesFamily extends $Family
   @override
   String toString() => r'productCategoriesProvider';
 }
+
+@ProviderFor(ProductForm)
+final productFormProvider = ProductFormFamily._();
+
+final class ProductFormProvider
+    extends $NotifierProvider<ProductForm, ProductFormState> {
+  ProductFormProvider._({
+    required ProductFormFamily super.from,
+    required ProductModel? super.argument,
+  }) : super(
+         retry: null,
+         name: r'productFormProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$productFormHash();
+
+  @override
+  String toString() {
+    return r'productFormProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  ProductForm create() => ProductForm();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProductFormState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProductFormState>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProductFormProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$productFormHash() => r'72b79eafc7e902fcff890163bc06dec3485cc112';
+
+final class ProductFormFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          ProductForm,
+          ProductFormState,
+          ProductFormState,
+          ProductFormState,
+          ProductModel?
+        > {
+  ProductFormFamily._()
+    : super(
+        retry: null,
+        name: r'productFormProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ProductFormProvider call(ProductModel? initialProduct) =>
+      ProductFormProvider._(argument: initialProduct, from: this);
+
+  @override
+  String toString() => r'productFormProvider';
+}
+
+abstract class _$ProductForm extends $Notifier<ProductFormState> {
+  late final _$args = ref.$arg as ProductModel?;
+  ProductModel? get initialProduct => _$args;
+
+  ProductFormState build(ProductModel? initialProduct);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<ProductFormState, ProductFormState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<ProductFormState, ProductFormState>,
+              ProductFormState,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args));
+  }
+}

@@ -1,4 +1,3 @@
-/// DTO representing an image entry when attaching uploaded files to a product or variant.
 class CreateProductImageDto {
   final String fileId;
   final bool main;
@@ -10,9 +9,7 @@ class CreateProductImageDto {
   }
 }
 
-/// DTO representing a product variant payload when creating a new product.
 class CreateProductVariantDto {
-  final String? productId;
   final String? sku;
   final String? barcode;
   final String? name;
@@ -24,10 +21,9 @@ class CreateProductVariantDto {
   final double? minimumStock;
   final double? maximumStock;
   final Map<String, dynamic>? attributes;
-  final List<CreateProductImageDto> images; // 👈 Agregado soporte de imágenes por variante
+  final List<CreateProductImageDto> images;
 
-  const CreateProductVariantDto({
-    this.productId,
+  CreateProductVariantDto({
     this.sku,
     this.barcode,
     this.name,
@@ -44,7 +40,6 @@ class CreateProductVariantDto {
 
   Map<String, dynamic> toJson() {
     return {
-      if (productId != null && productId!.isNotEmpty) 'productId': productId,
       if (sku != null && sku!.isNotEmpty) 'sku': sku,
       if (barcode != null && barcode!.isNotEmpty) 'barcode': barcode,
       if (name != null && name!.isNotEmpty) 'name': name,
@@ -61,19 +56,18 @@ class CreateProductVariantDto {
   }
 }
 
-/// Root DTO required by NestJS to create a new Product.
 class CreateProductDto {
   final String businessId;
   final String productTypeId;
   final String? productCategoryId;
   final String name;
   final String? description;
-  final String unitOfMeasure; // Allowed values: 'PZ', 'KG', 'LT', 'ML'
+  final String unitOfMeasure;
   final bool isActive;
   final List<CreateProductVariantDto> variants;
-  final List<CreateProductImageDto> images; // Imágenes generales del producto
+  final List<CreateProductImageDto> images;
 
-  const CreateProductDto({
+  CreateProductDto({
     required this.businessId,
     required this.productTypeId,
     this.productCategoryId,

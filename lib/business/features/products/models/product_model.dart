@@ -38,6 +38,44 @@ class ProductVariantModel {
     required this.updatedAt,
   });
 
+  ProductVariantModel copyWith({
+    String? id,
+    String? productId,
+    String? sku,
+    String? barcode,
+    String? name,
+    double? purchasePrice,
+    double? salePrice,
+    double? wholesalePrice,
+    double? wholesaleQuantity,
+    double? stockQuantity,
+    double? minimumStock,
+    double? maximumStock,
+    Map<String, dynamic>? attributes,
+    List<ProductImageModel>? images,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ProductVariantModel(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      sku: sku ?? this.sku,
+      barcode: barcode ?? this.barcode,
+      name: name ?? this.name,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      salePrice: salePrice ?? this.salePrice,
+      wholesalePrice: wholesalePrice ?? this.wholesalePrice,
+      wholesaleQuantity: wholesaleQuantity ?? this.wholesaleQuantity,
+      stockQuantity: stockQuantity ?? this.stockQuantity, // <-- El valor clave
+      minimumStock: minimumStock ?? this.minimumStock,
+      maximumStock: maximumStock ?? this.maximumStock,
+      attributes: attributes ?? this.attributes,
+      images: images ?? this.images,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory ProductVariantModel.fromJson(Map<String, dynamic> json) {
     return ProductVariantModel(
       id: json['id'] as String? ?? '',
@@ -103,20 +141,22 @@ class ProductImageModel {
   final String url;
   final String? blurHash;
   final bool main;
+  final String fileId;
 
-  const ProductImageModel({required this.id, required this.url, this.blurHash, this.main = false});
+  const ProductImageModel({required this.id, required this.url, required this.fileId, this.blurHash, this.main = false});
 
   factory ProductImageModel.fromJson(Map<String, dynamic> json) {
     return ProductImageModel(
       id: json['id'] as String? ?? '',
       url: json['url'] as String? ?? '',
+      fileId: json['fileId'] as String? ?? '',
       blurHash: json['blurHash'] as String?,
       main: json['main'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'url': url, 'blurHash': blurHash, 'main': main};
+    return {'id': id, 'url': url, 'fileId': fileId, 'blurHash': blurHash, 'main': main};
   }
 }
 
@@ -190,6 +230,38 @@ class ProductModel {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  ProductModel copyWith({
+    String? id,
+    String? businessId,
+    String? productTypeId,
+    String? productCategoryId,
+    String? productCategoryName,
+    String? name,
+    String? description,
+    String? unitOfMeasure,
+    bool? isActive,
+    List<ProductVariantModel>? variants,
+    List<ProductImageModel>? images,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      businessId: businessId ?? this.businessId,
+      productTypeId: productTypeId ?? this.productTypeId,
+      productCategoryId: productCategoryId ?? this.productCategoryId,
+      productCategoryName: productCategoryName ?? this.productCategoryName,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
+      isActive: isActive ?? this.isActive,
+      variants: variants ?? this.variants, // <-- Aquí actualizaremos la variante
+      images: images ?? this.images,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(

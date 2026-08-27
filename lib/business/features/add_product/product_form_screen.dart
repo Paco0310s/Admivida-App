@@ -1,9 +1,10 @@
 import 'package:admivida/business/features/add_product/add_product_provider.dart';
-import 'package:admivida/business/features/add_product/models/add_product_model.dart';
+import 'package:admivida/business/features/add_product/models/update_product_dto.dart';
+import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
-import 'package:admivida/business/features/products/products_service.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/models/files/picker_file.dart';
 import 'package:admivida/common/services/file_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
@@ -18,16 +19,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:image_picker/image_picker.dart';
 
-class AddProductScreen extends ConsumerStatefulWidget {
-  const AddProductScreen({super.key, required this.businessId});
+class ProductFormScreen extends ConsumerStatefulWidget {
+  const ProductFormScreen({
+    super.key,
+    required this.businessId,
+    this.product, // Null = Create | With Data = Edit
+  });
 
   final String businessId;
+  final ProductModel? product;
 
   @override
-  ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
+  ConsumerState<ProductFormScreen> createState() => _ProductFormScreenState();
 }
 
-class _AddProductScreenState extends ConsumerState<AddProductScreen> {
+class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -42,7 +48,61 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   String? _selectedCategoryId;
   String? _selectedProductTypeId;
 
-  final List<_VariantField> _variantFields = [_VariantField()];
+  final List<_VariantField> _variantFields = [];
+
+  // Helper getter to determine the current mode
+  bool get isEditing => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFormData();
+  }
+
+  /// Logic to preload data if we are in edit mode
+  void _initializeFormData() {
+    if (isEditing) {
+      final p = widget.product!;
+      _nameController.text = p.name;
+      _descriptionController.text = p.description ?? '';
+      _unitOfMeasure = p.unitOfMeasure;
+      _isActive = p.isActive;
+      _selectedProductTypeId = p.productTypeId;
+      _selectedCategoryId = p.productCategoryId;
+
+      for (final v in p.variants) {
+        final variantField = _VariantField(
+          id: v.id, // Crucial for PUT request
+          sku: v.sku ?? '',
+          barcode: v.barcode ?? '',
+          variantName: v.name ?? '',
+          purchasePrice: v.purchasePrice?.toString() ?? '',
+          salePrice: v.salePrice.toString(),
+          wholesalePrice: v.wholesalePrice?.toString() ?? '',
+          wholesaleQuantity: v.wholesaleQuantity?.toString() ?? '',
+          stockQuantity: v.stockQuantity?.toString() ?? '',
+          minimumStock: v.minimumStock?.toString() ?? '',
+          maximumStock: v.maximumStock?.toString() ?? '',
+          existingImages: v.images, // Pass existing images from server
+        );
+
+        // Preload attributes if any
+        if (v.attributes != null && v.attributes!.isNotEmpty) {
+          variantField.attributeFields.clear();
+          v.attributes!.forEach((key, value) {
+            variantField.attributeFields.add(_AttributeField(key: key, value: value.toString()));
+          });
+        }
+
+        // Note: Existing images from backend are handled by the Provider,
+        // local pickedImages are strictly for new uploads in this session.
+        _variantFields.add(variantField);
+      }
+    } else {
+      // If it's a new product, add a blank variant by default
+      _variantFields.add(_VariantField());
+    }
+  }
 
   @override
   void dispose() {
@@ -54,7 +114,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     super.dispose();
   }
 
-  /// Captura de foto principal del producto comprimida en RAM
+  /// Main product photo capture, compressed in RAM
   Future<void> _pickMainFile(ImageSource source) async {
     try {
       final XFile? picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1200, maxHeight: 1200);
@@ -63,15 +123,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
       setState(() {
         _pickedFile = picked;
-        _fileId = null;
+        _fileId = null; // Reset ID so it gets uploaded again
       });
     } catch (e) {
       if (!mounted) return;
-      SnackbarUtil.showError(context, 'La cámara no está disponible o no es compatible en esta plataforma.');
+      SnackbarUtil.showError(context, 'La cámara no está disponible o no es compatible con esta plataforma.');
     }
   }
 
-  /// Muestra modal de selección (Cámara o Galería) para una variante específica
+  /// Shows selection modal (Camera or Gallery) for a specific variant
   void _showImageSourceModal(_VariantField field) {
     showModalBottomSheet(
       context: context,
@@ -83,12 +143,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const AppText('Seleccionar Origen de la Foto', fontWeight: FontWeight.bold, fontSize: 16),
+                const AppText('Seleccionar Fuente de Imagen', fontWeight: FontWeight.bold, fontSize: 16),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.camera_alt, color: AppColors.kPrimaryColor),
                   title: const Text('Tomar Foto con Cámara'),
-                  subtitle: const Text('Rápido para inventario en caja'),
+                  subtitle: const Text('Rápido para inventario en tienda'),
                   onTap: () {
                     Navigator.pop(ctx);
                     _pickVariantImage(field, ImageSource.camera);
@@ -96,8 +156,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library, color: AppColors.kPrimaryColor),
-                  title: const Text('Elegir de la Galería'),
-                  subtitle: const Text('Seleccionar imagen editada o diseñada'),
+                  title: const Text('Seleccionar de la Galería'),
+                  subtitle: const Text('Elige una imagen editada o diseñada'),
                   onTap: () {
                     Navigator.pop(ctx);
                     _pickVariantImage(field, ImageSource.gallery);
@@ -111,7 +171,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     );
   }
 
-  /// Captura de foto de variante con límites estrictos de resolución para evitar OOM
+  /// Variant photo capture with strict resolution limits to prevent OOM
   Future<void> _pickVariantImage(_VariantField field, ImageSource source) async {
     try {
       final XFile? picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1200, maxHeight: 1200);
@@ -123,7 +183,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      SnackbarUtil.showError(context, 'La cámara no está disponible o no es compatible en esta plataforma.');
+      SnackbarUtil.showError(context, 'La cámara no está disponible o no es compatible con esta plataforma.');
     }
   }
 
@@ -144,13 +204,13 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedProductTypeId == null || _selectedProductTypeId!.isEmpty) {
-      SnackbarUtil.showError(context, 'Por favor selecciona un tipo de producto');
+      SnackbarUtil.showError(context, 'Por favor selecciona un tipo de producto.');
       return;
     }
 
     setState(() => _isSubmitting = true);
 
-    // 1. Subir la imagen general del producto si existe
+    // 1. Upload the main product image if a new one was selected
     String? finalFileId = _fileId;
     if (_pickedFile != null && finalFileId == null) {
       setState(() => _isUploadingImage = true);
@@ -158,7 +218,6 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       final uploadResult = await FileService.uploadImage(_pickedFile!.path);
 
       if (!mounted) return;
-
       setState(() => _isUploadingImage = false);
 
       finalFileId = uploadResult.when(
@@ -178,27 +237,29 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       }
     }
 
-    // 2. Subida secuencial de fotos por variante
-    final List<CreateProductVariantDto> variants = [];
+    // 2. Sequential upload of photos per variant & map attributes
+    final List<UpdateProductVariantDto> variantsToSubmit = [];
 
     for (final field in _variantFields) {
-      final variantImageDtos = <CreateProductImageDto>[];
+      final variantImageDtos = <UpdateProductImageDto>[];
 
+      // Upload newly picked images for this variant
       for (int i = 0; i < field.pickedImages.length; i++) {
         final imageFile = field.pickedImages[i];
         final uploadRes = await FileService.uploadImage(imageFile.path);
 
         uploadRes.when(
           (failure) {
-            SnackbarUtil.showError(context, 'Error al subir foto de variante: ${failure.message}');
+            SnackbarUtil.showError(context, 'Error al subir la imagen del variante: ${failure.message}');
           },
           (fileResponse) {
-            variantImageDtos.add(CreateProductImageDto(fileId: fileResponse.id, main: i == 0));
+            // New images don't have an ID yet, NestJS will create them
+            variantImageDtos.add(UpdateProductImageDto(fileId: fileResponse.id, main: i == 0));
           },
         );
       }
 
-      // Atributos dinámicos key-value
+      // Dynamic key-value attributes
       final attributes = <String, dynamic>{};
       for (final attributeField in field.attributeFields) {
         final key = attributeField.keyController.text.trim();
@@ -209,8 +270,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         }
       }
 
-      variants.add(
-        CreateProductVariantDto(
+      variantsToSubmit.add(
+        UpdateProductVariantDto(
+          id: field.id,
           sku: field.skuController.text.trim().isEmpty ? null : field.skuController.text.trim(),
           barcode: field.barcodeController.text.trim().isEmpty ? null : field.barcodeController.text.trim(),
           name: field.variantNameController.text.trim().isEmpty ? null : field.variantNameController.text.trim(),
@@ -222,40 +284,218 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           minimumStock: double.tryParse(field.minimumStockController.text.trim()) ?? 0.0,
           maximumStock: double.tryParse(field.maximumStockController.text.trim()),
           attributes: attributes.isEmpty ? null : attributes,
-          images: variantImageDtos,
+          images: variantImageDtos.isEmpty ? null : variantImageDtos,
         ),
       );
     }
 
-    // 3. Ensamblar DTO completo
-    final dto = CreateProductDto(
+    // 3. Load clean data to the Provider
+    final formNotifier = ref.read(productFormProvider(widget.product).notifier);
+
+    // Update main fields and variants
+    formNotifier.updateName(_nameController.text.trim());
+    formNotifier.setVariants(variantsToSubmit);
+
+    // 4. Trigger Provider submit with the final main file ID and new fields
+    final success = await formNotifier.submit(
       businessId: widget.businessId,
       productTypeId: _selectedProductTypeId!,
       productCategoryId: _selectedCategoryId,
-      name: _nameController.text.trim(),
       description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-      unitOfMeasure: _unitOfMeasure,
       isActive: _isActive,
-      variants: variants,
-      images: finalFileId == null ? const [] : [CreateProductImageDto(fileId: finalFileId, main: true)],
+      unitOfMeasure: _unitOfMeasure,
+      mainFileId: finalFileId,
     );
-
-    // 4. Enviar a NestJS
-    final result = await ProductsService.createProduct(dto);
 
     if (!mounted) return;
 
     setState(() => _isSubmitting = false);
 
-    result.when(
-      (failure) {
-        SnackbarUtil.showError(context, failure.message);
-      },
-      (product) {
-        SnackbarUtil.showSuccess(context, '${AppTexts.productCreated}: ${product.name}');
-        ref.invalidate(productsListProvider(widget.businessId));
-        NavigationService.pop(context);
-      },
+    if (success) {
+      SnackbarUtil.showSuccess(context, isEditing ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente');
+
+      // 1. Refresh the product list to reflect changes
+      ref.invalidate(productsListProvider(widget.businessId));
+
+      // 2. If editing, also refresh the product detail provider to get the latest data
+      if (isEditing) {
+        ref.invalidate(productDetailProvider(businessId: widget.businessId, productId: widget.product!.id));
+      }
+
+      NavigationService.pop(context);
+    } else {
+      SnackbarUtil.showError(context, 'Hubo un error al guardar el producto');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(productFormProvider(widget.product));
+
+    final bool isBusy = _isUploadingImage || _isSubmitting;
+    final String screenTitle = isEditing ? 'Editar Producto' : AppTexts.addProductButton;
+
+    return AppScaffold(
+      title: screenTitle,
+      appBar: AppBar(
+        title: AppText(screenTitle, color: AppColors.kNeutral100),
+        backgroundColor: AppColors.kPrimaryColor,
+        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+      ),
+      mobile: _buildContent(isBusy),
+      tablet: _buildContent(isBusy),
+      desktop: _buildContent(isBusy),
+      marginDesktop: 160,
+    );
+  }
+
+  Widget _buildHeaderCard() {
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppText(AppTexts.productAddIntro, fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
+            const Gap(8),
+            AppText(isEditing ? 'Edita los detalles de tu producto' : 'Agrega un nuevo producto a tu inventario', color: AppColors.kNeutral600),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(bool isBusy) {
+    final productTypesAsync = ref.watch(productTypesProvider);
+    final categoriesAsync = ref.watch(productCategoriesProvider(widget.businessId));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderCard(),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppTextField(
+                    text: AppTexts.productNameLabel,
+                    hintText: AppTexts.productNameHint,
+                    controller: _nameController,
+                    isRequired: true,
+                    validator: (value) => (value == null || value.trim().isEmpty) ? AppTexts.nameRequired : null,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    text: AppTexts.productDescriptionLabel,
+                    hintText: AppTexts.productDescriptionHint,
+                    controller: _descriptionController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+
+                  productTypesAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Text('Error al cargar los tipos de producto: $err'),
+                    data: (types) {
+                      return DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Tipo de Producto *',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        initialValue: _selectedProductTypeId,
+                        items: types.map((type) {
+                          return DropdownMenuItem<String>(value: type.id, child: Text(type.name));
+                        }).toList(),
+                        validator: (val) => val == null ? 'Por favor selecciona un tipo de producto' : null,
+                        onChanged: (selectedTypeId) {
+                          setState(() {
+                            _selectedProductTypeId = selectedTypeId;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  categoriesAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Text('Error al cargar las categorías: $err'),
+                    data: (categories) {
+                      return DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Categoría del Producto',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        initialValue: _selectedCategoryId,
+                        items: categories.map((cat) {
+                          return DropdownMenuItem<String>(value: cat.id, child: Text(cat.name));
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategoryId = value;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    initialValue: _unitOfMeasure,
+                    decoration: InputDecoration(
+                      labelText: AppTexts.productUnitOfMeasureLabel,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'PZ', child: Text('PZ')),
+                      DropdownMenuItem(value: 'KG', child: Text('KG')),
+                      DropdownMenuItem(value: 'LT', child: Text('LT')),
+                      DropdownMenuItem(value: 'ML', child: Text('ML')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _unitOfMeasure = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: AppText(AppTexts.productActiveLabel, color: AppColors.kNeutral900),
+                    value: _isActive,
+                    onChanged: (value) => setState(() => _isActive = value),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFilePicker(),
+                  const SizedBox(height: 16),
+                  _buildVariantEditor(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isBusy ? null : _submitForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.kPrimaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: isBusy
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(isEditing ? 'Guardar Cambios' : AppTexts.saveProduct),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -279,7 +519,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // SKU y Barcode
+                // SKU and Barcode
                 Row(
                   children: [
                     Expanded(
@@ -288,7 +528,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: AppTextField(
-                        text: 'Código de Barras',
+                        text: 'Barcode',
                         hintText: '7501234567890',
                         controller: field.barcodeController,
                         suffixIcon: IconButton(
@@ -318,11 +558,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 const SizedBox(height: 12),
                 AppTextField(
                   text: AppTexts.productVariantNameLabel,
-                  hintText: _variantFields.length == 1 ? 'General / Por Defecto' : AppTexts.productVariantNameHint,
+                  hintText: _variantFields.length == 1 ? 'General / Default' : AppTexts.productVariantNameHint,
                   controller: field.variantNameController,
                 ),
                 const SizedBox(height: 12),
-                // Precios de Compra y Venta
+                // Purchase and Sale Prices
                 Row(
                   children: [
                     Expanded(
@@ -342,12 +582,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         isRequired: true,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Requerido';
-                          }
-                          if (double.tryParse(value.trim()) == null) {
-                            return 'Inválido';
-                          }
+                          if (value == null || value.trim().isEmpty) return 'Requerido';
+                          if (double.tryParse(value.trim()) == null) return 'Invalido';
                           return null;
                         },
                       ),
@@ -355,12 +591,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Mayoreo
+                // Wholesale Settings
                 Row(
                   children: [
                     Expanded(
                       child: AppTextField(
-                        text: 'Precio Mayoreo',
+                        text: 'Precio de Mayoreo',
                         hintText: '\$85.00',
                         controller: field.wholesalePriceController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -369,7 +605,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: AppTextField(
-                        text: 'Cant. Min. Mayoreo',
+                        text: 'Cantidad Mínima de Mayoreo',
                         hintText: '10',
                         controller: field.wholesaleQuantityController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -378,7 +614,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Stocks
+                // Stock Management
                 Row(
                   children: [
                     Expanded(
@@ -435,7 +671,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const AppText('Fotos de esta Variante', fontWeight: FontWeight.bold, fontSize: 13),
+            const AppText('Fotos para esta Variante', fontWeight: FontWeight.bold, fontSize: 13),
             TextButton.icon(
               onPressed: () => _showImageSourceModal(field),
               icon: const Icon(Icons.add_a_photo, size: 18),
@@ -443,49 +679,67 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             ),
           ],
         ),
-        if (field.pickedImages.isNotEmpty) ...[
+        if (field.existingImages.isNotEmpty || field.pickedImages.isNotEmpty) ...[
           const SizedBox(height: 8),
           SizedBox(
             height: 75,
-            child: ListView.builder(
+            child: ListView(
               scrollDirection: Axis.horizontal,
-              itemCount: field.pickedImages.length,
-              itemBuilder: (context, imgIndex) {
-                final img = field.pickedImages[imgIndex];
-                return Stack(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.kNeutral300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: PickerFile(xFile: img).getWidget(fit: BoxFit.cover),
-                      ),
+              children: [
+                // 1. Mostrar las imágenes que ya vienen del servidor
+                ...field.existingImages.map(
+                  (img) => Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.kPrimaryColor.withValues(alpha: 0.5)),
                     ),
-                    Positioned(
-                      top: 2,
-                      right: 10,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            field.pickedImages.removeAt(imgIndex);
-                          });
-                        },
-                        child: const CircleAvatar(
-                          radius: 10,
-                          backgroundColor: Colors.red,
-                          child: Icon(Icons.close, size: 12, color: Colors.white),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: AdaptedFile.network(img.url, blurHash: img.blurHash).getWidget(fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+                // 2. Mostrar las imágenes nuevas seleccionadas en el dispositivo
+                ...field.pickedImages.map((img) {
+                  final imgIndex = field.pickedImages.indexOf(img);
+                  return Stack(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.kNeutral300),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: PickerFile(xFile: img).getWidget(fit: BoxFit.cover),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                      Positioned(
+                        top: 2,
+                        right: 10,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              field.pickedImages.removeAt(imgIndex);
+                            });
+                          },
+                          child: const CircleAvatar(
+                            radius: 10,
+                            backgroundColor: Colors.red,
+                            child: Icon(Icons.close, size: 12, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
             ),
           ),
         ],
@@ -549,6 +803,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   Widget _buildFilePicker() {
+    // 💡 Encuentra la imagen principal existente o toma la primera disponible
+    final existingMainImage = isEditing && widget.product!.images.isNotEmpty
+        ? widget.product!.images.firstWhere((img) => img.main, orElse: () => widget.product!.images.first)
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -562,6 +821,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             ElevatedButton.icon(onPressed: () => _pickMainFile(ImageSource.camera), icon: const Icon(Icons.camera_alt), label: Text(AppTexts.openCamera)),
           ],
         ),
+
+        // 1. Mostrar la nueva imagen si se seleccionó una
         if (_pickedFile != null) ...[
           const SizedBox(height: 15),
           Text('${AppTexts.selectedFile} ${_pickedFile!.name}', style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -576,181 +837,33 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               ),
             ),
           ),
+        ]
+        // 2. Si no hay nueva, pero existe una principal en la base de datos, mostrarla
+        else if (existingMainImage != null) ...[
+          const SizedBox(height: 15),
+          const Text(
+            'Imagen actual',
+            style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.kNeutral500),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: AdaptedFile.network(existingMainImage.url, blurHash: existingMainImage.blurHash).getWidget(fit: BoxFit.cover),
+              ),
+            ),
+          ),
         ],
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isBusy = _isUploadingImage || _isSubmitting;
-
-    return AppScaffold(
-      title: AppTexts.addProductButton,
-      appBar: AppBar(
-        title: AppText(AppTexts.addProductButton, color: AppColors.kNeutral100),
-        backgroundColor: AppColors.kPrimaryColor,
-        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
-      ),
-      mobile: _buildContent(isBusy),
-      tablet: _buildContent(isBusy),
-      desktop: _buildContent(isBusy),
-      marginDesktop: 160,
-    );
-  }
-
-  Widget _buildHeaderCard() {
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: SizedBox(
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppText(AppTexts.productAddIntro, fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-            const Gap(8),
-            AppText('Agrega los datos correspondientes para crear un nuevo producto.', color: AppColors.kNeutral600),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContent(bool isBusy) {
-    final productTypesAsync = ref.watch(productTypesProvider);
-    final categoriesAsync = ref.watch(productCategoriesProvider(widget.businessId));
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeaderCard(),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppTextField(
-                    text: AppTexts.productNameLabel,
-                    hintText: AppTexts.productNameHint,
-                    controller: _nameController,
-                    isRequired: true,
-                    validator: (value) => (value == null || value.trim().isEmpty) ? AppTexts.nameRequired : null,
-                  ),
-                  const SizedBox(height: 16),
-                  AppTextField(
-                    text: AppTexts.productDescriptionLabel,
-                    hintText: AppTexts.productDescriptionHint,
-                    controller: _descriptionController,
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-
-                  productTypesAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Text('Error al cargar tipos: $err'),
-                    data: (types) {
-                      return DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Tipo de Producto *',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        initialValue: _selectedProductTypeId,
-                        items: types.map((type) {
-                          return DropdownMenuItem<String>(value: type.id, child: Text(type.name));
-                        }).toList(),
-                        validator: (val) => val == null ? 'Selecciona un tipo de producto' : null,
-                        onChanged: (selectedTypeId) {
-                          setState(() {
-                            _selectedProductTypeId = selectedTypeId;
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  categoriesAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Text('Error al cargar categorías: $err'),
-                    data: (categories) {
-                      return DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Categoría de Producto',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        initialValue: _selectedCategoryId,
-                        items: categories.map((cat) {
-                          return DropdownMenuItem<String>(value: cat.id, child: Text(cat.name));
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategoryId = value;
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: _unitOfMeasure,
-                    decoration: InputDecoration(
-                      labelText: AppTexts.productUnitOfMeasureLabel,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'PZ', child: Text('PZ')),
-                      DropdownMenuItem(value: 'KG', child: Text('KG')),
-                      DropdownMenuItem(value: 'LT', child: Text('LT')),
-                      DropdownMenuItem(value: 'ML', child: Text('ML')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _unitOfMeasure = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    title: AppText(AppTexts.productActiveLabel, color: AppColors.kNeutral900),
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildFilePicker(),
-                  const SizedBox(height: 16),
-                  _buildVariantEditor(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isBusy ? null : _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.kPrimaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: isBusy
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(AppTexts.saveProduct),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
 class _VariantField {
+  final String? id; // Added to identify if we are editing an existing variant
   final TextEditingController skuController;
   final TextEditingController barcodeController;
   final TextEditingController variantNameController;
@@ -763,8 +876,10 @@ class _VariantField {
   final TextEditingController maximumStockController;
   final List<_AttributeField> attributeFields;
   final List<XFile> pickedImages;
+  final List<dynamic> existingImages; // Holds images loaded from the server
 
   _VariantField({
+    this.id,
     String sku = '',
     String barcode = '',
     String variantName = '',
@@ -775,6 +890,7 @@ class _VariantField {
     String stockQuantity = '',
     String minimumStock = '',
     String maximumStock = '',
+    List<dynamic>? existingImages, // Receive existing images in constructor
   }) : skuController = TextEditingController(text: sku),
        barcodeController = TextEditingController(text: barcode),
        variantNameController = TextEditingController(text: variantName),
@@ -786,7 +902,8 @@ class _VariantField {
        minimumStockController = TextEditingController(text: minimumStock),
        maximumStockController = TextEditingController(text: maximumStock),
        attributeFields = [_AttributeField()],
-       pickedImages = [];
+       pickedImages = [],
+       existingImages = existingImages ?? []; // Initialize it
 
   void dispose() {
     skuController.dispose();

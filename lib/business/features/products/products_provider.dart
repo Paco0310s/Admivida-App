@@ -72,4 +72,63 @@ class ProductsList extends _$ProductsList {
       state = AsyncValue.error(error, stackTrace);
     }
   }
+
+  void updateProductStockLocal(String productId, String variantId, double newStock) {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final updatedProducts = currentState.products.map((product) {
+      // 1. Look for the product that matches the given productId
+      if (product.id == productId) {
+        // 2. Update the stock quantity for the specific variant
+        final updatedVariants = product.variants.map((variant) {
+          if (variant.id == variantId) {
+            return variant.copyWith(stockQuantity: newStock);
+          }
+          return variant;
+        }).toList();
+
+        // 3. Return a new product instance with the updated variants
+        return product.copyWith(variants: updatedVariants);
+      }
+      return product;
+    }).toList();
+
+    // 4. Update the state of the complete list (this refreshes the UI without losing scroll position)
+    state = AsyncValue.data(currentState.copyWith(products: updatedProducts));
+  }
+}
+
+@Riverpod(keepAlive: true)
+class StockAdjustment extends _$StockAdjustment {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> adjustStock({
+    required String businessId,
+    required String productId,
+    required String variantId,
+    required double currentStock,
+    required double adjustment,
+  }) async {
+    final newStock = currentStock + adjustment;
+    if (newStock < 0) return;
+
+    state = const AsyncValue.loading();
+
+    final result = await ProductsService.updateStock(businessId, variantId, newStock);
+
+    result.when((failure) => state = AsyncValue.error(failure, StackTrace.current), (success) {
+      state = const AsyncValue.data(null);
+
+      ref.read(productsListProvider(businessId).notifier).updateProductStockLocal(productId, variantId, newStock);
+    });
+  }
+}
+
+@riverpod
+Future<ProductModel> productDetail(Ref ref, {required String businessId, required String productId}) async {
+  final result = await ProductsService.getProductById(businessId: businessId, productId: productId);
+
+  return result.when((failure) => throw failure, (product) => product);
 }

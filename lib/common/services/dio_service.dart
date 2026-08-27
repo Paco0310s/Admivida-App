@@ -176,14 +176,21 @@ class DioService {
     }
   }
 
-  static Future<EitherUtil<HttpFailure, T>> put<T>(String url, Map<String, dynamic> data, T Function(Map<String, dynamic>) fromJson) async {
+  static Future<EitherUtil<HttpFailure, T>> put<T>(
+    String url,
+    Map<String, dynamic> data,
+    T Function(Map<String, dynamic>) fromJson, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
-      AppLogger.info('PUT Request: $url, Data: $data');
+      final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
+      AppLogger.info('PUT Request: $url$queryLog, Data: $data');
 
-      final response = await _dio.put(url, data: data);
+      final response = await _dio.put(url, data: data, queryParameters: queryParameters);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data as Map<String, dynamic>;
+        final responseData = (response.data == null || response.data == '') ? <String, dynamic>{} : response.data as Map<String, dynamic>;
+
         final result = fromJson(responseData);
         return EitherUtil.success(result);
       } else {
@@ -197,14 +204,21 @@ class DioService {
     }
   }
 
-  static Future<EitherUtil<HttpFailure, T>> patch<T>(String url, Map<String, dynamic> data, T Function(Map<String, dynamic>) fromJson) async {
+  static Future<EitherUtil<HttpFailure, T>> patch<T>(
+    String url,
+    Map<String, dynamic> data,
+    T Function(Map<String, dynamic>) fromJson, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
-      AppLogger.info('PATCH Request: $url, Data: $data');
+      final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
+      AppLogger.info('PATCH Request: $url$queryLog, Data: $data');
 
-      final response = await _dio.patch(url, data: data);
+      final response = await _dio.patch(url, data: data, queryParameters: queryParameters);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data as Map<String, dynamic>;
+        final responseData = (response.data == null || response.data == '') ? <String, dynamic>{} : response.data as Map<String, dynamic>;
+
         final result = fromJson(responseData);
         return EitherUtil.success(result);
       } else {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -33,7 +34,7 @@ class ProductsScreen extends StatelessWidget {
       tablet: ProductsListView(businessId: businessId),
       desktop: ProductsListView(businessId: businessId),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => NavigationService.navigateTo(context, Routes.addProduct, arguments: businessId),
+        onPressed: () => NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': null}),
         backgroundColor: AppColors.kPrimaryColor,
         icon: const Icon(Icons.add),
         label: AppText(AppTexts.addProductButton, color: AppColors.kNeutral100),
@@ -128,7 +129,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         onTap: () {
-                          NavigationService.navigateTo(context, Routes.productDetail, arguments: product);
+                          NavigationService.navigateTo(context, Routes.productDetail, arguments: {'businessId': widget.businessId, 'productId': product.id});
                         },
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,11 +188,30 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                                             return SizedBox.shrink();
                                           }
 
+                                          if (product.variants.length > 1) {
+                                            return SizedBox.shrink();
+                                          }
+
                                           return InkWell(
-                                            onTap: () => {},
+                                            onTap: () {
+                                              if (firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0) {
+                                                ref
+                                                    .read(stockAdjustmentProvider.notifier)
+                                                    .adjustStock(
+                                                      businessId: widget.businessId,
+                                                      productId: product.id,
+                                                      variantId: firstVariant.id,
+                                                      currentStock: firstVariant.stockQuantity!, // Es de tipo double
+                                                      adjustment: -1.0,
+                                                    );
+                                              }
+                                            },
                                             child: Container(
                                               padding: const EdgeInsets.all(4),
                                               decoration: BoxDecoration(
+                                                color: firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0
+                                                    ? Colors.white
+                                                    : AppColors.kNeutral100,
                                                 border: Border.all(color: AppColors.kNeutral300),
                                                 borderRadius: BorderRadius.circular(4),
                                               ),
@@ -202,14 +222,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                                       ),
                                       Padding(
                                         padding: EdgeInsets.symmetric(horizontal: firstVariant?.stockQuantity == null ? 0 : 12),
-                                        child: AppText(
-                                          firstVariant?.stockQuantity != null ? '${firstVariant!.stockQuantity}' : AppTexts.ilimited,
-                                          color: firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0
-                                              ? AppColors.kSuccess
-                                              : AppColors.kWarning,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        child: _buildStockLabel(product, firstVariant),
                                       ),
                                       Builder(
                                         builder: (context) {
@@ -217,8 +230,24 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                                             return SizedBox.shrink();
                                           }
 
+                                          if (product.variants.length > 1) {
+                                            return SizedBox.shrink();
+                                          }
+
                                           return InkWell(
-                                            onTap: () => {},
+                                            onTap: () {
+                                              if (firstVariant?.stockQuantity != null) {
+                                                ref
+                                                    .read(stockAdjustmentProvider.notifier)
+                                                    .adjustStock(
+                                                      businessId: widget.businessId,
+                                                      productId: product.id,
+                                                      variantId: firstVariant!.id,
+                                                      currentStock: firstVariant.stockQuantity!,
+                                                      adjustment: 1.0,
+                                                    );
+                                              }
+                                            },
                                             child: Container(
                                               padding: const EdgeInsets.all(4),
                                               decoration: BoxDecoration(
@@ -246,6 +275,43 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
           ],
         ),
       ),
+    );
+  }
+
+  // 💡 Extracting this builder logic to a separate method keeps your main UI code much cleaner.
+  Widget _buildStockLabel(ProductModel product, ProductVariantModel? firstVariant) {
+    if (product.variants.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Single variant logic
+    if (product.variants.length == 1) {
+      if (firstVariant?.stockQuantity == null) {
+        return AppText(AppTexts.ilimited, color: AppColors.kWarning, fontSize: 12, fontWeight: FontWeight.bold);
+      }
+
+      // Format quantity to remove '.0' if it's an integer
+      final stockVal = firstVariant!.stockQuantity!;
+      final displayStock = stockVal == stockVal.toInt() ? stockVal.toInt().toString() : stockVal.toString();
+
+      return AppText(
+        displayStock,
+        color: stockVal > 0 ? AppColors.kSuccess : AppColors.kWarning, // Dynamic color based on stock
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+      );
+    }
+
+    // Multiple variants logic (Total sum)
+    final double totalQuantity = product.variants.fold(0.0, (sum, variant) => sum + (variant.stockQuantity ?? 0.0));
+
+    final displayTotal = totalQuantity == totalQuantity.toInt() ? totalQuantity.toInt().toString() : totalQuantity.toString();
+
+    return AppText(
+      '$displayTotal (Total)', // Adding "(Total)" as we discussed earlier
+      color: totalQuantity > 0 ? AppColors.kSuccess : AppColors.kWarning,
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
     );
   }
 

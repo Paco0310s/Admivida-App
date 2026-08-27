@@ -1,39 +1,84 @@
 import 'package:admivida/business/features/products/models/product_model.dart';
+import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:intl/intl.dart'; // Asegúrate de tener intl en tu pubspec.yaml para formatear fechas
+import 'package:intl/intl.dart';
 
-class ProductDetailScreen extends StatelessWidget {
-  const ProductDetailScreen({super.key, required this.product});
+class ProductDetailScreen extends ConsumerWidget {
+  const ProductDetailScreen({super.key, required this.businessId, required this.productId});
 
-  final ProductModel product;
+  final String businessId;
+  final String productId;
 
   @override
-  Widget build(BuildContext context) {
-    return AppScaffold(
-      title: product.name,
-      appBar: AppBar(
-        title: AppText(product.name, color: AppColors.kNeutral100),
-        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
-        backgroundColor: AppColors.kPrimaryColor,
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 💡 Watch the Single Source of Truth (SSOT)
+    final productAsync = ref.watch(productDetailProvider(businessId: businessId, productId: productId));
+
+    return productAsync.when(
+      data: (product) {
+        return AppScaffold(
+          title: product.name,
+          appBar: AppBar(
+            title: AppText(product.name, color: AppColors.kNeutral100),
+            iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+            backgroundColor: AppColors.kPrimaryColor,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: AppColors.kNeutral100),
+                onPressed: () {
+                  NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': product});
+                },
+              ),
+            ],
+          ),
+          // 💡 Pass IDs down to the view so it can be used for stock adjustments
+          mobile: ProductDetailView(product: product, businessId: businessId, productId: productId),
+          tablet: ProductDetailView(product: product, businessId: businessId, productId: productId),
+          desktop: ProductDetailView(product: product, businessId: businessId, productId: productId),
+        );
+      },
+      loading: () => AppScaffold(
+        title: 'Cargando...',
+        appBar: AppBar(
+          title: const AppText('Cargando...', color: AppColors.kNeutral100),
+          backgroundColor: AppColors.kPrimaryColor,
+          iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+        ),
+        mobile: const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
+        tablet: const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
+        desktop: const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
       ),
-      mobile: ProductDetailView(product: product),
-      tablet: ProductDetailView(product: product),
-      desktop: ProductDetailView(product: product),
+      error: (error, stackTrace) => AppScaffold(
+        title: 'Error',
+        appBar: AppBar(
+          title: const AppText('Error', color: AppColors.kNeutral100),
+          backgroundColor: AppColors.kPrimaryColor,
+          iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+        ),
+        mobile: Center(child: Text('Hubo un error al cargar el producto: $error')),
+        tablet: Center(child: Text('Hubo un error al cargar el producto: $error')),
+        desktop: Center(child: Text('Hubo un error al cargar el producto: $error')),
+      ),
     );
   }
 }
 
 class ProductDetailView extends StatelessWidget {
-  const ProductDetailView({super.key, required this.product});
+  const ProductDetailView({super.key, required this.product, required this.businessId, required this.productId});
 
   final ProductModel product;
+  final String businessId;
+  final String productId;
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +114,12 @@ class ProductDetailView extends StatelessWidget {
                   child: AppText(AppTexts.noData, color: AppColors.kNeutral600),
                 )
               else
-                ...product.variants.asMap().entries.map((entry) => _VariantCard(index: entry.key, variant: entry.value)),
+                ...product.variants.asMap().entries.map(
+                  (entry) => _VariantCard(index: entry.key, variant: entry.value, businessId: businessId, productId: productId),
+                ),
 
               const Gap(24),
-              // Fechas de registro
+              // 💡 Registration dates
               Center(
                 child: AppText(
                   'Creado el: ${DateFormat('dd/MM/yyyy HH:mm').format(product.createdAt.toLocal())}\nÚltima actualización: ${DateFormat('dd/MM/yyyy HH:mm').format(product.updatedAt.toLocal())}',
@@ -144,22 +191,25 @@ class _ProductSummary extends StatelessWidget {
   }
 }
 
-class _VariantCard extends StatelessWidget {
-  const _VariantCard({required this.index, required this.variant});
+// 💡 Changed to ConsumerWidget to allow Riverpod interactions
+class _VariantCard extends ConsumerWidget {
+  const _VariantCard({required this.index, required this.variant, required this.businessId, required this.productId});
 
   final int index;
   final ProductVariantModel variant;
+  final String businessId;
+  final String productId;
 
   @override
-  Widget build(BuildContext context) {
-    // Formateo de cantidades para mostrar enteros si no tienen decimales
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 💡 Format quantities to show integers if they have no decimal values
     String formatQuantity(double? val) => val == null ? AppTexts.ilimited : (val == val.toInt() ? val.toInt().toString() : val.toString());
 
     final stock = formatQuantity(variant.stockQuantity);
     final stockColor = variant.stockQuantity != null && variant.stockQuantity! > 0 ? AppColors.kSuccess : AppColors.kWarning;
     final variantTitle = variant.name?.isNotEmpty == true ? variant.name! : '${AppTexts.variantLabel} ${index + 1}';
 
-    // Obtener la imagen principal de esta variante (si tiene)
+    // 💡 Get the main image of this variant (if available)
     final mainVariantImage = variant.images.isNotEmpty ? variant.images.firstWhere((img) => img.main, orElse: () => variant.images.first) : null;
 
     return AppCard(
@@ -168,7 +218,6 @@ class _VariantCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 💡 HEADER DE LA VARIANTE (CON FOTO MINIATURA)
           Row(
             children: [
               if (mainVariantImage != null)
@@ -199,7 +248,7 @@ class _VariantCard extends StatelessWidget {
           ),
           const Gap(16),
 
-          // 💡 GRID DE DATOS (PRECIOS, STOCK, BARRAS)
+          // 💡 DATA GRID (PRICES, STOCK, BARCODES)
           Wrap(
             spacing: 24,
             runSpacing: 16,
@@ -213,13 +262,86 @@ class _VariantCard extends StatelessWidget {
               _VariantValue(label: AppTexts.productSalePriceLabel, value: '\$${variant.salePrice.toStringAsFixed(2)}', valueColor: AppColors.kPrimaryColor),
               _VariantValue(label: 'Precio Mayoreo', value: variant.wholesalePrice != null ? '\$${variant.wholesalePrice!.toStringAsFixed(2)}' : 'No aplica'),
               _VariantValue(label: 'Cant. Mayoreo', value: formatQuantity(variant.wholesaleQuantity)),
-              _VariantValue(label: AppTexts.productStockLabel, value: stock, valueColor: stockColor),
+
+              // 💡 Interactive Stock Adjuster
+              if (variant.stockQuantity == null)
+                _VariantValue(label: AppTexts.productStockLabel, value: AppTexts.ilimited)
+              else
+                SizedBox(
+                  width: 120,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(AppTexts.productStockLabel, fontSize: 11, color: AppColors.kNeutral600),
+                      const Gap(4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: variant.stockQuantity! > 0
+                                ? () async {
+                                    await ref
+                                        .read(stockAdjustmentProvider.notifier)
+                                        .adjustStock(
+                                          businessId: businessId,
+                                          productId: productId,
+                                          variantId: variant.id,
+                                          currentStock: variant.stockQuantity!,
+                                          adjustment: -1.0,
+                                        );
+                                    // 💡 Refresh the detail view SSOT automatically
+                                    ref.invalidate(productDetailProvider(businessId: businessId, productId: productId));
+                                  }
+                                : null,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.kNeutral300),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.remove, size: 20),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: AppText(stock, color: stockColor, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          InkWell(
+                            onTap: () async {
+                              await ref
+                                  .read(stockAdjustmentProvider.notifier)
+                                  .adjustStock(
+                                    businessId: businessId,
+                                    productId: productId,
+                                    variantId: variant.id,
+                                    currentStock: variant.stockQuantity!,
+                                    adjustment: 1.0,
+                                  );
+                              // 💡 Refresh the detail view SSOT automatically
+                              ref.invalidate(productDetailProvider(businessId: businessId, productId: productId));
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.kNeutral300),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.add, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ----------------------------------------------------
               _VariantValue(label: AppTexts.productMinimumStockLabel, value: formatQuantity(variant.minimumStock)),
               _VariantValue(label: AppTexts.productMaximumStockLabel, value: formatQuantity(variant.maximumStock)),
             ],
           ),
 
-          // 💡 CARRUSEL SECUNDARIO (Solo si tiene MÁS de 1 foto)
+          // 💡 SECONDARY CAROUSEL (Only if there is MORE than 1 photo)
           if (variant.images.length > 1) ...[
             const Gap(20),
             AppText('Otras Fotos de la Variante', fontWeight: FontWeight.bold, color: AppColors.kNeutral700, fontSize: 13),
@@ -231,7 +353,7 @@ class _VariantCard extends StatelessWidget {
                 itemCount: variant.images.length,
                 itemBuilder: (context, i) {
                   final img = variant.images[i];
-                  // Opcional: No mostrar de nuevo la miniatura principal en el carrusel
+                  // 💡 Optional: Prevent showing the main thumbnail again in the carousel
                   if (img.id == mainVariantImage?.id) return const SizedBox.shrink();
 
                   return Container(
@@ -252,7 +374,7 @@ class _VariantCard extends StatelessWidget {
             ),
           ],
 
-          // 💡 ATRIBUTOS ADICIONALES (KEY-VALUE)
+          // 💡 ADDITIONAL ATTRIBUTES (KEY-VALUE)
           if (variant.attributes?.isNotEmpty == true) ...[
             const Gap(20),
             AppText(AppTexts.metadataLabel, fontWeight: FontWeight.bold, color: AppColors.kNeutral700, fontSize: 13),
@@ -287,7 +409,7 @@ class _VariantValue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 120, // Define un ancho fijo para alinear el grid de forma limpia
+      width: 120,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

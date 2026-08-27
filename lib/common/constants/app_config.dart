@@ -22,6 +22,10 @@ class AppConfig {
   static String myAccountsEndpoint(String? businessId) => '/accounts/$businessId';
   static const String paymentMethodsEndpoint = '/payment-methods';
   static String transactionsEndpoint = '/transactions';
+  static String updateStockProductVariantEndpoint(String variantId) => '/product-variants/stock/$variantId';
+  static String createProductEndpoint = '/products';
+  static String updateProductEndpoint(String productId) => '/products/fromBusiness/$productId';
+  static String getProductByIdEndpoint(String productId, String businessId) => '/products/$productId/business/$businessId';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
