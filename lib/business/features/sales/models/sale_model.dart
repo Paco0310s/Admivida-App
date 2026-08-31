@@ -14,6 +14,7 @@ class SaleDetailModel {
   final bool isComissionPaid;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? productId;
 
   // Campos extra para la UI
   final double subtotal;
@@ -23,6 +24,7 @@ class SaleDetailModel {
     required this.id,
     required this.saleId,
     required this.productVariantId,
+    required this.productId,
     required this.productNameSnapshot,
     required this.quantity,
     required this.originalPriceSnapshot,
@@ -47,6 +49,7 @@ class SaleDetailModel {
       id: json['id'] as String? ?? '',
       saleId: json['saleId'] as String? ?? '',
       productVariantId: json['productVariantId'] as String? ?? '',
+      productId: json['productId'] as String?,
       productNameSnapshot: json['productNameSnapshot'] as String? ?? '',
       quantity: qty,
       originalPriceSnapshot: (json['originalPriceSnapshot'] as num? ?? 0).toDouble(),
@@ -70,6 +73,7 @@ class SaleDetailModel {
       'id': id,
       'saleId': saleId,
       'productVariantId': productVariantId,
+      'productId': productId,
       'productNameSnapshot': productNameSnapshot,
       'quantity': quantity,
       'originalPriceSnapshot': originalPriceSnapshot,

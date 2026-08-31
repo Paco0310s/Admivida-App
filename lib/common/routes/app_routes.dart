@@ -8,6 +8,8 @@ import 'package:admivida/business/features/businesses/businesses_screen.dart';
 import 'package:admivida/business/features/products/products_screen.dart';
 import 'package:admivida/business/features/products/product_detail_screen.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
+import 'package:admivida/business/features/sales/models/sale_model.dart';
+import 'package:admivida/business/features/sales/sale_detail_screen.dart';
 import 'package:admivida/business/features/sales/sales_screen.dart';
 import 'package:admivida/business/features/transactions/transactions_screen.dart';
 import 'package:admivida/business/models/business_model.dart';
@@ -94,6 +96,25 @@ class AppRoutes {
       Routes.addTransaction: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return AddTransactionScreen(businessId: businessId);
+      },
+      Routes.saleDetail: (context) {
+        final sale = ModalRoute.of(context)?.settings.arguments as SaleModel?;
+        return SaleDetailScreen(
+          sale:
+              sale ??
+              SaleModel(
+                id: '',
+                businessId: '',
+                sellerUserId: '',
+                clientNameSnapshot: '',
+                status: '',
+                discountAmount: 0,
+                totalPriceSnapshot: 0,
+                details: [],
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+        );
       },
     };
   }
