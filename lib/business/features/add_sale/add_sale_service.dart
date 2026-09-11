@@ -9,7 +9,7 @@ import 'package:admivida/common/utils/either.dart';
 
 class AddSaleService {
   static Future<EitherUtil<HttpFailure, SaleModel>> createSale(CreateSaleDto dto) async {
-    final response = await DioService.post<SaleModel>('/sales', dto.toJson(), (json) => SaleModel.fromJson(json));
+    final response = await DioService.post<SaleModel>(AppConfig.createSaleEndpoint, dto.toJson(), (json) => SaleModel.fromJson(json));
     return response.when((failure) => EitherUtil.failure(failure), (saleModel) => EitherUtil.success(saleModel));
   }
 

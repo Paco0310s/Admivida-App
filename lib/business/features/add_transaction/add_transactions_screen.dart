@@ -88,7 +88,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Widget _buildContent(bool isLoading) {
-    final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
+    final accountsAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
     final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
 
     return SingleChildScrollView(

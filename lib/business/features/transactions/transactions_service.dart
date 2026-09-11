@@ -28,8 +28,8 @@ class TransactionsService {
     return response.when((failure) => EitherUtil.failure(failure), (pageResponse) => EitherUtil.success(pageResponse));
   }
 
-  static Future<EitherUtil<HttpFailure, List<AccountModel>>> getAccounts({String? businessId}) async {
-    final response = await DioService.getList<AccountModel>(AppConfig.myAccountsEndpoint(businessId), AccountModel.fromJson);
+  static Future<EitherUtil<HttpFailure, List<AccountModel>>> getAccountsBusiness({String? businessId}) async {
+    final response = await DioService.getList<AccountModel>(AppConfig.accountsBusinessEndpoint(businessId), AccountModel.fromJson);
 
     return response.when((failure) => EitherUtil.failure(failure), (accounts) => EitherUtil.success(accounts));
   }

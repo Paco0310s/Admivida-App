@@ -22,7 +22,8 @@ class AppConfig {
   static String productCategoriesEndpoint(String businessId) => '/product-categories/$businessId';
   static String salesTenantEndpoint(String businessId) => '/sales/business/$businessId';
   static String transactionsTenantEndpoint = '/transactions/business';
-  static String myAccountsEndpoint(String? businessId) => '/accounts/$businessId';
+  static String accountsBusinessEndpoint(String? businessId) => '/accounts/business/$businessId';
+  static String accountsUserEndpoint(String? userId) => '/accounts/user/$userId';
   static const String paymentMethodsEndpoint = '/payment-methods';
   static String transactionsEndpoint = '/transactions';
   static String updateStockProductVariantEndpoint(String variantId) => '/product-variants/stock/$variantId';
@@ -34,6 +35,7 @@ class AppConfig {
   static String getBusinessClientsEndpoint(String businessId) => '/users/businesses/$businessId/clients';
   static String productVariantScanEndpoint(String sku) => '/product-variants/scan/$sku';
   static String createSaleEndpoint = '/sales';
+  static String createCommissionPaymentEndpoint(String businessId) => '/commission-payments/$businessId';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];

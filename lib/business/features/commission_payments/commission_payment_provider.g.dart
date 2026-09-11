@@ -198,3 +198,80 @@ final class PendingCommissionsFamily extends $Family
   @override
   String toString() => r'pendingCommissionsProvider';
 }
+
+@ProviderFor(accountsUser)
+final accountsUserProvider = AccountsUserFamily._();
+
+final class AccountsUserProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<AccountModel>>,
+          List<AccountModel>,
+          FutureOr<List<AccountModel>>
+        >
+    with
+        $FutureModifier<List<AccountModel>>,
+        $FutureProvider<List<AccountModel>> {
+  AccountsUserProvider._({
+    required AccountsUserFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: null,
+         name: r'accountsUserProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountsUserHash();
+
+  @override
+  String toString() {
+    return r'accountsUserProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<AccountModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<AccountModel>> create(Ref ref) {
+    final argument = this.argument as String?;
+    return accountsUser(ref, userId: argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AccountsUserProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$accountsUserHash() => r'b612d493f6f9e82e1c1c48ae124e2c6fc482390e';
+
+final class AccountsUserFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<AccountModel>>, String?> {
+  AccountsUserFamily._()
+    : super(
+        retry: null,
+        name: r'accountsUserProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  AccountsUserProvider call({String? userId}) =>
+      AccountsUserProvider._(argument: userId, from: this);
+
+  @override
+  String toString() => r'accountsUserProvider';
+}

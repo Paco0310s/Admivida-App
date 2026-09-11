@@ -1,5 +1,3 @@
-// commission_payment_response_model.dart
-
 class CommissionPaymentDetailModel {
   final String saleDetailId;
   final String saleId;
@@ -33,8 +31,10 @@ class CommissionPaymentResponseModel {
   final String id;
   final String businessId;
   final String sellerUserId;
-  final double totalAmount;
-  final String? transactionId;
+  final double calculatedTotalAmount;
+  final double paidAmount;
+  final String? expenseTransactionId;
+  final String? incomeTransactionId;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -44,8 +44,10 @@ class CommissionPaymentResponseModel {
     required this.id,
     required this.businessId,
     required this.sellerUserId,
-    required this.totalAmount,
-    this.transactionId,
+    required this.calculatedTotalAmount,
+    required this.paidAmount,
+    this.expenseTransactionId,
+    this.incomeTransactionId,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -57,8 +59,10 @@ class CommissionPaymentResponseModel {
       id: json['id'] as String,
       businessId: json['businessId'] as String,
       sellerUserId: json['sellerUserId'] as String,
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      transactionId: json['transactionId'] as String?,
+      calculatedTotalAmount: (json['calculatedTotalAmount'] as num).toDouble(),
+      paidAmount: (json['paidAmount'] as num).toDouble(),
+      expenseTransactionId: json['expenseTransactionId'] as String?,
+      incomeTransactionId: json['incomeTransactionId'] as String?,
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),

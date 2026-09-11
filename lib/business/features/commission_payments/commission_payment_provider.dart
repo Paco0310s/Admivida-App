@@ -1,6 +1,7 @@
 import 'package:admivida/business/features/commission_payments/commission_payment_service.dart';
 import 'package:admivida/business/features/commission_payments/models/business_staff_model.dart';
 import 'package:admivida/business/features/commission_payments/models/pending_commission_item.dart';
+import 'package:admivida/business/features/transactions/models/account_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'commission_payment_provider.g.dart';
@@ -22,44 +23,9 @@ Future<List<PendingCommissionItem>> pendingCommissions(Ref ref, {required String
   return result.when((failure) => throw failure, (items) => items);
 }
 
-/// Controller to handle the POST request state (Loading, Success, Error).
-// @riverpod
-// class CommissionPaymentController extends _$CommissionPaymentController {
-//   @override
-//   FutureOr<void> build() {}
+@riverpod
+Future<List<AccountModel>> accountsUser(Ref ref, {String? userId}) async {
+  final result = await CommissionPaymentsService.getAccountsUser(userId: userId);
 
-//   /// Executes the payment creation and invalidates the pending list on success.
-//   Future<bool> payCommissions({
-//     required String businessId,
-//     required String sellerUserId,
-//     required List<String> saleDetailIds,
-//     required double totalAmountPaid,
-//   }) async {
-//     state = const AsyncValue.loading();
-
-//     final dto = CreateCommissionPaymentDto(
-//       sellerUserId: sellerUserId,
-//       saleDetailIds: saleDetailIds,
-//       totalAmountPaid: totalAmountPaid,
-//     );
-
-//     final result = await CommissionPaymentsService.createPayment(
-//       businessId: businessId,
-//       dto: dto,
-//     );
-
-//     return result.when(
-//       (failure) {
-//         state = AsyncValue.error(failure, StackTrace.current);
-//         return false;
-//       },
-//       (success) {
-//         state = const AsyncValue.data(null);
-        
-//         // Refresh the pending list so the paid items disappear from the UI
-//         ref.invalidate(pendingCommissionsProvider);
-//         return true;
-//       },
-//     );
-//   }
-// }
+  return result.when((failure) => throw failure, (accounts) => accounts);
+}

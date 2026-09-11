@@ -64,8 +64,8 @@ class TransactionsList extends _$TransactionsList {
 }
 
 @riverpod
-Future<List<AccountModel>> accounts(Ref ref, {String? businessId}) async {
-  final result = await TransactionsService.getAccounts(businessId: businessId);
+Future<List<AccountModel>> accountsBusiness(Ref ref, {String? businessId}) async {
+  final result = await TransactionsService.getAccountsBusiness(businessId: businessId);
 
   return result.when((failure) => throw failure, (accounts) => accounts);
 }

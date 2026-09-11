@@ -1,5 +1,8 @@
 import 'package:admivida/business/features/commission_payments/models/business_staff_model.dart';
+import 'package:admivida/business/features/commission_payments/models/commission_payment_response_model.dart';
+import 'package:admivida/business/features/commission_payments/models/create_commission_payment_dto.dart';
 import 'package:admivida/business/features/commission_payments/models/pending_commission_item.dart';
+import 'package:admivida/business/features/transactions/models/account_model.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/services/dio_service.dart';
 import 'package:admivida/common/utils/either.dart';
@@ -23,15 +26,19 @@ class CommissionPaymentsService {
     return response.when((failure) => EitherUtil.failure(failure), (items) => EitherUtil.success(items));
   }
 
-  /// Submits the payment creation request to the backend.
-  // static Future<EitherUtil<HttpFailure, void>> createPayment({required String businessId, required CreateCommissionPaymentDto dto}) async {
-  //   final response = await DioService.post<void>(
-  //     // Ensure you add this getter to your AppConfig: e.g., '/businesses/$businessId/commission-payments'
-  //     AppConfig.createCommissionPaymentEndpoint(businessId),
-  //     dto.toJson(),
-  //     (_) {}, // Empty parser since we only care about the 201/200 status code
-  //   );
+  // Creates a new commission payment for a seller.
+  static Future<EitherUtil<HttpFailure, CommissionPaymentResponseModel>> createCommissionPayment(CreateCommissionPaymentDto dto, String businessId) async {
+    final response = await DioService.post<CommissionPaymentResponseModel>(
+      AppConfig.createCommissionPaymentEndpoint(businessId),
+      dto.toJson(),
+      CommissionPaymentResponseModel.fromJson,
+    );
+    return response.when((failure) => EitherUtil.failure(failure), (commissionPayment) => EitherUtil.success(commissionPayment));
+  }
 
-  //   return response.when((failure) => EitherUtil.failure(failure), (_) => EitherUtil.success(null));
-  // }
+  static Future<EitherUtil<HttpFailure, List<AccountModel>>> getAccountsUser({String? userId}) async {
+    final response = await DioService.getList<AccountModel>(AppConfig.accountsUserEndpoint(userId), AccountModel.fromJson);
+
+    return response.when((failure) => EitherUtil.failure(failure), (accounts) => EitherUtil.success(accounts));
+  }
 }

@@ -105,10 +105,10 @@ abstract class _$TransactionsList
   }
 }
 
-@ProviderFor(accounts)
-final accountsProvider = AccountsFamily._();
+@ProviderFor(accountsBusiness)
+final accountsBusinessProvider = AccountsBusinessFamily._();
 
-final class AccountsProvider
+final class AccountsBusinessProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<AccountModel>>,
@@ -118,23 +118,23 @@ final class AccountsProvider
     with
         $FutureModifier<List<AccountModel>>,
         $FutureProvider<List<AccountModel>> {
-  AccountsProvider._({
-    required AccountsFamily super.from,
+  AccountsBusinessProvider._({
+    required AccountsBusinessFamily super.from,
     required String? super.argument,
   }) : super(
          retry: null,
-         name: r'accountsProvider',
+         name: r'accountsBusinessProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$accountsHash();
+  String debugGetCreateSourceHash() => _$accountsBusinessHash();
 
   @override
   String toString() {
-    return r'accountsProvider'
+    return r'accountsBusinessProvider'
         ''
         '($argument)';
   }
@@ -148,12 +148,12 @@ final class AccountsProvider
   @override
   FutureOr<List<AccountModel>> create(Ref ref) {
     final argument = this.argument as String?;
-    return accounts(ref, businessId: argument);
+    return accountsBusiness(ref, businessId: argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is AccountsProvider && other.argument == argument;
+    return other is AccountsBusinessProvider && other.argument == argument;
   }
 
   @override
@@ -162,22 +162,22 @@ final class AccountsProvider
   }
 }
 
-String _$accountsHash() => r'86589835755511a3a58776298a992e6fa232e5a3';
+String _$accountsBusinessHash() => r'60f4de66d282389117c80519112a4d290e35e5c2';
 
-final class AccountsFamily extends $Family
+final class AccountsBusinessFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<AccountModel>>, String?> {
-  AccountsFamily._()
+  AccountsBusinessFamily._()
     : super(
         retry: null,
-        name: r'accountsProvider',
+        name: r'accountsBusinessProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  AccountsProvider call({String? businessId}) =>
-      AccountsProvider._(argument: businessId, from: this);
+  AccountsBusinessProvider call({String? businessId}) =>
+      AccountsBusinessProvider._(argument: businessId, from: this);
 
   @override
-  String toString() => r'accountsProvider';
+  String toString() => r'accountsBusinessProvider';
 }

@@ -396,7 +396,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       }
     }
 
-    final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
+    final accountsAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
     final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
     final sellersAsync = ref.watch(businessSellersProvider(widget.businessId));
     final clientsAsync = ref.watch(businessClientsProvider(widget.businessId));

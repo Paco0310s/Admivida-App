@@ -73,7 +73,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   @override
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsListProvider(widget.businessId, _selectedAccountId));
-    final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
+    final accountsAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
 
     final accountOptions = <String, String>{};
 

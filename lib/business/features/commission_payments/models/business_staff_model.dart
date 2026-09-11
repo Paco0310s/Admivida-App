@@ -13,16 +13,3 @@ class BusinessStaffModel {
 
   String get fullName => '$firstName $lastName'.trim();
 }
-
-// create_commission_payment_dto.dart
-class CreateCommissionPaymentDto {
-  final String sellerUserId;
-  final List<String> saleDetailIds;
-  final double totalAmountPaid;
-
-  CreateCommissionPaymentDto({required this.sellerUserId, required this.saleDetailIds, required this.totalAmountPaid});
-
-  Map<String, dynamic> toJson() {
-    return {'sellerUserId': sellerUserId, 'saleDetailIds': saleDetailIds, 'totalAmountPaid': totalAmountPaid};
-  }
-}

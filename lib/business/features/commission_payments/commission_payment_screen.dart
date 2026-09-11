@@ -1,6 +1,10 @@
+import 'package:admivida/business/features/add_transaction/add_transactions_provider.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_provider.dart';
+import 'package:admivida/business/features/commission_payments/commission_payment_service.dart';
 import 'package:admivida/business/features/commission_payments/models/business_staff_model.dart';
+import 'package:admivida/business/features/commission_payments/models/create_commission_payment_dto.dart';
 import 'package:admivida/business/features/commission_payments/models/pending_commission_item.dart';
+import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
@@ -22,7 +26,11 @@ class CommissionPaymentScreen extends ConsumerStatefulWidget {
 
 class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScreen> {
   String? _selectedSellerId;
+  String? _sourceAccountId; // Business account (Expense)
+  String? _destinationAccountId; // Seller account (Income)
+  String? _paymentMethodId; // Payment method (Cash, Transfer, etc.)
   bool _isSubmitting = false;
+  bool _selectAllState = false; // Tracks master checkbox state
 
   // Local state for the products
   List<PendingCommissionItem> _pendingItems = [];
@@ -31,29 +39,60 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
   final Map<String, bool> _selectedCheckboxes = {};
   final Map<String, TextEditingController> _itemControllers = {};
 
-  // Controller for the grand total
+  // Controllers for the grand total and notes
   final TextEditingController _totalController = TextEditingController(text: '0.00');
+  final TextEditingController _notesController = TextEditingController();
+
+  // Tracks the pure calculated sum of selected items to compare against manual edits
+  double _calculatedPureTotal = 0.0;
 
   @override
   void dispose() {
     _totalController.dispose();
+    _notesController.dispose();
     for (final controller in _itemControllers.values) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  /// Calculates the total by summing only the selected items
+  /// Calculates the total by summing only the selected items and updates difference meters
   void _calculateTotal() {
-    double total = 0.0;
+    double pureSum = 0.0;
     for (final item in _pendingItems) {
       if (_selectedCheckboxes[item.saleDetailId] == true) {
         final textValue = _itemControllers[item.saleDetailId]?.text ?? '0';
-        total += double.tryParse(textValue) ?? 0.0;
+        pureSum += double.tryParse(textValue) ?? 0.0;
       }
     }
-    // Update the total textfield, but allow manual edits
-    _totalController.text = total.toStringAsFixed(2);
+
+    setState(() {
+      _calculatedPureTotal = pureSum;
+      // If it's the first initialization or user hasn't overridden it manually with custom logic,
+      // we keep total synced, but we allow them to change it freely.
+      if (_totalController.text == '0.00' || _totalController.text.isEmpty) {
+        _totalController.text = pureSum.toStringAsFixed(2);
+      }
+    });
+  }
+
+  /// Toggles select all items
+  void _toggleSelectAll(bool? value) {
+    final newValue = value ?? false;
+    setState(() {
+      _selectAllState = newValue;
+      for (final item in _pendingItems) {
+        _selectedCheckboxes[item.saleDetailId] = newValue;
+      }
+      _calculateTotal();
+
+      // Auto-update total to match pure sum when selecting all
+      if (newValue) {
+        _totalController.text = _calculatedPureTotal.toStringAsFixed(2);
+      } else {
+        _totalController.text = '0.00';
+      }
+    });
   }
 
   /// Safely initializes controllers when new data arrives from the provider
@@ -63,6 +102,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     setState(() {
       _pendingItems = items;
       _selectedCheckboxes.clear();
+      _selectAllState = false;
 
       // Dispose old controllers
       for (final controller in _itemControllers.values) {
@@ -71,66 +111,86 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
       _itemControllers.clear();
 
       for (final item in items) {
-        _selectedCheckboxes[item.saleDetailId] = false; // Unselected by default
+        _selectedCheckboxes[item.saleDetailId] = false;
 
         final controller = TextEditingController(text: item.commission.toStringAsFixed(2));
-        controller.addListener(_calculateTotal);
+        controller.addListener(() => _calculateTotal());
         _itemControllers[item.saleDetailId] = controller;
       }
-      _calculateTotal(); // Reset the total
+      _calculateTotal();
     });
   }
 
   /// Handles the POST request to pay commissions
   Future<void> _submitPayment() async {
-    final selectedDetails = _pendingItems.where((item) => _selectedCheckboxes[item.saleDetailId] == true).map((item) => item.saleDetailId).toList();
+    final selectedDetails = _pendingItems.where((item) => _selectedCheckboxes[item.saleDetailId] == true).toList();
 
     if (selectedDetails.isEmpty) {
-      SnackbarUtil.showError(context, 'Please select at least one product to pay.');
+      SnackbarUtil.showError(context, 'Seleccione al menos una comisión para efectuar el pago.');
       return;
     }
 
     final double finalTotal = double.tryParse(_totalController.text) ?? 0.0;
     if (finalTotal <= 0) {
-      SnackbarUtil.showError(context, 'The total amount must be greater than 0.');
+      SnackbarUtil.showError(context, 'El monto final a pagar debe ser mayor a cero.');
       return;
     }
 
-    if (_selectedSellerId == null) return;
+    if (_selectedSellerId == null) {
+      SnackbarUtil.showError(context, 'Debe seleccionar al colaborador correspondiente.');
+      return;
+    }
+
+    if (_sourceAccountId == null || _destinationAccountId == null || _paymentMethodId == null) {
+      SnackbarUtil.showError(context, 'Complete la configuración financiera (Cuentas y Método de Pago).');
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
-    // // Call the POST provider
-    // final success = await ref.read(commissionPaymentControllerProvider.notifier).payCommissions(
-    //   businessId: widget.businessId,
-    //   sellerUserId: _selectedSellerId!,
-    //   saleDetailIds: selectedDetails,
-    //   totalAmountPaid: finalTotal,
-    // );
+    final itemsDto = selectedDetails.map((item) {
+      final amountStr = _itemControllers[item.saleDetailId]?.text ?? '0';
+      final amount = double.tryParse(amountStr) ?? item.commission;
+      return CommissionPaymentItemDto(saleDetailId: item.saleDetailId, amountToPay: amount);
+    }).toList();
+
+    final dto = CreateCommissionPaymentDto(
+      sellerUserId: _selectedSellerId!,
+      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      items: itemsDto,
+      sourceAccountId: _sourceAccountId!,
+      destinationAccountId: _destinationAccountId!,
+      paymentMethodId: _paymentMethodId!,
+      paidAmount: finalTotal,
+    );
+
+    final result = await CommissionPaymentsService.createCommissionPayment(dto, widget.businessId);
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
-    // if (success) {
-    SnackbarUtil.showSuccess(context, 'Commission payment registered successfully.');
-    // Optionally reset the view or pop the screen
-    // NavigationService.pop(context);
-    // } else {
-    //   SnackbarUtil.showError(context, 'Failed to register the payment. Please try again.');
-    // }
+    result.when(
+      (failure) {
+        SnackbarUtil.showError(context, failure.message);
+      },
+      (successResponse) {
+        SnackbarUtil.showSuccess(context, 'Pago de comisiones registrado correctamente.');
+        Navigator.of(context).pop(true);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Fetch Sellers for the Dropdown
     final sellersAsync = ref.watch(businessSellersProvider(widget.businessId));
+    final accountsBusinessAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
+    final accountsUserAsync = ref.watch(accountsUserProvider(userId: _selectedSellerId)); // Fetches user accounts for the current logged-in user
+    final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
 
-    // 2. Fetch Pending Items if a seller is selected
     final pendingProvider = _selectedSellerId != null ? pendingCommissionsProvider(businessId: widget.businessId, sellerId: _selectedSellerId!) : null;
 
     final pendingAsync = pendingProvider != null ? ref.watch(pendingProvider) : const AsyncValue.data(<PendingCommissionItem>[]);
 
-    // 3. Listen to the pending items safely to initialize text controllers
     if (pendingProvider != null) {
       ref.listen<AsyncValue<List<PendingCommissionItem>>>(pendingProvider, (previous, next) {
         next.whenData((items) => _initializeItems(items));
@@ -138,20 +198,26 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     }
 
     return AppScaffold(
-      title: 'Commission Payments',
+      title: 'Dispersión de Comisiones',
       appBar: AppBar(
-        title: const AppText('Commission Payments', color: AppColors.kNeutral100),
+        title: const AppText('Pago de Comisiones', color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
       ),
-      mobile: _buildContent(sellersAsync, pendingAsync),
-      tablet: _buildContent(sellersAsync, pendingAsync),
-      desktop: _buildContent(sellersAsync, pendingAsync),
+      mobile: _buildContent(sellersAsync, accountsBusinessAsync, accountsUserAsync, paymentMethodsAsync, pendingAsync),
+      tablet: _buildContent(sellersAsync, accountsBusinessAsync, accountsUserAsync, paymentMethodsAsync, pendingAsync),
+      desktop: _buildContent(sellersAsync, accountsBusinessAsync, accountsUserAsync, paymentMethodsAsync, pendingAsync),
       marginDesktop: 160,
     );
   }
 
-  Widget _buildContent(AsyncValue<List<BusinessStaffModel>> sellersAsync, AsyncValue<List<PendingCommissionItem>> pendingAsync) {
+  Widget _buildContent(
+    AsyncValue<List<BusinessStaffModel>> sellersAsync,
+    AsyncValue accountsBusinessAsync,
+    AsyncValue accountsUserAsync,
+    AsyncValue paymentMethodsAsync,
+    AsyncValue<List<PendingCommissionItem>> pendingAsync,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -160,31 +226,36 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
           _buildSellerSelector(sellersAsync),
           const Gap(16),
 
-          if (_selectedSellerId != null) ...[_buildPendingList(pendingAsync), const Gap(16), _buildSummaryCard()],
+          if (_selectedSellerId != null) ...[
+            _buildPendingList(pendingAsync),
+            const Gap(16),
+            _buildFinancialConfigCard(accountsBusinessAsync, accountsUserAsync, paymentMethodsAsync),
+            const Gap(16),
+            _buildSummaryCard(),
+          ],
         ],
       ),
     );
   }
 
-  /// Renders the Dropdown to pick the seller/admin
   Widget _buildSellerSelector(AsyncValue<List<BusinessStaffModel>> sellersAsync) {
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppText('Select Staff Member', fontWeight: FontWeight.bold, fontSize: 16),
+          const AppText('Colaborador / Vendedor', fontWeight: FontWeight.bold, fontSize: 16),
           const Gap(12),
           sellersAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Text('Error loading staff: $err'),
+            error: (err, stack) => Text('Error al cargar equipo: $err'),
             data: (sellers) {
               if (sellers.isEmpty) {
-                return const Text('No active sellers found for this business.');
+                const Text('No se encontraron colaboradores registrados.');
               }
               return DropdownButtonFormField<String>(
                 decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                hint: const Text('Choose a seller...'),
+                hint: const Text('Seleccionar miembro del personal...'),
                 initialValue: _selectedSellerId,
                 items: sellers.map((seller) {
                   return DropdownMenuItem<String>(value: seller.userId, child: Text(seller.fullName));
@@ -202,26 +273,37 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     );
   }
 
-  /// Renders the list of pending items for the selected seller
   Widget _buildPendingList(AsyncValue<List<PendingCommissionItem>> pendingAsync) {
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppText('Pending Products', fontWeight: FontWeight.bold, fontSize: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const AppText('Comisiones Pendientes de Pago', fontWeight: FontWeight.bold, fontSize: 16),
+              if (_pendingItems.isNotEmpty)
+                Row(
+                  children: [
+                    const Text('Seleccionar todos', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    Checkbox(value: _selectAllState, activeColor: AppColors.kPrimaryColor, onChanged: _toggleSelectAll),
+                  ],
+                ),
+            ],
+          ),
           const Gap(12),
           pendingAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(24.0),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (err, stack) => Text('Error loading pending items: $err'),
+            error: (err, stack) => Text('Error al procesar elementos: $err'),
             data: (items) {
               if (items.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Center(child: Text('No pending commissions for this user.')),
+                  child: Center(child: Text('Este colaborador no cuenta con comisiones pendientes por liquidar.')),
                 );
               }
               return Column(children: _pendingItems.map((item) => _buildCommissionItem(item)).toList());
@@ -232,7 +314,6 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     );
   }
 
-  /// Renders a single row with checkbox and textfield
   Widget _buildCommissionItem(PendingCommissionItem item) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -244,6 +325,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
             onChanged: (val) {
               setState(() {
                 _selectedCheckboxes[item.saleDetailId] = val ?? false;
+                _calculateTopSelectAllState();
                 _calculateTotal();
               });
             },
@@ -254,7 +336,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppText(item.productName, fontWeight: FontWeight.w600, fontSize: 14),
-                AppText('${item.quantity} pzas - Sale: ${item.soldAt.day}/${item.soldAt.month}/${item.soldAt.year}', color: Colors.grey, fontSize: 12),
+                AppText('Cant: ${item.quantity} - Venta: ${item.soldAt.day}/${item.soldAt.month}/${item.soldAt.year}', color: Colors.grey, fontSize: 12),
               ],
             ),
           ),
@@ -262,7 +344,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
           Expanded(
             flex: 1,
             child: AppTextField(
-              text: '', // No label to save space
+              text: '',
               hintText: '0.00',
               controller: _itemControllers[item.saleDetailId],
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -273,22 +355,141 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     );
   }
 
-  /// Renders the bottom card with total and submit button
-  Widget _buildSummaryCard() {
+  void _calculateTopSelectAllState() {
+    if (_pendingItems.isEmpty) {
+      _selectAllState = false;
+      return;
+    }
+    final allChecked = _pendingItems.every((item) => _selectedCheckboxes[item.saleDetailId] == true);
+    _selectAllState = allChecked;
+  }
+
+  Widget _buildFinancialConfigCard(AsyncValue accountsBusinessAsync, AsyncValue accountsUserAsync, AsyncValue paymentMethodsAsync) {
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppText('Payment Summary', fontWeight: FontWeight.bold, fontSize: 16),
+          const AppText('Origen y Destino de Fondos', fontWeight: FontWeight.bold, fontSize: 16),
+          const Gap(12),
+
+          // Source Account
+          accountsBusinessAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (e, s) => Text('Error al cargar cuentas: $e'),
+            data: (accounts) {
+              return DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Cuenta de Origen (Retiro del Negocio)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                hint: const Text('Seleccionar cuenta...'),
+                initialValue: _sourceAccountId,
+                items: accounts.map<DropdownMenuItem<String>>((account) {
+                  return DropdownMenuItem<String>(value: account.id, child: Text(account.name));
+                }).toList(),
+                onChanged: (val) => setState(() => _sourceAccountId = val),
+              );
+            },
+          ),
+          const Gap(12),
+
+          // Destination Account
+          accountsUserAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (e, s) => const SizedBox.shrink(),
+            data: (accounts) {
+              return DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Cuenta de Destino (Abono al Colaborador)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                hint: const Text('Seleccionar cuenta destino...'),
+                initialValue: _destinationAccountId,
+                items: accounts.map<DropdownMenuItem<String>>((account) {
+                  return DropdownMenuItem<String>(value: account.id, child: Text(account.name));
+                }).toList(),
+                onChanged: (val) => setState(() => _destinationAccountId = val),
+              );
+            },
+          ),
+          const Gap(12),
+
+          // Payment Method
+          paymentMethodsAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (e, s) => Text('Error al cargar métodos: $e'),
+            data: (methods) {
+              return DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Método de Operación',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                hint: const Text('Seleccionar método...'),
+                initialValue: _paymentMethodId,
+                items: methods.map<DropdownMenuItem<String>>((method) {
+                  return DropdownMenuItem<String>(value: method.id, child: Text(method.name));
+                }).toList(),
+                onChanged: (val) => setState(() => _paymentMethodId = val),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    final double userTypedTotal = double.tryParse(_totalController.text) ?? 0.0;
+    final double difference = userTypedTotal - _calculatedPureTotal;
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppText('Resumen y Desglose Financiero', fontWeight: FontWeight.bold, fontSize: 16),
           const Gap(12),
           AppTextField(
-            text: 'Total to Pay',
+            text: 'Observaciones de la Transacción',
+            hintText: 'Ej. Liquidación de comisiones correspondientes al periodo',
+            controller: _notesController,
+          ),
+          const Gap(12),
+          AppTextField(
+            text: 'Monto Final a Pagar (Editable)',
             hintText: '0.00',
             controller: _totalController,
+            onChanged: (val) => setState(() {}), // Triggers rebuild to update real-time diff metrics
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             prefixIcon: const Icon(Icons.attach_money),
           ),
+          const Gap(16),
+
+          // Desglose visual detallado
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              children: [
+                _buildSummaryRow('Suma de Comisiones:', '\$ ${_calculatedPureTotal.toStringAsFixed(2)}'),
+                const Divider(height: 16),
+                _buildSummaryRow('Monto que se pagará:', '\$ ${userTypedTotal.toStringAsFixed(2)}', isBold: true),
+                const Divider(height: 16),
+                _buildSummaryRow(
+                  'Diferencia (Ajuste):',
+                  '${difference >= 0 ? '+' : ''}\$ ${difference.toStringAsFixed(2)}',
+                  textColor: difference == 0 ? Colors.grey : (difference > 0 ? Colors.orange.shade800 : Colors.blue.shade800),
+                  isBold: true,
+                ),
+              ],
+            ),
+          ),
+
           const Gap(24),
           SizedBox(
             width: double.infinity,
@@ -301,11 +502,24 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
               ),
               child: _isSubmitting
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Register Payment', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  : const Text('Confirmar y Registrar Pago', style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, {bool isBold = false, Color? textColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: 14)),
+        Text(
+          value,
+          style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: 14, color: textColor ?? Colors.black87),
+        ),
+      ],
     );
   }
 }

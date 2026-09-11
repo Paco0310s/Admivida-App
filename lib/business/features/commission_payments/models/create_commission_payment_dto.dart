@@ -18,7 +18,7 @@ class CreateCommissionPaymentDto {
   final String sourceAccountId;
   final String destinationAccountId;
   final String paymentMethodId;
-  final double totalAmount; // 💡 Lo que sugeriste agregar al backend
+  final double paidAmount;
 
   CreateCommissionPaymentDto({
     required this.sellerUserId,
@@ -27,7 +27,7 @@ class CreateCommissionPaymentDto {
     required this.sourceAccountId,
     required this.destinationAccountId,
     required this.paymentMethodId,
-    required this.totalAmount,
+    required this.paidAmount,
   });
 
   Map<String, dynamic> toJson() {
@@ -38,7 +38,7 @@ class CreateCommissionPaymentDto {
       'sourceAccountId': sourceAccountId,
       'destinationAccountId': destinationAccountId,
       'paymentMethodId': paymentMethodId,
-      'totalAmount': totalAmount,
+      'paidAmount': paidAmount,
     };
   }
 }
