@@ -20,7 +20,7 @@ final class CartProvider
         argument: null,
         retry: null,
         name: r'cartProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -43,7 +43,7 @@ final class CartProvider
   }
 }
 
-String _$cartHash() => r'786ae75eb380050723ee218e9115612c480df257';
+String _$cartHash() => r'a71d0f582260c34944688e1a28ef8a141827dfdb';
 
 abstract class _$Cart extends $Notifier<List<CreateSaleDetailInnerDto>> {
   List<CreateSaleDetailInnerDto> build();
@@ -152,3 +152,90 @@ final class CartItemCountProvider
 }
 
 String _$cartItemCountHash() => r'f2ed61ab2754324784163270508f370cc2d4a058';
+
+/// Provider to fetch the list of clients for the dropdown.
+
+@ProviderFor(businessClients)
+final businessClientsProvider = BusinessClientsFamily._();
+
+/// Provider to fetch the list of clients for the dropdown.
+
+final class BusinessClientsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<BusinessClientModel>>,
+          List<BusinessClientModel>,
+          FutureOr<List<BusinessClientModel>>
+        >
+    with
+        $FutureModifier<List<BusinessClientModel>>,
+        $FutureProvider<List<BusinessClientModel>> {
+  /// Provider to fetch the list of clients for the dropdown.
+  BusinessClientsProvider._({
+    required BusinessClientsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'businessClientsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$businessClientsHash();
+
+  @override
+  String toString() {
+    return r'businessClientsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<BusinessClientModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<BusinessClientModel>> create(Ref ref) {
+    final argument = this.argument as String;
+    return businessClients(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is BusinessClientsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$businessClientsHash() => r'0080272c10f115e853b5996c2978d55bd5dfe21e';
+
+/// Provider to fetch the list of clients for the dropdown.
+
+final class BusinessClientsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<FutureOr<List<BusinessClientModel>>, String> {
+  BusinessClientsFamily._()
+    : super(
+        retry: null,
+        name: r'businessClientsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider to fetch the list of clients for the dropdown.
+
+  BusinessClientsProvider call(String businessId) =>
+      BusinessClientsProvider._(argument: businessId, from: this);
+
+  @override
+  String toString() => r'businessClientsProvider';
+}

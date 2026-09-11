@@ -1,8 +1,13 @@
+import 'package:admivida/business/features/add_sale/add_sale_provider.dart';
+import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
 import 'package:admivida/business/features/add_sale/cart/cart_screen.dart';
+import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_screen.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -19,12 +24,38 @@ class AddSaleScreen extends ConsumerWidget {
     final state = ref.watch(posCatalogProvider(businessId));
 
     return PosScannerListener(
-      onBarcodeScanned: (code) {
-        debugPrint('SKU Detectado por el Escáner: $code');
+      onBarcodeScanned: (code) async {
+        final cleanCode = code.trim();
+        if (cleanCode.isEmpty) return;
 
-        ref.read(posCatalogProvider(businessId).notifier).setSearchQuery('');
+        try {
+          final variant = await ref.read(scannedVariantProvider(cleanCode, businessId).future);
 
-        SnackbarUtil.showSuccess(context, 'Producto escaneado y agregado: $code');
+          if (!context.mounted) return;
+
+          final double price = variant.salePrice;
+          final String displayName = (variant.name != null && variant.name!.isNotEmpty) ? variant.name! : variant.sku;
+
+          final newItem = CreateSaleDetailInnerDto(
+            productVariantId: variant.id,
+            quantity: 1.0,
+            unitPrice: price,
+            originalPriceSnapshot: price,
+            productNameSnapshot: displayName,
+            priceType: 'RETAIL',
+            isPaid: true,
+            imageUrl: variant.images.isNotEmpty ? variant.images.first : null,
+            subtotal: price,
+          );
+
+          ref.read(cartProvider.notifier).addItem(newItem);
+          ref.read(posCatalogProvider(businessId).notifier).setSearchQuery('');
+          SnackbarUtil.showSuccess(context, '$displayName agregado');
+        } catch (e) {
+          if (context.mounted) {
+            SnackbarUtil.showWarning(context, 'No se encontró el producto: $cleanCode');
+          }
+        }
       },
       child: AppScaffold(
         title: AppTexts.createSale,
@@ -40,7 +71,7 @@ class AddSaleScreen extends ConsumerWidget {
           children: [
             Flexible(flex: 72, child: PosCatalogScreen(businessId: businessId, crossAxisCount: 6)),
             Container(width: 2, color: AppColors.kNeutral300),
-            Flexible(flex: 28, child: CartScreen()),
+            Flexible(flex: 28, child: CartScreen(businessId: businessId)),
           ],
         ),
         marginDesktop: 5,
@@ -64,9 +95,35 @@ class MobileTabletView extends StatelessWidget {
           bottom: 70,
           right: 10,
           child: FloatingActionButton(
-            onPressed: () {},
+            onPressed: () {
+              NavigationService.navigateTo(context, Routes.cart, arguments: businessId);
+            },
             backgroundColor: AppColors.kPrimaryColor,
             child: const Icon(Icons.shopping_cart, color: Colors.white),
+          ),
+        ),
+        Positioned(
+          bottom: 110,
+          right: 5,
+          child: Consumer(
+            builder: (context, ref, _) {
+              final itemCount = ref.watch(cartItemCountProvider);
+
+              return itemCount > 0
+                  ? Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                      child: Center(
+                        child: Text(
+                          '${itemCount > 99 ? '99+' : itemCount.toInt()}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+            },
           ),
         ),
       ],

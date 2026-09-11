@@ -231,7 +231,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                                       ),
                                       const Spacer(),
                                       AppText(
-                                        '${transaction.createdAt.day}/${transaction.createdAt.month}/${transaction.createdAt.year}',
+                                        '${transaction.createdAt.day}/${transaction.createdAt.month}/${transaction.createdAt.year}, ${transaction.createdAt.hour}:${transaction.createdAt.minute.toString().padLeft(2, '0')}:${transaction.createdAt.second.toString().padLeft(2, '0')}',
                                         color: AppColors.kNeutral500,
                                         fontSize: 12,
                                       ),

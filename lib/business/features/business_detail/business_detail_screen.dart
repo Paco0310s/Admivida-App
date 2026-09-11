@@ -22,7 +22,7 @@ class BusinessDetailScreen extends StatelessWidget {
       title: business.name,
       appBar: AppBar(
         title: AppText(business.name, color: AppColors.kNeutral100),
-        iconTheme: IconThemeData(color: AppColors.kNeutral100),
+        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
       ),
       mobile: BusinessDetailView(business: business, crossAxisCount: 2),
@@ -70,42 +70,24 @@ class BusinessDetailView extends StatelessWidget {
         'route': Routes.transactions,
         'role': ['ADMIN'],
       },
-      // {
-      //   'title': AppTexts.businessCustomers,
-      //   'subtitle': AppTexts.businessCustomersDescription,
-      //   'icon': Icons.people_alt_rounded,
-      //   'color': AppColors.kPrimaryColor,
-      //   'isEnabled': false,
-      //   'route': 'business_customers',
-      //   'role': ['SELLER', 'ADMIN'],
-      // },
-      // {
-      //   'title': AppTexts.businessReports,
-      //   'subtitle': AppTexts.businessReportsDescription,
-      //   'icon': Icons.bar_chart_rounded,
-      //   'color': AppColors.kPrimaryColor,
-      //   'isEnabled': false,
-      //   'route': 'business_reports',
-      //   'role': ['SELLER', 'ADMIN'],
-      // },
-      // {
-      //   'title': AppTexts.gains,
-      //   'subtitle': AppTexts.gainsDescription,
-      //   'icon': Icons.monetization_on_rounded,
-      //   'color': AppColors.kPrimaryColor,
-      //   'isEnabled': false,
-      //   'route': 'business_gains',
-      //   'role': ['SELLER', 'ADMIN'],
-      // },
-      // {
-      //   'title': AppTexts.profile,
-      //   'subtitle': AppTexts.profileDescription,
-      //   'icon': Icons.person_rounded,
-      //   'color': AppColors.kPrimaryColor,
-      //   'isEnabled': false,
-      //   'route': 'business_profile',
-      //   'role': ['SELLER', 'ADMIN'],
-      // },
+      {
+        'title': 'Pago de Comisiones',
+        'subtitle': 'Paga las comisiones pendientes a tus vendedores y administra los saldos.',
+        'icon': Icons.payments_rounded,
+        'color': AppColors.kPrimaryColor,
+        'isEnabled': true,
+        'route': Routes.commissionPayments,
+        'role': ['ADMIN'],
+      },
+      {
+        'title': 'Mis Ganancias',
+        'subtitle': 'Consulta tu historial de comisiones pendientes y pagos recibidos.',
+        'icon': Icons.savings_rounded,
+        'color': AppColors.kPrimaryColor,
+        'isEnabled': true,
+        'route': Routes.myEarnings,
+        'role': ['SELLER', 'ADMIN'],
+      },
     ];
 
     return SingleChildScrollView(
@@ -113,6 +95,7 @@ class BusinessDetailView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Card...
           AppCard(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -147,7 +130,6 @@ class BusinessDetailView extends StatelessWidget {
                               if (business.description == null) {
                                 return Container();
                               }
-
                               return AppText(business.description!, color: AppColors.kNeutral700, maxLines: 3, overflow: TextOverflow.ellipsis);
                             },
                           ),
@@ -162,6 +144,8 @@ class BusinessDetailView extends StatelessWidget {
             ),
           ),
           const Gap(20),
+
+          // Grid Options
           AppText(AppTexts.businessOptionsTitle, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
           const Gap(12),
           GridView.builder(
@@ -187,6 +171,7 @@ class BusinessDetailView extends StatelessWidget {
 
               return Builder(
                 builder: (context) {
+                  // Hide option if user does not have the required role
                   if (!hasRole) {
                     return const SizedBox.shrink();
                   }
@@ -196,7 +181,12 @@ class BusinessDetailView extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     onTap: () {
                       if (isEnabled) {
-                        if (title == AppTexts.businessProducts || title == AppTexts.businessSales || title == 'Movimientos') {
+                        // 💡 Pass businessId as an argument for all enabled business modules
+                        if (title == AppTexts.businessProducts ||
+                            title == AppTexts.businessSales ||
+                            title == 'Movimientos' ||
+                            title == 'Pago de Comisiones' ||
+                            title == 'Mis Ganancias') {
                           NavigationService.navigateTo(context, route, arguments: business.id);
                         } else {
                           NavigationService.navigateTo(context, route);
@@ -210,7 +200,7 @@ class BusinessDetailView extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: AppColors.kBackgroundColor, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(color: AppColors.kBackgroundColor, shape: BoxShape.circle),
                           child: Icon(icon, color: color, size: 28),
                         ),
                         const Gap(12),

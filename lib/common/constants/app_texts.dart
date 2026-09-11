@@ -66,6 +66,7 @@ class AppTexts {
   static const String signUpForContinue = 'Regístrate para continuar';
   static const String usernameHint = 'Elige un nombre de usuario';
   static const String usernameLabel = 'Nombre de usuario';
+  static const String cart = 'Carrito';
 
   // Error Messages
   static const String connectionError = 'Error de conexión. Verifica tu conexión a internet.';

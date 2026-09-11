@@ -1,8 +1,11 @@
 class AppConfig {
   // Base URLs
-  static const String baseUrl = 'http://localhost:3000/api/v1';
-  // static const String baseUrl = 'http://192.168.1.39:3000/api/v1';
-  static const String baseServerUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://localhost:7100/api/v1';
+  // static const String baseUrl = 'http://192.168.1.14:3000/api/v1';
+  static const String baseServerUrl = 'http://localhost:7100';
+
+  // App version code
+  static const int appVersionCode = 1;
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
@@ -26,6 +29,11 @@ class AppConfig {
   static String createProductEndpoint = '/products';
   static String updateProductEndpoint(String productId) => '/products/fromBusiness/$productId';
   static String getProductByIdEndpoint(String productId, String businessId) => '/products/$productId/business/$businessId';
+  static String getPendingCommissionsEndpoint(String businessId) => '/commission-payments/pending/$businessId';
+  static String getBusinessSellersEndpoint(String businessId) => '/users/businesses/$businessId/sellers';
+  static String getBusinessClientsEndpoint(String businessId) => '/users/businesses/$businessId/clients';
+  static String productVariantScanEndpoint(String sku) => '/product-variants/scan/$sku';
+  static String createSaleEndpoint = '/sales';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];

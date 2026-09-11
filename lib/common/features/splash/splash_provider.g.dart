@@ -59,7 +59,7 @@ final class SplashStartupLogicProvider
 }
 
 String _$splashStartupLogicHash() =>
-    r'8451babb51273cb56839cc0c1e0192ce5730f1da';
+    r'ff16e43dc1bc5d797f1422b752beab70c0bbbb16';
 
 final class SplashStartupLogicFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, BuildContext> {

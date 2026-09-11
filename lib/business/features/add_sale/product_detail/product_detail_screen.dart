@@ -1,5 +1,5 @@
 import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
-import 'package:admivida/business/features/add_sale/models/create_sale_dto.dart';
+import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -169,6 +169,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
       imageUrl: displayImage?.url,
     );
 
+    debugPrint('🟢 URL DESDE CATÁLOGO: ${detail.imageUrl}');
     // 3. Agregamos al carrito usando el provider generado
     ref.read(cartProvider.notifier).addItem(detail);
 

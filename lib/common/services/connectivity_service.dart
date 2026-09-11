@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:admivida/common/constants/app_config.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
@@ -27,6 +28,15 @@ class ConnectivityService {
         final result = await InternetAddress.lookup('google.com');
         return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       }
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> isServerLive() async {
+    try {
+      final response = await get(Uri.parse('${AppConfig.baseUrl}/health'));
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }

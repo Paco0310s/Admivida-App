@@ -3,6 +3,7 @@ import 'package:admivida/common/constants/app_theme.dart';
 import 'package:admivida/common/logging/app_logger.dart';
 import 'package:admivida/common/routes/app_routes.dart';
 import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +19,7 @@ void main() async {
 
   // Initialize storage service
   await StorageService.init();
+  await IsarCacheService.init();
 
   // Initialize Logger
   AppLogger.initialize();

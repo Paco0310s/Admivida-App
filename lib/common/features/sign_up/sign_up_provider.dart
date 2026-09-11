@@ -10,6 +10,7 @@ import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
+import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sign_up_provider.g.dart';
@@ -23,6 +24,18 @@ Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel
       SnackbarUtil.showError(context, failure.message);
     },
     (userData) async {
+      if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
+        // SplashLoading().setLoading(false);
+        showUpdateRequiredDialog(context, 'Actualización requerida', 'Por favor, actualiza la aplicación a la última versión para continuar.', 'Aceptar');
+        return;
+      }
+
+      if (userData.inMaintenance) {
+        // SplashLoading().setLoading(false);
+        showUpdateRequiredDialog(context, 'Mantenimiento', 'La aplicación está en mantenimiento. Por favor, inténtalo más tarde.', 'Aceptar');
+        return;
+      }
+
       StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
       StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
       StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
@@ -68,4 +81,27 @@ Future<void> signUpWithApple(Ref ref, BuildContext context) async {
 @riverpod
 Future<void> goToSignIn(Ref ref, BuildContext context) async {
   NavigationService.replaceUntil(context, Routes.signIn);
+}
+
+void showUpdateRequiredDialog(BuildContext context, String title, String content, String textButton) {
+  if (context.mounted) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: <Widget>[
+            TextButton(
+              child: Text(textButton),
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

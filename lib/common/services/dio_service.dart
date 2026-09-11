@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:admivida/common/enums/app_failure_enum.dart';
 import 'package:dio/dio.dart';
 import 'package:admivida/common/constants/app_config.dart';
@@ -7,6 +8,8 @@ import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/logging/app_logger.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
+import 'package:admivida/common/services/connectivity_service.dart';
 
 class DioService {
   static final Dio _dio =
@@ -106,7 +109,22 @@ class DioService {
     }
   }
 
+  /// Helper to detect if the error is related to network issues (For GET fallback)
+  static bool _isNetworkError(DioException error) {
+    return error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.connectionError ||
+        (error.type == DioExceptionType.unknown && error.error is SocketException);
+  }
+
+  // =========================================================================
+  // READ METHODS (GET) - Allow requests to attempt, fallback to Cache on fail
+  // =========================================================================
+
   static Future<EitherUtil<HttpFailure, T>> get<T>(String url, T Function(Map<String, dynamic>) fromJson, {Map<String, dynamic>? queryParameters}) async {
+    final cacheKey = 'GET_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
+
     try {
       AppLogger.info('GET Request: $url ${queryParameters != null ? "with params: $queryParameters" : ""}');
 
@@ -114,12 +132,25 @@ class DioService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
+
+        // Save the successful response to Isar cache for offline fallback
+        await IsarCacheService.saveCache(cacheKey, jsonEncode(data));
+
         final result = fromJson(data);
         return EitherUtil.success(result);
       } else {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
       }
     } on DioException catch (error) {
+      if (_isNetworkError(error)) {
+        // Read from Isar cache if network error occurs
+        final cachedString = await IsarCacheService.getCache(cacheKey);
+        if (cachedString != null) {
+          AppLogger.info('🌐 OFFLINE MODE: Serving local ISAR cache for GET $url');
+          final cachedData = jsonDecode(cachedString) as Map<String, dynamic>;
+          return EitherUtil.success(fromJson(cachedData));
+        }
+      }
       return _handleError<T>(error);
     } catch (error) {
       AppLogger.error('Unexpected error in GET: $error');
@@ -132,6 +163,8 @@ class DioService {
     T Function(Map<String, dynamic>) fromJson, {
     Map<String, dynamic>? queryParameters,
   }) async {
+    final cacheKey = 'GET_LIST_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
+
     try {
       AppLogger.info('GET LIST Request: $url ${queryParameters != null ? "with params: $queryParameters" : ""}');
 
@@ -140,13 +173,25 @@ class DioService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> rawList = response.data as List<dynamic>;
 
-        final List<T> resultList = rawList.map((jsonItem) => fromJson(jsonItem as Map<String, dynamic>)).toList();
+        // Save the successful response to Isar cache for offline fallback
+        await IsarCacheService.saveCache(cacheKey, jsonEncode(rawList));
 
+        final List<T> resultList = rawList.map((jsonItem) => fromJson(jsonItem as Map<String, dynamic>)).toList();
         return EitherUtil.success(resultList);
       } else {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
       }
     } on DioException catch (error) {
+      if (_isNetworkError(error)) {
+        // Read from Isar cache if network error occurs
+        final cachedString = await IsarCacheService.getCache(cacheKey);
+        if (cachedString != null) {
+          AppLogger.info('🌐 OFFLINE MODE: Serving local ISAR cache for GET LIST $url');
+          final List<dynamic> rawList = jsonDecode(cachedString) as List<dynamic>;
+          final List<T> resultList = rawList.map((jsonItem) => fromJson(jsonItem as Map<String, dynamic>)).toList();
+          return EitherUtil.success(resultList);
+        }
+      }
       return _handleError<List<T>>(error);
     } catch (error) {
       AppLogger.error('Unexpected error in GET LIST: $error');
@@ -154,16 +199,25 @@ class DioService {
     }
   }
 
+  // =========================================================================
+  // WRITE METHODS - Protected by Pre-flight Internet Check
+  // =========================================================================
+
   static Future<EitherUtil<HttpFailure, T>> post<T>(String url, Map<String, dynamic> data, T Function(Map<String, dynamic>) fromJson) async {
+    if (!await ConnectivityService.hasInternet()) {
+      AppLogger.warning('POST blocked: No internet connection for $url');
+      return EitherUtil.failure(HttpFailure.connectionError());
+    }
+
     try {
       AppLogger.info('POST Request: $url, Data: $data');
 
       final response = await _dio.post(url, data: data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data as Map<String, dynamic>;
-        AppLogger.info('Server response JSON: $data');
-        final result = fromJson(data);
+        final responseData = response.data as Map<String, dynamic>;
+        AppLogger.info('Server response JSON: $responseData');
+        final result = fromJson(responseData);
         return EitherUtil.success(result);
       } else {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
@@ -182,6 +236,11 @@ class DioService {
     T Function(Map<String, dynamic>) fromJson, {
     Map<String, dynamic>? queryParameters,
   }) async {
+    if (!await ConnectivityService.hasInternet()) {
+      AppLogger.warning('PUT blocked: No internet connection for $url');
+      return EitherUtil.failure(HttpFailure.connectionError());
+    }
+
     try {
       final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
       AppLogger.info('PUT Request: $url$queryLog, Data: $data');
@@ -210,6 +269,11 @@ class DioService {
     T Function(Map<String, dynamic>) fromJson, {
     Map<String, dynamic>? queryParameters,
   }) async {
+    if (!await ConnectivityService.hasInternet()) {
+      AppLogger.warning('PATCH blocked: No internet connection for $url');
+      return EitherUtil.failure(HttpFailure.connectionError());
+    }
+
     try {
       final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
       AppLogger.info('PATCH Request: $url$queryLog, Data: $data');
@@ -233,6 +297,11 @@ class DioService {
   }
 
   static Future<EitherUtil<HttpFailure, bool>> delete(String url) async {
+    if (!await ConnectivityService.hasInternet()) {
+      AppLogger.warning('DELETE blocked: No internet connection for $url');
+      return EitherUtil.failure(HttpFailure.connectionError());
+    }
+
     try {
       AppLogger.info('DELETE Request: $url');
 
@@ -259,14 +328,17 @@ class DioService {
     required T Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic>? extraFields,
   }) async {
+    if (!await ConnectivityService.hasInternet()) {
+      AppLogger.warning('UPLOAD blocked: No internet connection for $url');
+      return EitherUtil.failure(HttpFailure.connectionError());
+    }
+
     try {
       AppLogger.info('UPLOAD Request: $url with file: $filePath');
 
-      // 1. Preparamos el archivo para envío
       final fileName = filePath.split('/').last;
       final formData = FormData.fromMap({fileKey: await MultipartFile.fromFile(filePath, filename: fileName), ...?extraFields});
 
-      // 2. Ejecutamos la petición POST multipart
       final response = await _dio.post(
         url,
         data: formData,

@@ -2,20 +2,21 @@ import 'package:uuid/uuid.dart';
 
 class CreateSaleDetailInnerDto {
   // --------------------------------------------------------
-  // 1. CAMPOS PARA EL BACKEND (Se incluyen en el toJson)
+  // 1. FIELDS FOR THE BACKEND (Included in toJson)
   // --------------------------------------------------------
   final String productVariantId;
   final double quantity;
-  final double unitPrice; // Corresponde al productPriceSnapshot
+  final double unitPrice; // Corresponds to productPriceSnapshot
   final String? commentary;
   final String productNameSnapshot;
   final double originalPriceSnapshot;
   final String priceType; // 'RETAIL', 'WHOLESALE', 'CUSTOM'
+  final bool isPaid; // Flag to indicate if the individual item has been paid
 
   // --------------------------------------------------------
-  // 2. CAMPOS SOLO PARA LA UI (No se envían a NestJS)
+  // 2. FIELDS FOR UI ONLY (Not sent to NestJS)
   // --------------------------------------------------------
-  final String id; // ID único temporal para el listado del carrito
+  final String id; // Unique temporary ID for the cart list
   final String? imageUrl;
   final double subtotal;
 
@@ -28,11 +29,12 @@ class CreateSaleDetailInnerDto {
     required this.productNameSnapshot,
     required this.originalPriceSnapshot,
     required this.priceType,
+    this.isPaid = true, // Default to true
     this.imageUrl,
     required this.subtotal,
-  }) : id = id ?? const Uuid().v4(); // Genera un ID automático si no se le pasa
+  }) : id = id ?? const Uuid().v4(); // Generates an automatic ID if none is passed
 
-  /// Permite a Riverpod actualizar la cantidad manteniendo inmutabilidad
+  /// Allows Riverpod to update quantity while keeping immutability
   CreateSaleDetailInnerDto copyWith({
     String? id,
     String? productVariantId,
@@ -42,6 +44,7 @@ class CreateSaleDetailInnerDto {
     String? productNameSnapshot,
     double? originalPriceSnapshot,
     String? priceType,
+    bool? isPaid,
     String? imageUrl,
     double? subtotal,
   }) {
@@ -54,63 +57,23 @@ class CreateSaleDetailInnerDto {
       productNameSnapshot: productNameSnapshot ?? this.productNameSnapshot,
       originalPriceSnapshot: originalPriceSnapshot ?? this.originalPriceSnapshot,
       priceType: priceType ?? this.priceType,
+      isPaid: isPaid ?? this.isPaid,
       imageUrl: imageUrl ?? this.imageUrl,
       subtotal: subtotal ?? this.subtotal,
     );
   }
 
-  /// Limpia los datos para enviar a NestJS
+  /// Cleans and formats data to send to NestJS
   Map<String, dynamic> toJson() {
     return {
       'productVariantId': productVariantId,
       'quantity': quantity,
-      'unitPrice': unitPrice, // En NestJS podrías mapearlo a productPriceSnapshot
+      'productPriceSnapshot': unitPrice, // Mapped correctly for NestJS backend expectation
       'originalPriceSnapshot': originalPriceSnapshot,
       'productNameSnapshot': productNameSnapshot,
       'priceType': priceType,
+      'isPaid': isPaid,
       if (commentary != null && commentary!.trim().isNotEmpty) 'commentary': commentary!.trim(),
-    };
-  }
-}
-
-class CreateSaleDto {
-  final String clientNameSnapshot;
-  final double? latitude;
-  final double? longitude;
-  final String? clientUserId;
-  final String sellerUserId;
-  final String businessId;
-  final String accountId;
-  final String paymentMethodId;
-  final String paymentMethodCode;
-  final List<CreateSaleDetailInnerDto> items;
-
-  CreateSaleDto({
-    this.clientNameSnapshot = 'Público General',
-    this.latitude,
-    this.longitude,
-    this.clientUserId,
-    required this.sellerUserId,
-    required this.businessId,
-    required this.accountId,
-    required this.paymentMethodId,
-    required this.paymentMethodCode,
-    required this.items,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'clientNameSnapshot': clientNameSnapshot.isEmpty ? 'Público General' : clientNameSnapshot,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
-      if (clientUserId != null) 'clientUserId': clientUserId,
-      'sellerUserId': sellerUserId,
-      'businessId': businessId,
-      'accountId': accountId,
-      'paymentMethodId': paymentMethodId,
-      'paymentMethodCode': paymentMethodCode,
-      // Gracias a que nuestro DTO filtra los datos de UI, esto manda el payload perfecto
-      'items': items.map((item) => item.toJson()).toList(),
     };
   }
 }

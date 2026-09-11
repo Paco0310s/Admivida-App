@@ -10,6 +10,7 @@ import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
+import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sign_in_provider.g.dart';
@@ -23,6 +24,18 @@ Future<void> signIn(Ref ref, BuildContext context, LoginUserDto userLoginDto) as
       SnackbarUtil.showError(context, failure.message);
     },
     (userData) async {
+      if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
+        // SplashLoading().setLoading(false);
+        showUpdateRequiredDialog(context, 'Actualización requerida', 'Por favor, actualiza la aplicación a la última versión para continuar.', 'Aceptar');
+        return;
+      }
+
+      if (userData.inMaintenance) {
+        // SplashLoading().setLoading(false);
+        showUpdateRequiredDialog(context, 'Mantenimiento', 'La aplicación está en mantenimiento. Por favor, inténtalo más tarde.', 'Aceptar');
+        return;
+      }
+
       StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
       StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
       StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
@@ -84,5 +97,28 @@ class RememberMe extends _$RememberMe {
 
   void toggle() {
     state = !state; // Toggle the boolean value
+  }
+}
+
+void showUpdateRequiredDialog(BuildContext context, String title, String content, String textButton) {
+  if (context.mounted) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: <Widget>[
+            TextButton(
+              child: Text(textButton),
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }

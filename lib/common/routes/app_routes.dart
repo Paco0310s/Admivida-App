@@ -1,10 +1,12 @@
 import 'package:admivida/business/features/add_business/add_business_screen.dart';
 import 'package:admivida/business/features/add_product/product_form_screen.dart';
 import 'package:admivida/business/features/add_sale/add_sale_screen.dart';
+import 'package:admivida/business/features/add_sale/cart/cart_screen.dart';
 import 'package:admivida/business/features/add_sale/product_detail/product_detail_screen.dart';
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
 import 'package:admivida/business/features/business_detail/business_detail_screen.dart';
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
+import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
 import 'package:admivida/business/features/products/products_screen.dart';
 import 'package:admivida/business/features/products/product_detail_screen.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
@@ -13,8 +15,12 @@ import 'package:admivida/business/features/sales/sale_detail_screen.dart';
 import 'package:admivida/business/features/sales/sales_screen.dart';
 import 'package:admivida/business/features/transactions/transactions_screen.dart';
 import 'package:admivida/business/models/business_model.dart';
+import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/features/choose_platform_role/choose_platform_role_screen.dart';
 import 'package:admivida/common/features/home/home_screen.dart';
+import 'package:admivida/common/widgets/app_scafffold.dart';
+import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/forgot_password/forgot_password_screen.dart';
 import 'package:admivida/common/features/sign_in/sign_in_screen.dart';
@@ -116,6 +122,29 @@ class AppRoutes {
               ),
         );
       },
+      Routes.commissionPayments: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return CommissionPaymentScreen(businessId: businessId);
+      },
+      Routes.cart: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return AppScaffold(
+          title: AppTexts.cart,
+          appBar: AppBar(
+            title: AppText(AppTexts.cart, color: AppColors.kBackgroundColor),
+            backgroundColor: AppColors.kPrimaryColor,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          mobile: CartScreen(businessId: businessId),
+          tablet: CartScreen(businessId: businessId),
+          desktop: CartScreen(businessId: businessId),
+          marginDesktop: 5,
+        );
+      },
+      // Routes.myEarnings: (context) {
+      //   // final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+      //   // return CommissionPaymentScreen(businessId: businessId);
+      // },
     };
   }
 }

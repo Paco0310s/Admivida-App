@@ -1,13 +1,15 @@
-import 'package:admivida/business/features/add_sale/models/create_sale_dto.dart';
+import 'package:admivida/business/features/add_sale/cart/cart_service.dart';
+import 'package:admivida/business/features/add_sale/models/business_client_model.dart';
+import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'cart_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class Cart extends _$Cart {
   @override
   List<CreateSaleDetailInnerDto> build() {
-    return []; // El carrito inicia vacío
+    return []; // The cart starts empty
   }
 
   void addItem(CreateSaleDetailInnerDto newItem) {
@@ -48,7 +50,7 @@ class Cart extends _$Cart {
     state = [];
   }
 
-  // Updates the unit price of a specific item in the cart
+  /// Updates the unit price of a specific item in the cart
   void updateUnitPrice(String id, double newPrice) {
     if (newPrice < 0) return;
 
@@ -63,18 +65,34 @@ class Cart extends _$Cart {
       return item;
     }).toList();
   }
+
+  /// Updates the isPaid flag of a specific item in the cart
+  void updateIsPaid(String id, bool isPaid) {
+    state = state.map((item) {
+      if (item.id == id) {
+        return item.copyWith(isPaid: isPaid);
+      }
+      return item;
+    }).toList();
+  }
 }
 
-// 💡 Cambiamos CartTotalRef por la clase genérica Ref
 @riverpod
 double cartTotal(Ref ref) {
   final cartItems = ref.watch(cartProvider);
   return cartItems.fold(0.0, (sum, item) => sum + item.subtotal);
 }
 
-// 💡 Cambiamos CartItemCountRef por la clase genérica Ref
 @riverpod
 double cartItemCount(Ref ref) {
   final cartItems = ref.watch(cartProvider);
   return cartItems.fold(0.0, (sum, item) => sum + item.quantity);
+}
+
+/// Provider to fetch the list of clients for the dropdown.
+@riverpod
+Future<List<BusinessClientModel>> businessClients(Ref ref, String businessId) async {
+  final result = await CartService.getClients(businessId);
+
+  return result.when((failure) => throw failure, (clients) => clients);
 }

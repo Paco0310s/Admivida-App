@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:admivida/business/features/add_sale/add_sale_provider.dart';
+import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
+import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/models/pos_catalog_state.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
@@ -55,15 +58,38 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return BarcodeScannerSheet(
-          onCode: (String code) {
-            // 1. Write the scanned code into the search text field
-            _searchController.text = code;
+          onCode: (String code) async {
+            final cleanCode = code.trim();
+            if (cleanCode.isEmpty) return;
 
-            // 2. Trigger the search in the provider immediately
-            ref.read(posCatalogProvider(widget.businessId).notifier).setSearchQuery(code);
+            try {
+              final variant = await ref.read(scannedVariantProvider(cleanCode, widget.businessId).future);
 
-            // 3. Visual confirmation for the cashier
-            SnackbarUtil.showSuccess(context, 'Código escaneado: $code');
+              if (!context.mounted) return;
+
+              final double price = variant.salePrice;
+              final String displayName = (variant.name != null && variant.name!.isNotEmpty) ? variant.name! : variant.sku;
+
+              final newItem = CreateSaleDetailInnerDto(
+                productVariantId: variant.id,
+                quantity: 1.0,
+                unitPrice: price,
+                originalPriceSnapshot: price,
+                productNameSnapshot: displayName,
+                priceType: 'RETAIL',
+                isPaid: true,
+                imageUrl: variant.images.isNotEmpty ? variant.images.first : null,
+                subtotal: price,
+              );
+
+              ref.read(cartProvider.notifier).addItem(newItem);
+              ref.read(posCatalogProvider(widget.businessId).notifier).setSearchQuery('');
+              SnackbarUtil.showSuccess(context, '$displayName agregado');
+            } catch (e) {
+              if (context.mounted) {
+                SnackbarUtil.showWarning(context, 'No se encontró el producto: $cleanCode');
+              }
+            }
           },
         );
       },

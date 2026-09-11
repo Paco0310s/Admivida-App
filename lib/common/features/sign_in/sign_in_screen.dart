@@ -136,10 +136,19 @@ class _SignInFormState extends ConsumerState<SignInForm> {
 
   void _handleSignIn() async {
     if (_formKey.currentState?.validate() ?? false) {
-      final emailOrPhone = _emailOrPhoneController.text.trim();
+      final emailOrPhoneInput = _emailOrPhoneController.text.trim();
+      String finalEmailOrPhone = emailOrPhoneInput;
+
+      // 1. Check if the input is a raw phone number (does not contain '@' and does not start with '+')
+      if (!emailOrPhoneInput.contains('@') && !emailOrPhoneInput.startsWith('+')) {
+        // It is a raw phone number, so we prepend the country code '+52' and remove any spaces
+        final noSpaces = emailOrPhoneInput.replaceAll(' ', '');
+        finalEmailOrPhone = '+52 $noSpaces';
+      }
+
       final password = _passwordController.text;
 
-      final LoginUserDto loginUserDto = LoginUserDto(emailOrPhone: emailOrPhone, password: password);
+      final LoginUserDto loginUserDto = LoginUserDto(emailOrPhone: finalEmailOrPhone, password: password);
 
       ref.read(signInLoadingProvider.notifier).setLoading(true);
       await ref.read(signInProvider(context, loginUserDto).future);

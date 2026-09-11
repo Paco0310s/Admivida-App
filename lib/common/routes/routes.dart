@@ -20,4 +20,7 @@ class Routes {
   static final String addSale = '/add_sale';
   static final String productDetailSale = '/product_detail_sale';
   static final String addTransaction = '/add_transaction';
+  static final String commissionPayments = '/commission_payments';
+  static final String myEarnings = '/my_earnings';
+  static final String cart = '/cart';
 }
