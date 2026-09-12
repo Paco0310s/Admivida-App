@@ -182,12 +182,10 @@ class BusinessDetailView extends StatelessWidget {
                     onTap: () {
                       if (isEnabled) {
                         // 💡 Pass businessId as an argument for all enabled business modules
-                        if (title == AppTexts.businessProducts ||
-                            title == AppTexts.businessSales ||
-                            title == 'Movimientos' ||
-                            title == 'Pago de Comisiones' ||
-                            title == 'Mis Ganancias') {
+                        if (title == AppTexts.businessProducts || title == AppTexts.businessSales || title == 'Movimientos' || title == 'Pago de Comisiones') {
                           NavigationService.navigateTo(context, route, arguments: business.id);
+                        } else if (title == 'Mis Ganancias') {
+                          NavigationService.navigateTo(context, route, arguments: {'businessId': business.id, 'isAdmin': roles.contains('ADMIN')});
                         } else {
                           NavigationService.navigateTo(context, route);
                         }

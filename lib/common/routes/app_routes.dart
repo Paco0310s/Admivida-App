@@ -6,6 +6,7 @@ import 'package:admivida/business/features/add_sale/product_detail/product_detai
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
 import 'package:admivida/business/features/business_detail/business_detail_screen.dart';
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
+import 'package:admivida/business/features/commission_payment_history/commission_payment_history_screen.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
 import 'package:admivida/business/features/products/products_screen.dart';
 import 'package:admivida/business/features/products/product_detail_screen.dart';
@@ -141,10 +142,12 @@ class AppRoutes {
           marginDesktop: 5,
         );
       },
-      // Routes.myEarnings: (context) {
-      //   // final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
-      //   // return CommissionPaymentScreen(businessId: businessId);
-      // },
+      Routes.myEarnings: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        final businessId = arguments?['businessId'] as String? ?? '';
+        final isAdmin = arguments?['isAdmin'] as bool? ?? false;
+        return CommissionPaymentHistoryScreen(businessId: businessId, isAdmin: isAdmin);
+      },
     };
   }
 }

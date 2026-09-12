@@ -36,6 +36,8 @@ class AppConfig {
   static String productVariantScanEndpoint(String sku) => '/product-variants/scan/$sku';
   static String createSaleEndpoint = '/sales';
   static String createCommissionPaymentEndpoint(String businessId) => '/commission-payments/$businessId';
+  static String getCommissionPaymentHistoryBusinessEndpoint(String businessId) => '/commission-payments/history/$businessId';
+  static String getCommissionPaymentMyHistoryEndpoint(String businessId) => '/commission-payments/my-history/$businessId';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
