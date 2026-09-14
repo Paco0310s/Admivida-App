@@ -22,6 +22,8 @@ class AppTextField extends StatelessWidget {
   final AppTextFieldType type;
   final int maxLines;
   final bool isRequired;
+  final bool readOnly;
+  final void Function()? onTap;
 
   const AppTextField({
     super.key,
@@ -41,6 +43,8 @@ class AppTextField extends StatelessWidget {
     this.textColor = AppColors.kPrimary500,
     this.fontWeight = FontWeight.normal,
     this.isRequired = false,
+    this.readOnly = false,
+    this.onTap,
   });
 
   @override
@@ -59,6 +63,8 @@ class AppTextField extends StatelessWidget {
           TextFormField(
             controller: controller,
             maxLines: maxLines,
+            readOnly: readOnly,
+            onTap: onTap,
             decoration: InputDecoration(
               hintText: hintText,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -83,6 +89,8 @@ class AppTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      readOnly: readOnly,
+      onTap: onTap,
       decoration: InputDecoration(
         // filled: true,
         // fillColor: AppColors.accent.withOpacity(0.1),

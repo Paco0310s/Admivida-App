@@ -22,6 +22,7 @@ class UpdateProductVariantDto {
   final double? stockQuantity;
   final double? minimumStock;
   final double? maximumStock;
+  final String? expirationDate;
   final Map<String, dynamic>? attributes;
   final List<UpdateProductImageDto>? images;
 
@@ -37,6 +38,7 @@ class UpdateProductVariantDto {
     this.stockQuantity,
     this.minimumStock,
     this.maximumStock,
+    this.expirationDate,
     this.attributes,
     this.images,
   });
@@ -54,6 +56,7 @@ class UpdateProductVariantDto {
       if (stockQuantity != null) 'stockQuantity': stockQuantity,
       if (minimumStock != null) 'minimumStock': minimumStock,
       if (maximumStock != null) 'maximumStock': maximumStock,
+      'expirationDate': (expirationDate != null && expirationDate!.isNotEmpty) ? expirationDate : null,
       if (attributes != null && attributes!.isNotEmpty) 'attributes': attributes,
       if (images != null && images!.isNotEmpty) 'images': images!.map((i) => i.toJson()).toList(),
     };

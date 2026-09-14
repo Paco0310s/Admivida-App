@@ -180,7 +180,7 @@ final class ProductFormProvider
   }
 }
 
-String _$productFormHash() => r'72b79eafc7e902fcff890163bc06dec3485cc112';
+String _$productFormHash() => r'7a03bbe3775b8de80125c39e1d33ced483a9fdd3';
 
 final class ProductFormFamily extends $Family
     with

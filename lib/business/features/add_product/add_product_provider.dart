@@ -43,6 +43,7 @@ class ProductForm extends _$ProductForm {
               stockQuantity: v.stockQuantity,
               minimumStock: v.minimumStock,
               maximumStock: v.maximumStock,
+              expirationDate: v.expirationDate?.toIso8601String(),
               attributes: v.attributes,
               // Map existing images (make sure to use img.fileId, not img.id for fileId)
               images: v.images.map((img) => UpdateProductImageDto(id: img.id, fileId: img.fileId, main: img.main)).toList(),
@@ -109,12 +110,10 @@ class ProductForm extends _$ProductForm {
           productTypeId: productTypeId,
           productCategoryId: productCategoryId,
           name: state.name.trim(),
-          description: description, // Mapped
-          unitOfMeasure: unitOfMeasure, // Mapped
-          isActive: isActive, // Mapped
-          // Map main image if provided
+          description: description,
+          unitOfMeasure: unitOfMeasure,
+          isActive: isActive,
           images: mainFileId != null ? [CreateProductImageDto(fileId: mainFileId, main: true)] : const [],
-          // Convert generic variants to creation DTO, including images and attributes
           variants: state.variants
               .map(
                 (v) => CreateProductVariantDto(
@@ -122,14 +121,14 @@ class ProductForm extends _$ProductForm {
                   barcode: v.barcode,
                   name: v.name,
                   purchasePrice: v.purchasePrice,
-                  salePrice: v.salePrice ?? 0.0, // Ensure it is not null
+                  salePrice: v.salePrice ?? 0.0,
                   wholesalePrice: v.wholesalePrice,
                   wholesaleQuantity: v.wholesaleQuantity,
                   stockQuantity: v.stockQuantity,
                   minimumStock: v.minimumStock,
                   maximumStock: v.maximumStock,
+                  expirationDate: v.expirationDate,
                   attributes: v.attributes,
-                  // Convert UpdateProductImageDto back to CreateProductImageDto
                   images: v.images?.map((img) => CreateProductImageDto(fileId: img.fileId, main: img.main)).toList() ?? [],
                 ),
               )

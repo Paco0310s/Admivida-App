@@ -60,7 +60,7 @@ class BusinessesList extends ConsumerWidget {
                         icon: Icon(Icons.add),
                         color: AppColors.kPrimaryColor,
                         onPressed: () {
-                          NavigationService.navigateTo(context, Routes.addBusiness);
+                          NavigationService.navigateTo(context, Routes.createOrUpdateBusinessScreen, arguments: null);
                         },
                         tooltip: AppTexts.addBusinessButton,
                       ),

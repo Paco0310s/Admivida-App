@@ -14,6 +14,7 @@ class ProductVariantModel {
   final double? stockQuantity;
   final double? minimumStock;
   final double? maximumStock;
+  final DateTime? expirationDate; // <-- NUEVO CAMPO
   final Map<String, dynamic>? attributes;
   final List<ProductImageModel> images;
   final DateTime createdAt;
@@ -32,6 +33,7 @@ class ProductVariantModel {
     this.stockQuantity,
     this.minimumStock,
     this.maximumStock,
+    this.expirationDate, // <-- NUEVO CAMPO
     this.attributes,
     required this.images,
     required this.createdAt,
@@ -51,6 +53,7 @@ class ProductVariantModel {
     double? stockQuantity,
     double? minimumStock,
     double? maximumStock,
+    DateTime? expirationDate, // <-- NUEVO CAMPO
     Map<String, dynamic>? attributes,
     List<ProductImageModel>? images,
     DateTime? createdAt,
@@ -66,9 +69,10 @@ class ProductVariantModel {
       salePrice: salePrice ?? this.salePrice,
       wholesalePrice: wholesalePrice ?? this.wholesalePrice,
       wholesaleQuantity: wholesaleQuantity ?? this.wholesaleQuantity,
-      stockQuantity: stockQuantity ?? this.stockQuantity, // <-- El valor clave
+      stockQuantity: stockQuantity ?? this.stockQuantity,
       minimumStock: minimumStock ?? this.minimumStock,
       maximumStock: maximumStock ?? this.maximumStock,
+      expirationDate: expirationDate ?? this.expirationDate, // <-- NUEVO CAMPO
       attributes: attributes ?? this.attributes,
       images: images ?? this.images,
       createdAt: createdAt ?? this.createdAt,
@@ -90,6 +94,7 @@ class ProductVariantModel {
       stockQuantity: _toDoubleOrNull(json['stockQuantity']),
       minimumStock: _toDoubleOrNull(json['minimumStock']),
       maximumStock: _toDoubleOrNull(json['maximumStock']),
+      expirationDate: json['expirationDate'] != null ? DateTime.parse(json['expirationDate']) : null, // <-- NUEVO CAMPO
       attributes: json['attributes'] is Map<String, dynamic> ? Map<String, dynamic>.from(json['attributes']) : null,
       images: (json['images'] as List<dynamic>?)?.map((i) => ProductImageModel.fromJson(i as Map<String, dynamic>)).toList() ?? [],
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
@@ -111,6 +116,7 @@ class ProductVariantModel {
       'stockQuantity': stockQuantity,
       'minimumStock': minimumStock,
       'maximumStock': maximumStock,
+      'expirationDate': expirationDate?.toIso8601String(), // <-- NUEVO CAMPO
       'attributes': attributes,
       'images': images.map((i) => i.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
@@ -256,7 +262,7 @@ class ProductModel {
       description: description ?? this.description,
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
       isActive: isActive ?? this.isActive,
-      variants: variants ?? this.variants, // <-- Aquí actualizaremos la variante
+      variants: variants ?? this.variants,
       images: images ?? this.images,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

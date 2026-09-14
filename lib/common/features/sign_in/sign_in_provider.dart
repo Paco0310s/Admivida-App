@@ -25,14 +25,16 @@ Future<void> signIn(Ref ref, BuildContext context, LoginUserDto userLoginDto) as
     },
     (userData) async {
       if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
-        // SplashLoading().setLoading(false);
-        showUpdateRequiredDialog(context, 'Actualización requerida', 'Por favor, actualiza la aplicación a la última versión para continuar.', 'Aceptar');
+        if (context.mounted) {
+          NavigationService.replaceWith(context, Routes.updateRequired);
+        }
         return;
       }
 
       if (userData.inMaintenance) {
-        // SplashLoading().setLoading(false);
-        showUpdateRequiredDialog(context, 'Mantenimiento', 'La aplicación está en mantenimiento. Por favor, inténtalo más tarde.', 'Aceptar');
+        if (context.mounted) {
+          NavigationService.replaceWith(context, Routes.maintenance);
+        }
         return;
       }
 

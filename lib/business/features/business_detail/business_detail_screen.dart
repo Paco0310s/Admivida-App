@@ -11,13 +11,27 @@ import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-class BusinessDetailScreen extends StatelessWidget {
+class BusinessDetailScreen extends StatefulWidget {
   const BusinessDetailScreen({super.key, required this.business});
 
   final BusinessModel business;
 
   @override
+  State<BusinessDetailScreen> createState() => _BusinessDetailScreenState();
+}
+
+class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
+  late BusinessModel business;
+
+  @override
+  void initState() {
+    super.initState();
+    business = widget.business;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Al unificar el widget, el setState también repintará el título del AppScaffold
     return AppScaffold(
       title: business.name,
       appBar: AppBar(
@@ -25,21 +39,13 @@ class BusinessDetailScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
       ),
-      mobile: BusinessDetailView(business: business, crossAxisCount: 2),
-      tablet: BusinessDetailView(business: business, crossAxisCount: 3),
-      desktop: BusinessDetailView(business: business, crossAxisCount: 4),
+      mobile: _buildView(crossAxisCount: 2),
+      tablet: _buildView(crossAxisCount: 3),
+      desktop: _buildView(crossAxisCount: 4),
     );
   }
-}
 
-class BusinessDetailView extends StatelessWidget {
-  const BusinessDetailView({super.key, required this.business, required this.crossAxisCount});
-
-  final BusinessModel business;
-  final int crossAxisCount;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildView({required int crossAxisCount}) {
     List<String> roles = ['SELLER', 'ADMIN'];
 
     final List<Map<String, dynamic>> options = [
@@ -95,7 +101,7 @@ class BusinessDetailView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Card...
+          // Header Card
           AppCard(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -105,6 +111,7 @@ class BusinessDetailView extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
+                      // 💡 Cambiamos "widget.business" por "business" (tu estado local actualizado)
                       child: business.image == null
                           ? Container(
                               width: 80,
@@ -135,6 +142,30 @@ class BusinessDetailView extends StatelessWidget {
                           ),
                           const Gap(8),
                           AppText(business.categoryName, fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.kSecondaryColor),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final updatedBusiness = await NavigationService.navigateTo(context, Routes.createOrUpdateBusinessScreen, arguments: business);
+
+                        if (updatedBusiness != null && updatedBusiness is BusinessModel) {
+                          setState(() {
+                            business = updatedBusiness;
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.kPrimaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.edit_rounded, size: 20),
+                          const Gap(8),
+                          AppText(AppTexts.editBusinessButton, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kNeutral100),
                         ],
                       ),
                     ),
@@ -181,7 +212,7 @@ class BusinessDetailView extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     onTap: () {
                       if (isEnabled) {
-                        // 💡 Pass businessId as an argument for all enabled business modules
+                        // 💡 Seguimos usando "business.id" local
                         if (title == AppTexts.businessProducts || title == AppTexts.businessSales || title == 'Movimientos' || title == 'Pago de Comisiones') {
                           NavigationService.navigateTo(context, route, arguments: business.id);
                         } else if (title == 'Mis Ganancias') {

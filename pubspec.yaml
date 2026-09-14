@@ -54,6 +54,7 @@ dependencies:
   isar_community: ^3.3.2
   isar_community_flutter_libs: ^3.3.2
   logger: ^2.6.0
+  lottie: ^3.5.1
   mobile_scanner: ^7.4.0
   path_provider: ^2.1.6
   photo_view: ^0.15.0

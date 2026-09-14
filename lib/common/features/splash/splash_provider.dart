@@ -46,7 +46,7 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
   final bool serverLive = await ConnectivityService.isServerLive();
   if (!serverLive) {
     if (context.mounted) {
-      showUpdateRequiredDialog(context, 'Mantenimiento', 'La aplicación está en mantenimiento. Por favor, inténtalo más tarde.', 'Aceptar');
+      NavigationService.replaceWith(context, Routes.maintenance);
     }
     return;
   }
@@ -68,13 +68,17 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
     (userData) async {
       // Validate if the app version is below the minimum required version
       if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
-        showUpdateRequiredDialog(context, 'Actualización requerida', 'Por favor, actualiza la aplicación a la última versión para continuar.', 'Aceptar');
+        if (context.mounted) {
+          NavigationService.replaceWith(context, Routes.updateRequired);
+        }
         return;
       }
 
       // Validate internal maintenance flag for the user (just in case)
       if (userData.inMaintenance) {
-        showUpdateRequiredDialog(context, 'Mantenimiento', 'La aplicación está en mantenimiento. Por favor, inténtalo más tarde.', 'Aceptar');
+        if (context.mounted) {
+          NavigationService.replaceWith(context, Routes.maintenance);
+        }
         return;
       }
 

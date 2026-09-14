@@ -14,6 +14,7 @@ import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 
 class AddSaleScreen extends ConsumerWidget {
   final String businessId;
@@ -33,6 +34,50 @@ class AddSaleScreen extends ConsumerWidget {
 
           if (!context.mounted) return;
 
+          debugPrint(variant.expirationDate?.toIso8601String());
+          debugPrint(DateTime.now().toIso8601String());
+
+          if (variant.expirationDate != null && variant.expirationDate!.isBefore(DateTime.now())) {
+            final proceed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                    Gap(10),
+                    Expanded(
+                      child: Text(
+                        'Alerta de Caducidad Próxima',
+                        style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ),
+                  ],
+                ),
+                content: const Text(
+                  'El sistema indica que hay existencias de este producto que ya alcanzaron su fecha límite.\n\nPor favor, revisa físicamente la caducidad del artículo que tienes en las manos antes de cobrarlo para evitar entregar un producto vencido.\n\n¿Deseas agregarlo a la venta?',
+                  style: TextStyle(fontSize: 14),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Cancelar', style: TextStyle(color: AppColors.kNeutral600)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('Sí, vender', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+
+            if (proceed != true) return;
+          }
+
           final double price = variant.salePrice;
           final String displayName = (variant.name != null && variant.name!.isNotEmpty) ? variant.name! : variant.sku;
 
@@ -50,7 +95,7 @@ class AddSaleScreen extends ConsumerWidget {
 
           ref.read(cartProvider.notifier).addItem(newItem);
           ref.read(posCatalogProvider(businessId).notifier).setSearchQuery('');
-          SnackbarUtil.showSuccess(context, '$displayName agregado');
+          if (context.mounted) SnackbarUtil.showSuccess(context, '$displayName agregado');
         } catch (e) {
           if (context.mounted) {
             SnackbarUtil.showWarning(context, 'No se encontró el producto: $cleanCode');

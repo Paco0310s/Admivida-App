@@ -28,6 +28,7 @@ import 'package:admivida/common/features/sign_in/sign_in_screen.dart';
 import 'package:admivida/common/features/sign_up/sign_up_screen.dart';
 import 'package:admivida/common/features/offline/offline_screen.dart';
 import 'package:admivida/common/features/splash/splash_screen.dart';
+import 'package:admivida/common/features/status/status_screen.dart';
 import 'routes.dart';
 
 class AppRoutes {
@@ -36,6 +37,8 @@ class AppRoutes {
       Routes.splash: (context) => const SplashScreen(),
       Routes.signIn: (context) => const SignInScreen(),
       Routes.offline: (context) => const OfflineScreen(),
+      Routes.maintenance: (context) => const MaintenanceScreen(),
+      Routes.updateRequired: (context) => const UpdateRequiredScreen(),
       Routes.signUp: (context) => const SignUpScreen(),
       Routes.forgotPassword: (context) => const ForgotPasswordScreen(),
       Routes.choosePlatformRole: (context) => const ChoosePlatformRoleScreen(),
@@ -66,8 +69,9 @@ class AppRoutes {
 
         return ProductFormScreen(businessId: businessId, product: product);
       },
-      Routes.addBusiness: (context) {
-        return AddBusinessScreen();
+      Routes.createOrUpdateBusinessScreen: (context) {
+        final business = ModalRoute.of(context)?.settings.arguments as BusinessModel?;
+        return CreateOrUpdateBusinessScreen(business: business);
       },
       Routes.addSale: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';

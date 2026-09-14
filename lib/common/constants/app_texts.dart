@@ -3,6 +3,8 @@ class AppTexts {
   static const String appName = 'Admivida';
   static const String loading = 'Cargando...';
   static const String offline = 'Desconectado';
+  static const String maintenance = 'Mantenimiento';
+  static const String updateRequired = 'Actualización requerida';
   static const String youAreOffline = 'Estás desconectado. Por favor, verifica tu conexión a internet.';
   static const String withoutConnection = 'Parece que no hay conexión a internet.\nIntenta conectarte de nuevo.';
   static const String welcome = 'Bienvenido a Admivida';
@@ -67,6 +69,7 @@ class AppTexts {
   static const String usernameHint = 'Elige un nombre de usuario';
   static const String usernameLabel = 'Nombre de usuario';
   static const String cart = 'Carrito';
+  static const String editBusinessButton = 'Editar Empresa';
 
   // Error Messages
   static const String connectionError = 'Error de conexión. Verifica tu conexión a internet.';

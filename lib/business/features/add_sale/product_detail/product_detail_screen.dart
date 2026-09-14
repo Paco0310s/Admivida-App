@@ -11,6 +11,7 @@ import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:intl/intl.dart';
 
 class ProductDetailSaleScreen extends ConsumerStatefulWidget {
   final ProductModel product;
@@ -26,7 +27,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
   int _quantity = 1;
   String? _selectedVariantId;
 
-  // Controladores editables
+  // Editable controllers
   late TextEditingController _nameSnapshotController;
   late TextEditingController _priceSnapshotController;
   final TextEditingController _commentController = TextEditingController();
@@ -52,12 +53,12 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     super.dispose();
   }
 
-  /// Variante seleccionada
+  /// Currently selected variant
   ProductVariantModel get _currentVariant {
     return widget.product.variants.firstWhere((v) => v.id == _selectedVariantId, orElse: () => widget.product.variants.first);
   }
 
-  /// Nombre por defecto para el snapshot
+  /// Default name for the snapshot
   String get _defaultNameSnapshot {
     final vName = _currentVariant.name;
     if (vName != null && vName.isNotEmpty && vName.toLowerCase() != 'general') {
@@ -66,13 +67,13 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     return widget.product.name;
   }
 
-  /// Indica si aplica regla de mayoreo automática
+  /// Indicates if the automatic wholesale rule applies
   bool get _appliesWholesaleRule {
     final v = _currentVariant;
     return v.wholesalePrice != null && v.wholesaleQuantity != null && _quantity >= v.wholesaleQuantity!;
   }
 
-  /// Precio original / lista sin descuentos aplicados
+  /// Original / list price without applied discounts
   double get _originalListPrice {
     final v = _currentVariant;
     if (_appliesWholesaleRule) {
@@ -81,12 +82,12 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     return v.salePrice;
   }
 
-  /// Precio calculado de manera estándar (Menudeo o Mayoreo)
+  /// Standard calculated price (Retail or Wholesale)
   double get _calculatedStandardUnitPrice {
     return _originalListPrice;
   }
 
-  /// Precio unitario final a cobrar
+  /// Final unit price to charge
   double get _finalUnitPrice {
     if (_isCustomPrice) {
       return double.tryParse(_priceSnapshotController.text.trim()) ?? _calculatedStandardUnitPrice;
@@ -94,7 +95,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     return _calculatedStandardUnitPrice;
   }
 
-  /// Determina automáticamente el tipo de precio para la venta
+  /// Automatically determines the price type for the sale
   String get _priceType {
     if (_isCustomPrice) {
       return 'CUSTOM';
@@ -105,7 +106,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     return 'RETAIL';
   }
 
-  /// Actualiza los campos al cambiar variante o cantidad
+  /// Updates fields when variant or quantity changes
   void _syncCalculatedFields({bool resetCustomPrice = false}) {
     if (resetCustomPrice || !_isCustomPrice) {
       _isCustomPrice = false;
@@ -142,21 +143,63 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     });
   }
 
-  void _addToCart() {
+  void _addToCart() async {
     final variant = _currentVariant;
+
+    if (variant.expirationDate != null && variant.expirationDate!.isBefore(DateTime.now())) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              Gap(10),
+              Expanded(
+                child: Text(
+                  'Alerta de Caducidad Próxima',
+                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'El sistema indica que hay existencias de este producto que ya alcanzaron su fecha límite.\n\nPor favor, revisa físicamente la caducidad del artículo que tienes en las manos antes de cobrarlo para evitar entregar un producto vencido.\n\n¿Deseas agregarlo a la venta?',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar', style: TextStyle(color: AppColors.kNeutral600)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Sí, vender', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true) return;
+    }
+
     final finalPrice = _finalUnitPrice;
     final originalPrice = _originalListPrice;
     final priceType = _priceType;
     final nameSnapshot = _nameSnapshotController.text.trim().isEmpty ? _defaultNameSnapshot : _nameSnapshotController.text.trim();
 
-    // 1. Obtenemos la imagen correcta para el carrito
+    // 1. Get image
     final variantImage = variant.images.isNotEmpty ? variant.images.firstWhere((img) => img.main, orElse: () => variant.images.first) : null;
     final productImage = widget.product.images.isNotEmpty
         ? widget.product.images.firstWhere((img) => img.main, orElse: () => widget.product.images.first)
         : null;
     final displayImage = variantImage ?? productImage;
 
-    // 2. Creamos el DTO (¡con los campos extra de UI!)
+    // 2. Create the dto
     final detail = CreateSaleDetailInnerDto(
       productVariantId: variant.id,
       productNameSnapshot: nameSnapshot,
@@ -169,15 +212,14 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
       imageUrl: displayImage?.url,
     );
 
-    debugPrint('🟢 URL DESDE CATÁLOGO: ${detail.imageUrl}');
-    // 3. Agregamos al carrito usando el provider generado
+    // 3. Add to cart
     ref.read(cartProvider.notifier).addItem(detail);
 
-    // 4. Mostramos confirmación
-    SnackbarUtil.showSuccess(context, 'Agregado al carrito: $nameSnapshot x$_quantity');
+    // 4. Show confirmation
+    if (mounted) SnackbarUtil.showSuccess(context, 'Agregado al carrito: $nameSnapshot x$_quantity');
 
-    // 5. Regresamos al catálogo
-    Navigator.of(context).pop();
+    // 5. Back
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -186,7 +228,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     final double finalPrice = _finalUnitPrice;
     final String currentPriceType = _priceType;
 
-    // Foto dinámica
+    // Dynamic photo
     final variantImage = variant.images.isNotEmpty ? variant.images.firstWhere((img) => img.main, orElse: () => variant.images.first) : null;
     final productImage = widget.product.images.isNotEmpty
         ? widget.product.images.firstWhere((img) => img.main, orElse: () => widget.product.images.first)
@@ -217,13 +259,13 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. TARJETA PRINCIPAL (IMAGEN Y EDICIÓN DE NOMBRE)
+              // 1. MAIN CARD (IMAGE AND NAME EDITING)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Imagen reactiva
+                    // Reactive image
                     Container(
                       height: 220,
                       width: double.infinity,
@@ -243,7 +285,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                     ),
                     const Gap(16),
 
-                    // Nombre editable de la partida (productNameSnapshot)
+                    // Editable item name (productNameSnapshot)
                     const AppText('Nombre en Ticket / Partida:', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.kNeutral600),
                     const Gap(6),
                     TextField(
@@ -268,7 +310,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
               ),
               const Gap(16),
 
-              // 2. SELECCIÓN DE VARIANTE (Si aplica)
+              // 2. VARIANT SELECTION (If applicable)
               if (widget.product.variants.isNotEmpty)
                 AppCard(
                   padding: const EdgeInsets.all(16),
@@ -315,7 +357,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                 ),
               const Gap(16),
 
-              // 3. TARJETA DE PRECIO UNITARIO Y EDICIÓN (PRECIO PERSONALIZADO / DESCUENTO)
+              // 3. UNIT PRICE CARD AND EDITING (CUSTOM PRICE / DISCOUNT)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -325,7 +367,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const AppText('Precio Unitario de Venta:', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                        // Badge con el PriceType actual
+                        // Badge with the current PriceType
                         _PriceTypeBadge(priceType: priceType),
                       ],
                     ),
@@ -348,7 +390,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                             onChanged: (val) {
                               setState(() {
                                 final parsed = double.tryParse(val.trim());
-                                // Si cambia respecto al estándar, se marca como CUSTOM
+                                // If it differs from the standard, mark it as CUSTOM
                                 if (parsed != null && parsed != _calculatedStandardUnitPrice) {
                                   _isCustomPrice = true;
                                 } else {
@@ -381,7 +423,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
               ),
               const Gap(16),
 
-              // 4. INFORMACIÓN DE INVENTARIO Y ATRIBUTOS
+              // 4. INVENTORY INFORMATION AND ATTRIBUTES
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -409,6 +451,17 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                       _InfoRow(icon: Icons.qr_code, label: 'Código de Barras', value: variant.barcode!),
                     ],
 
+                    // 💡 EXPIRATION DATE INFO
+                    if (variant.expirationDate != null) ...[
+                      const Divider(height: 24, color: AppColors.kNeutral200),
+                      _InfoRow(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Caducidad Próxima',
+                        value: DateFormat('dd/MM/yyyy').format(variant.expirationDate!),
+                        valueColor: variant.expirationDate!.isBefore(DateTime.now()) ? Colors.red : AppColors.kNeutral900,
+                      ),
+                    ],
+
                     if (variant.attributes?.isNotEmpty == true) ...[
                       const Divider(height: 24, color: AppColors.kNeutral200),
                       const AppText('Atributos de Variante', fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.kNeutral600),
@@ -425,7 +478,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
               ),
               const Gap(16),
 
-              // 5. CANTIDAD, NOTAS Y SUBTOTAL
+              // 5. QUANTITY, NOTES AND SUBTOTAL
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -498,7 +551,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
               ),
               const Gap(28),
 
-              // 6. BOTÓN DE AGREGAR AL CARRITO
+              // 6. ADD TO CART BUTTON
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

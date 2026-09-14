@@ -1,9 +1,12 @@
 import 'package:admivida/business/features/add_business/add_business_provider.dart';
 import 'package:admivida/business/features/add_business/models/create_business_dto.dart';
+import 'package:admivida/business/features/add_business/models/update_business_dto.dart';
+import 'package:admivida/business/models/business_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/models/files/picker_file.dart';
+import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/services/file_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
@@ -16,14 +19,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:image_picker/image_picker.dart';
 
-class AddBusinessScreen extends ConsumerStatefulWidget {
-  const AddBusinessScreen({super.key});
+class CreateOrUpdateBusinessScreen extends ConsumerStatefulWidget {
+  /// Si [business] es nulo, la pantalla funciona en modo "Crear".
+  /// Si se proporciona un negocio, funciona en modo "Editar".
+  final BusinessModel? business;
+
+  const CreateOrUpdateBusinessScreen({super.key, this.business});
 
   @override
-  ConsumerState<AddBusinessScreen> createState() => _AddBusinessScreenState();
+  ConsumerState<CreateOrUpdateBusinessScreen> createState() => _CreateOrUpdateBusinessScreenState();
 }
 
-class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
+class _CreateOrUpdateBusinessScreenState extends ConsumerState<CreateOrUpdateBusinessScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -35,7 +42,41 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
   String? _selectedCategoryId;
   bool _isActive = true;
 
-  final List<_MetadataField> _metadataFields = [_MetadataField()];
+  final List<_MetadataField> _metadataFields = [];
+
+  bool get isEditing => widget.business != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingData();
+  }
+
+  /// Llena los campos si estamos en modo edición
+  void _loadExistingData() {
+    if (!isEditing) {
+      _metadataFields.add(_MetadataField());
+      return;
+    }
+
+    final b = widget.business!;
+    _nameController.text = b.name;
+    _descriptionController.text = b.description ?? '';
+    _isActive = b.isActive;
+    _selectedCategoryId = b.businessCategoryId;
+    _fileId = b.image?.id;
+
+    if (b.metadata != null && b.metadata!.isNotEmpty) {
+      b.metadata!.forEach((key, value) {
+        _metadataFields.add(_MetadataField(key: key, value: value.toString()));
+      });
+    }
+
+    // Si no traía metadata, dejamos un campo vacío listo para usar
+    if (_metadataFields.isEmpty) {
+      _metadataFields.add(_MetadataField());
+    }
+  }
 
   @override
   void dispose() {
@@ -101,8 +142,8 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
 
     String? finalFileId = _fileId;
 
-    // 1. Automatically upload selected image if fileId is not yet generated
-    if (_pickedFile != null && finalFileId == null) {
+    // 1. Automatically upload selected image if a new one was picked
+    if (_pickedFile != null) {
       setState(() => _isUploadingImage = true);
 
       final uploadResult = await FileService.uploadImage(_pickedFile!.path);
@@ -124,18 +165,30 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
       if (finalFileId == null) return;
     }
 
-    // 2. Build immutable DTO payload
-    final dto = CreateBusinessDto(
-      name: _nameController.text.trim(),
-      description: _descriptionController.text.trim(),
-      businessCategoryId: _selectedCategoryId!,
-      fileId: finalFileId,
-      isActive: _isActive,
-      metadata: _buildMetadata(),
-    );
+    // 2. Dispatch the correct request based on mode
+    if (isEditing) {
+      final updateDto = UpdateBusinessDto(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        businessCategoryId: _selectedCategoryId,
+        fileId: finalFileId,
+        isActive: _isActive,
+        metadata: _buildMetadata(),
+      );
 
-    // 3. Dispatch POST creation request via Riverpod notifier
-    ref.read(createBusinessProvider.notifier).submit(dto);
+      ref.read(createOrUpdateBusinessProvider.notifier).submit(updateDto: updateDto, businessId: widget.business!.id);
+    } else {
+      final createDto = CreateBusinessDto(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        businessCategoryId: _selectedCategoryId!,
+        fileId: finalFileId,
+        isActive: _isActive,
+        metadata: _buildMetadata(),
+      );
+
+      ref.read(createOrUpdateBusinessProvider.notifier).submit(createDto: createDto);
+    }
   }
 
   Widget _buildMetadataEditor() {
@@ -174,26 +227,14 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
             ),
           );
         }),
-        // if (_metadataFields.isNotEmpty) ...[
-        //   const SizedBox(height: 6),
-        //   AppText(AppTexts.metadataPreview, fontWeight: FontWeight.bold),
-        //   const SizedBox(height: 8),
-        //   Container(
-        //     width: double.infinity,
-        //     padding: const EdgeInsets.all(12),
-        //     decoration: BoxDecoration(
-        //       color: AppColors.kNeutral100,
-        //       borderRadius: BorderRadius.circular(10),
-        //       border: Border.all(color: AppColors.kNeutral200),
-        //     ),
-        //     child: Text(const JsonEncoder.withIndent('  ').convert(_buildMetadata()), style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
-        //   ),
-        // ],
       ],
     );
   }
 
   Widget _buildFilePicker() {
+    // Variable para saber si tenemos una URL de imagen guardada en red
+    final hasExistingNetworkImage = isEditing && widget.business?.image?.url != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -207,10 +248,10 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
             ElevatedButton.icon(onPressed: () => _pickFile(ImageSource.camera), icon: const Icon(Icons.camera_alt), label: Text(AppTexts.openCamera)),
           ],
         ),
-        if (_pickedFile != null) ...[
-          const SizedBox(height: 15),
-          // Text('${AppTexts.selectedFile} ${_pickedFile!.name}', style: const TextStyle(fontWeight: FontWeight.w500)),
-          // const SizedBox(height: 10),
+        const SizedBox(height: 15),
+
+        // Muestra la imagen nueva que el usuario acaba de seleccionar
+        if (_pickedFile != null)
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
@@ -220,24 +261,39 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
                 child: PickerFile(xFile: _pickedFile!).getWidget(fit: BoxFit.cover),
               ),
             ),
+          )
+        // O muestra la imagen que ya estaba guardada en el negocio
+        else if (hasExistingNetworkImage)
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: AdaptedFile.network(widget.business!.image!.url).getWidget(fit: BoxFit.cover),
+              ),
+            ),
           ),
-        ],
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🚀 Listen for business creation asynchronous state changes
-    final createBusinessState = ref.watch(createBusinessProvider);
-    final isSubmitting = createBusinessState.isLoading || _isUploadingImage;
+    // 🚀 Listen for business creation/update asynchronous state changes
+    final formState = ref.watch(createOrUpdateBusinessProvider);
+    final isSubmitting = formState.isLoading || _isUploadingImage;
 
-    ref.listen(createBusinessProvider, (previous, next) {
+    // Títulos dinámicos según el modo
+    final screenTitle = isEditing ? 'Editar Negocio' : AppTexts.addBusinessButton;
+
+    ref.listen(createOrUpdateBusinessProvider, (previous, next) {
       next.whenOrNull(
-        data: (createdBusiness) {
-          if (createdBusiness != null) {
-            SnackbarUtil.showSuccess(context, '${createdBusiness.name} ${AppTexts.registeredSuccessfully}');
-            NavigationService.pop(context);
+        data: (businessResult) {
+          if (businessResult != null) {
+            final actionText = isEditing ? 'actualizado' : AppTexts.registeredSuccessfully;
+            SnackbarUtil.showSuccess(context, '${businessResult.name} $actionText');
+            NavigationService.pop(context, result: businessResult);
           }
         },
         error: (error, stackTrace) {
@@ -248,9 +304,9 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
     });
 
     return AppScaffold(
-      title: AppTexts.addBusinessButton,
+      title: screenTitle,
       appBar: AppBar(
-        title: AppText(AppTexts.addBusinessButton, color: AppColors.kNeutral100),
+        title: AppText(screenTitle, color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
       ),
@@ -261,6 +317,9 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
   }
 
   Widget _buildHeaderCard() {
+    final titleText = isEditing ? 'Actualizar Información' : AppTexts.saleAddIntro;
+    final subtitleText = isEditing ? 'Modifica los datos de tu empresa.' : 'Agrega los datos correspondientes para crear una nueva empresa.';
+
     return AppCard(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16),
@@ -269,9 +328,9 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppText(AppTexts.saleAddIntro, fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
+            AppText(titleText, fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
             const Gap(8),
-            AppText('Agrega los datos correspondientes para crear una nueva empresa.', color: AppColors.kNeutral600),
+            AppText(subtitleText, color: AppColors.kNeutral600),
           ],
         ),
       ),
@@ -334,7 +393,7 @@ class _AddBusinessScreenState extends ConsumerState<AddBusinessScreen> {
                 ),
                 child: isSubmitting
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(AppTexts.saveBusiness),
+                    : Text(isEditing ? 'Actualizar Negocio' : AppTexts.saveBusiness),
               ),
             ),
           ],
@@ -375,11 +434,7 @@ class BusinessCategoryDropdown extends ConsumerWidget {
           decoration: InputDecoration(
             label: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText(AppTexts.businessCategoryLabel, color: AppColors.kPrimary500),
-                // const SizedBox(width: 2),
-                // AppText('*', color: Colors.red),
-              ],
+              children: [AppText(AppTexts.businessCategoryLabel, color: AppColors.kPrimary500)],
             ),
             border: const OutlineInputBorder(),
           ),

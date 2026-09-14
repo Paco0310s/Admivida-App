@@ -11,6 +11,7 @@ class ScannedVariantModel {
   final double stockQuantity;
   final double? minimumStock;
   final double? maximumStock;
+  final DateTime? expirationDate;
   final dynamic attributes;
   final List<String> images;
   final DateTime? createdAt;
@@ -29,6 +30,7 @@ class ScannedVariantModel {
     required this.stockQuantity,
     this.minimumStock,
     this.maximumStock,
+    this.expirationDate,
     this.attributes,
     required this.images,
     this.createdAt,
@@ -43,7 +45,6 @@ class ScannedVariantModel {
       sku: json['sku'] as String,
       barcode: json['barcode'] as String?,
       name: json['name'] as String?,
-      // Safely parsing numeric values to double
       purchasePrice: (json['purchasePrice'] as num?)?.toDouble() ?? 0.0,
       salePrice: (json['salePrice'] as num?)?.toDouble() ?? 0.0,
       wholesalePrice: (json['wholesalePrice'] as num?)?.toDouble(),
@@ -51,6 +52,7 @@ class ScannedVariantModel {
       stockQuantity: (json['stockQuantity'] as num?)?.toDouble() ?? 0.0,
       minimumStock: (json['minimumStock'] as num?)?.toDouble(),
       maximumStock: (json['maximumStock'] as num?)?.toDouble(),
+      expirationDate: json['expirationDate'] != null ? DateTime.tryParse(json['expirationDate'] as String) : null,
       attributes: json['attributes'],
       images:
           (json['images'] as List<dynamic>?)

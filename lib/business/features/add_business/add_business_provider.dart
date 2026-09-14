@@ -1,6 +1,7 @@
 import 'package:admivida/business/features/add_business/add_business_service.dart';
 import 'package:admivida/business/features/add_business/models/business_category_model.dart';
 import 'package:admivida/business/features/add_business/models/create_business_dto.dart';
+import 'package:admivida/business/features/add_business/models/update_business_dto.dart';
 import 'package:admivida/business/features/businesses/businesses_provider.dart';
 import 'package:admivida/business/models/business_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -8,34 +9,26 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'add_business_provider.g.dart';
 
 @riverpod
-class CreateBusiness extends _$CreateBusiness {
-  /// Initial state setup. Defaults to null as no business creation
-  /// request has been executed yet on build time.
+class CreateOrUpdateBusiness extends _$CreateOrUpdateBusiness {
   @override
   FutureOr<BusinessModel?> build() {
     return null;
   }
 
-  /// Handles the HTTP POST request to register a new business entity in NestJS.
-  Future<void> submit(CreateBusinessDto dto) async {
-    // 1. Set the state to loading to inform the UI layer (e.g., disable submit buttons)
+  /// Handles both POST (create) and PATCH (update) requests.
+  Future<void> submit({CreateBusinessDto? createDto, UpdateBusinessDto? updateDto, String? businessId}) async {
     state = const AsyncValue.loading();
 
-    // 2. Perform the API call via the static business service
-    final result = await AddBusinessService.createBusiness(dto);
+    final isUpdate = businessId != null && updateDto != null;
 
-    // 3. Process the domain result using EitherUtil pattern
+    final result = isUpdate ? await AddBusinessService.updateBusiness(businessId, updateDto) : await AddBusinessService.createBusiness(createDto!);
+
     result.when(
       (failure) {
-        // Assign the failure error state to be captured by ref.listen in the presentation layer
         state = AsyncValue.error(failure, StackTrace.current);
       },
-      (newBusiness) {
-        // Successfully update state with the freshly created business entity
-        state = AsyncValue.data(newBusiness);
-
-        // Invalidate the global businesses list provider to trigger an automatic
-        // background re-fetch, keeping the dashboard hub state fully synchronized.
+      (business) {
+        state = AsyncValue.data(business);
         ref.invalidate(businessesListProvider);
       },
     );

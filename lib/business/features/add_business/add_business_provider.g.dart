@@ -9,33 +9,34 @@ part of 'add_business_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(CreateBusiness)
-final createBusinessProvider = CreateBusinessProvider._();
+@ProviderFor(CreateOrUpdateBusiness)
+final createOrUpdateBusinessProvider = CreateOrUpdateBusinessProvider._();
 
-final class CreateBusinessProvider
-    extends $AsyncNotifierProvider<CreateBusiness, BusinessModel?> {
-  CreateBusinessProvider._()
+final class CreateOrUpdateBusinessProvider
+    extends $AsyncNotifierProvider<CreateOrUpdateBusiness, BusinessModel?> {
+  CreateOrUpdateBusinessProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'createBusinessProvider',
+        name: r'createOrUpdateBusinessProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$createBusinessHash();
+  String debugGetCreateSourceHash() => _$createOrUpdateBusinessHash();
 
   @$internal
   @override
-  CreateBusiness create() => CreateBusiness();
+  CreateOrUpdateBusiness create() => CreateOrUpdateBusiness();
 }
 
-String _$createBusinessHash() => r'74e31d4779a4448c5416615313f05c141eb79b61';
+String _$createOrUpdateBusinessHash() =>
+    r'af1602182ea20d2caeedac25872c933483672382';
 
-abstract class _$CreateBusiness extends $AsyncNotifier<BusinessModel?> {
+abstract class _$CreateOrUpdateBusiness extends $AsyncNotifier<BusinessModel?> {
   FutureOr<BusinessModel?> build();
   @$mustCallSuper
   @override

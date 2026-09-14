@@ -289,7 +289,6 @@ class _VariantCard extends ConsumerWidget {
                                           currentStock: variant.stockQuantity!,
                                           adjustment: -1.0,
                                         );
-                                    // 💡 Refresh the detail view SSOT automatically
                                     ref.invalidate(productDetailProvider(businessId: businessId, productId: productId));
                                   }
                                 : null,
@@ -338,6 +337,13 @@ class _VariantCard extends ConsumerWidget {
               // ----------------------------------------------------
               _VariantValue(label: AppTexts.productMinimumStockLabel, value: formatQuantity(variant.minimumStock)),
               _VariantValue(label: AppTexts.productMaximumStockLabel, value: formatQuantity(variant.maximumStock)),
+
+              if (variant.expirationDate != null)
+                _VariantValue(
+                  label: 'Caducidad Próxima',
+                  value: DateFormat('dd/MM/yyyy').format(variant.expirationDate!),
+                  valueColor: variant.expirationDate!.isBefore(DateTime.now()) ? Colors.red : AppColors.kNeutral900,
+                ),
             ],
           ),
 

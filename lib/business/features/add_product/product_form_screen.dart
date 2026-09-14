@@ -72,7 +72,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
       for (final v in p.variants) {
         final variantField = _VariantField(
-          id: v.id, // Crucial for PUT request
+          id: v.id,
           sku: v.sku ?? '',
           barcode: v.barcode ?? '',
           variantName: v.name ?? '',
@@ -83,7 +83,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           stockQuantity: v.stockQuantity?.toString() ?? '',
           minimumStock: v.minimumStock?.toString() ?? '',
           maximumStock: v.maximumStock?.toString() ?? '',
-          existingImages: v.images, // Pass existing images from server
+          expirationDateVal: v.expirationDate,
+          existingImages: v.images,
         );
 
         // Preload attributes if any
@@ -283,6 +284,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           stockQuantity: double.tryParse(field.stockQuantityController.text.trim()),
           minimumStock: double.tryParse(field.minimumStockController.text.trim()) ?? 0.0,
           maximumStock: double.tryParse(field.maximumStockController.text.trim()),
+          expirationDate: field.expirationDateController.text.trim().isEmpty ? null : field.expirationDateController.text.trim(),
           attributes: attributes.isEmpty ? null : attributes,
           images: variantImageDtos.isEmpty ? null : variantImageDtos,
         ),
@@ -637,11 +639,54 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                AppTextField(
-                  text: AppTexts.productMaximumStockLabel,
-                  hintText: '50',
-                  controller: field.maximumStockController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                // Reemplaza el AppTextField de maximumStock con este Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        text: AppTexts.productMaximumStockLabel,
+                        hintText: '50',
+                        controller: field.maximumStockController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppTextField(
+                        text: 'Caducidad Próxima',
+                        hintText: 'YYYY-MM-DD',
+                        controller: field.expirationDateController,
+                        readOnly: true,
+                        // 👇 NUEVO: Ícono dinámico para limpiar la fecha
+                        suffixIcon: field.expirationDate != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20, color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    field.expirationDate = null;
+                                    field.expirationDateController.clear();
+                                  });
+                                },
+                              )
+                            : const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.kNeutral500),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: field.expirationDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2050),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              field.expirationDate = picked;
+                              field.expirationDateController.text =
+                                  "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 _buildVariantImagePicker(field),
@@ -863,7 +908,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 }
 
 class _VariantField {
-  final String? id; // Added to identify if we are editing an existing variant
+  final String? id;
   final TextEditingController skuController;
   final TextEditingController barcodeController;
   final TextEditingController variantNameController;
@@ -874,9 +919,12 @@ class _VariantField {
   final TextEditingController stockQuantityController;
   final TextEditingController minimumStockController;
   final TextEditingController maximumStockController;
+  final TextEditingController expirationDateController;
+  DateTime? expirationDate;
+
   final List<_AttributeField> attributeFields;
   final List<XFile> pickedImages;
-  final List<dynamic> existingImages; // Holds images loaded from the server
+  final List<dynamic> existingImages;
 
   _VariantField({
     this.id,
@@ -890,7 +938,8 @@ class _VariantField {
     String stockQuantity = '',
     String minimumStock = '',
     String maximumStock = '',
-    List<dynamic>? existingImages, // Receive existing images in constructor
+    DateTime? expirationDateVal,
+    List<dynamic>? existingImages,
   }) : skuController = TextEditingController(text: sku),
        barcodeController = TextEditingController(text: barcode),
        variantNameController = TextEditingController(text: variantName),
@@ -901,9 +950,15 @@ class _VariantField {
        stockQuantityController = TextEditingController(text: stockQuantity),
        minimumStockController = TextEditingController(text: minimumStock),
        maximumStockController = TextEditingController(text: maximumStock),
+       expirationDateController = TextEditingController(
+         text: expirationDateVal != null
+             ? "${expirationDateVal.year}-${expirationDateVal.month.toString().padLeft(2, '0')}-${expirationDateVal.day.toString().padLeft(2, '0')}"
+             : '',
+       ),
+       expirationDate = expirationDateVal,
        attributeFields = [_AttributeField()],
        pickedImages = [],
-       existingImages = existingImages ?? []; // Initialize it
+       existingImages = existingImages ?? [];
 
   void dispose() {
     skuController.dispose();
@@ -916,6 +971,7 @@ class _VariantField {
     stockQuantityController.dispose();
     minimumStockController.dispose();
     maximumStockController.dispose();
+    expirationDateController.dispose();
     for (final attributesField in attributeFields) {
       attributesField.dispose();
     }

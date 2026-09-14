@@ -38,6 +38,7 @@ class AppConfig {
   static String createCommissionPaymentEndpoint(String businessId) => '/commission-payments/$businessId';
   static String getCommissionPaymentHistoryBusinessEndpoint(String businessId) => '/commission-payments/history/$businessId';
   static String getCommissionPaymentMyHistoryEndpoint(String businessId) => '/commission-payments/my-history/$businessId';
+  static String updateBusinessEndpoint(String businessId) => '/businesses/$businessId';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
