@@ -68,17 +68,26 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         'role': ['SELLER', 'ADMIN'],
       },
       {
-        'title': 'Movimientos',
-        'subtitle': 'Consulta todos los movimientos de dinero ordenados del más reciente al más antiguo.',
-        'icon': Icons.account_balance_wallet_rounded,
+        'title': 'Historial de pagos',
+        'subtitle': 'Consulta el historial de pagos recibidos y pendientes.',
+        'icon': Icons.savings_rounded,
         'color': AppColors.kPrimaryColor,
         'isEnabled': true,
-        'route': Routes.transactions,
+        'route': Routes.paymentsHistory,
+        'role': ['SELLER', 'ADMIN'],
+      },
+      {
+        'title': 'Pago a Empleados',
+        'subtitle': 'Paga a tus empleados un monto libre',
+        'icon': Icons.payment,
+        'color': AppColors.kPrimaryColor,
+        'isEnabled': true,
+        'route': Routes.employeePayments,
         'role': ['ADMIN'],
       },
       {
         'title': 'Pago de Comisiones',
-        'subtitle': 'Paga las comisiones pendientes a tus vendedores y administra los saldos.',
+        'subtitle': 'Paga las comisiones pendientes a tus vendedores.',
         'icon': Icons.payments_rounded,
         'color': AppColors.kPrimaryColor,
         'isEnabled': true,
@@ -86,13 +95,13 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         'role': ['ADMIN'],
       },
       {
-        'title': 'Mis Ganancias',
-        'subtitle': 'Consulta tu historial de comisiones pendientes y pagos recibidos.',
-        'icon': Icons.savings_rounded,
+        'title': 'Movimientos',
+        'subtitle': 'Consulta todos los movimientos de dinero ordenados del más reciente al más antiguo.',
+        'icon': Icons.account_balance_wallet_rounded,
         'color': AppColors.kPrimaryColor,
         'isEnabled': true,
-        'route': Routes.myEarnings,
-        'role': ['SELLER', 'ADMIN'],
+        'route': Routes.transactions,
+        'role': ['ADMIN'],
       },
     ];
 
@@ -212,10 +221,13 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     padding: const EdgeInsets.all(16),
                     onTap: () {
                       if (isEnabled) {
-                        // 💡 Seguimos usando "business.id" local
-                        if (title == AppTexts.businessProducts || title == AppTexts.businessSales || title == 'Movimientos' || title == 'Pago de Comisiones') {
+                        if (route == Routes.products ||
+                            route == Routes.sales ||
+                            route == Routes.transactions ||
+                            route == Routes.commissionPayments ||
+                            route == Routes.employeePayments) {
                           NavigationService.navigateTo(context, route, arguments: business.id);
-                        } else if (title == 'Mis Ganancias') {
+                        } else if (route == Routes.paymentsHistory) {
                           NavigationService.navigateTo(context, route, arguments: {'businessId': business.id, 'isAdmin': roles.contains('ADMIN')});
                         } else {
                           NavigationService.navigateTo(context, route);

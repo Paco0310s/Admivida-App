@@ -1,16 +1,16 @@
 import 'package:admivida/business/features/commission_payment_history/commission_payment_history_service.dart';
 import 'package:admivida/business/features/commission_payment_history/models/commission_payment_history_response_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-// Asegúrate de importar tus modelos y servicios reales:
-// import '../models/commission_payment_history_response_model.dart';
-// import '../services/commission_payments_history_service.dart';
 
 part 'commission_payment_history_provider.g.dart';
 
 @riverpod
 class CommissionPaymentsController extends _$CommissionPaymentsController {
   @override
-  FutureOr<CommissionPaymentHistoryResponseModel> build({required String businessId, required bool isAdmin}) async {
+  FutureOr<CommissionPaymentHistoryResponseModel> build({
+    required String businessId,
+    required bool isAdmin, // Uses the boolean flag to determine the endpoint path
+  }) async {
     // Automatically fetches the history when the provider is initialized
     return _fetchHistory(businessId: businessId, isAdmin: isAdmin);
   }

@@ -8,6 +8,7 @@ import 'package:admivida/business/features/business_detail/business_detail_scree
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
 import 'package:admivida/business/features/commission_payment_history/commission_payment_history_screen.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
+import 'package:admivida/business/features/create_employee_payments/create_employee_payment_screen.dart';
 import 'package:admivida/business/features/products/products_screen.dart';
 import 'package:admivida/business/features/products/product_detail_screen.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
@@ -131,6 +132,10 @@ class AppRoutes {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return CommissionPaymentScreen(businessId: businessId);
       },
+      Routes.employeePayments: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return CreateEmployeePaymentScreen(businessId: businessId);
+      },
       Routes.cart: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return AppScaffold(
@@ -146,7 +151,7 @@ class AppRoutes {
           marginDesktop: 5,
         );
       },
-      Routes.myEarnings: (context) {
+      Routes.paymentsHistory: (context) {
         final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
         final businessId = arguments?['businessId'] as String? ?? '';
         final isAdmin = arguments?['isAdmin'] as bool? ?? false;

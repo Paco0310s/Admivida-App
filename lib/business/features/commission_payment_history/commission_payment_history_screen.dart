@@ -1,4 +1,4 @@
-import 'package:admivida/business/features/commission_payment_history/models/commission_payment_history_provider.dart';
+import 'package:admivida/business/features/commission_payment_history/commission_payment_history_provider.dart';
 import 'package:admivida/business/features/commission_payment_history/models/commission_payment_history_response_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -17,7 +17,7 @@ class CommissionPaymentHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = isAdmin ? 'Historial de Comisiones' : 'Mis Comisiones';
+    final title = isAdmin ? 'Historial de Pagos' : 'Mis Pagos';
 
     return AppScaffold(
       title: title,
@@ -66,6 +66,7 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header summary section
             historyAsync.when(
               loading: () => const AppCard(
                 padding: EdgeInsets.all(24),
@@ -80,6 +81,8 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
             const Gap(16),
             AppText('Desglose de Pagos', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
             const Gap(12),
+
+            // Payments list section
             Expanded(
               child: historyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -116,7 +119,7 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
-            widget.isAdmin ? 'Balance General de Comisiones' : 'Mi Balance de Comisiones',
+            widget.isAdmin ? 'Balance General de Pagos' : 'Mi Balance de Pagos',
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: AppColors.kPrimaryColor,
@@ -134,15 +137,13 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
                   ],
                 ),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText('Pendiente', color: AppColors.kNeutral600, fontSize: 12),
-                    const Gap(4),
-                    AppText('\$${summary.totalPendingAmount.toStringAsFixed(2)}', fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.kWarning),
-                  ],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText('Pendiente', color: AppColors.kNeutral600, fontSize: 12),
+                  const Gap(4),
+                  AppText('\$${summary.totalPendingAmount.toStringAsFixed(2)}', fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.kWarning),
+                ],
               ),
             ],
           ),
@@ -165,28 +166,64 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
 
   Widget _buildPaymentCard(CommissionPaymentItemModel payment) {
     final formattedDate = '${payment.createdAt.day}/${payment.createdAt.month}/${payment.createdAt.year}';
-    final isIncome = !widget.isAdmin; // Para el vendedor es un ingreso, para el dueño egreso visual.
+
+    // For the seller/employee it's visually an income, for the admin/owner it's an expense.
+    final isIncome = !widget.isAdmin;
+    final isCommission = payment.type == 'COMMISSION';
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.zero, // El ExpansionTile maneja su propio padding
+      padding: EdgeInsets.zero,
       child: Theme(
-        // Quitamos las líneas de los bordes del ExpansionTile por defecto
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          // If it's a free payment, disable expansion since there are no sale details
+          enabled: isCommission,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Un poco más de padding vertical
           leading: Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(color: AppColors.kSuccess.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.attach_money_rounded, color: AppColors.kSuccess),
+            decoration: BoxDecoration(
+              color: (isCommission ? AppColors.kSuccess : AppColors.kPrimaryColor).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(isCommission ? Icons.receipt_long_rounded : Icons.payments_rounded, color: isCommission ? AppColors.kSuccess : AppColors.kPrimaryColor),
           ),
-          title: AppText(widget.isAdmin ? payment.sellerName : 'Pago Recibido', fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+          title: Row(
+            children: [
+              Expanded(
+                child: AppText(widget.isAdmin ? payment.employeeName : 'Pago Recibido', fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: (isCommission ? Colors.green : Colors.blue).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: Text(
+                  isCommission ? 'Comisión' : 'Pago Libre',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isCommission ? Colors.green.shade700 : Colors.blue.shade700),
+                ),
+              ),
+            ],
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Gap(4),
               AppText('Fecha: $formattedDate', color: AppColors.kNeutral500, fontSize: 12),
+
+              // NEW: Muestra la nota directamente en el subtítulo si es Pago Libre
+              if (!isCommission && payment.notes != null && payment.notes!.isNotEmpty) ...[
+                const Gap(4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.short_text, size: 14, color: Colors.grey),
+                    const Gap(4),
+                    Expanded(
+                      child: AppText(payment.notes!, color: AppColors.kNeutral600, fontSize: 12, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
           trailing: Column(
@@ -200,39 +237,43 @@ class _CommissionHistoryListViewState extends ConsumerState<CommissionHistoryLis
                 fontSize: 14,
               ),
               const Gap(2),
-              AppText('Detalles', color: AppColors.kPrimaryColor, fontSize: 11),
+              // Ocultamos la palabra "Nómina" si es pago libre, porque la nota ya nos da contexto
+              if (isCommission) AppText('Detalles', color: AppColors.kPrimaryColor, fontSize: 11),
             ],
           ),
           children: [
-            Container(color: AppColors.kNeutral200, height: 1), // Custom Divider
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (payment.notes != null && payment.notes!.isNotEmpty) ...[
-                    AppText('Nota: ${payment.notes}', color: AppColors.kNeutral700, fontSize: 13, fontStyle: FontStyle.italic),
-                    const Gap(12),
-                  ],
-                  AppText('Productos pagados:', fontWeight: FontWeight.bold, color: AppColors.kNeutral800, fontSize: 13),
-                  const Gap(8),
-                  ...payment.details.map(
-                    (detail) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText('${detail.quantity.toInt()}x', color: AppColors.kNeutral500, fontSize: 12, fontWeight: FontWeight.bold),
-                          const Gap(8),
-                          Expanded(child: AppText(detail.productName, color: AppColors.kNeutral800, fontSize: 13)),
-                          AppText('\$${detail.commission.toStringAsFixed(2)}', color: AppColors.kSuccess, fontSize: 13, fontWeight: FontWeight.bold),
-                        ],
+            // Details section only shown if it's a COMMISSION
+            if (isCommission) ...[
+              Container(color: AppColors.kNeutral200, height: 1),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (payment.notes != null && payment.notes!.isNotEmpty) ...[
+                      AppText('Nota: ${payment.notes}', color: AppColors.kNeutral700, fontSize: 13, fontStyle: FontStyle.italic),
+                      const Gap(12),
+                    ],
+                    AppText('Productos pagados:', fontWeight: FontWeight.bold, color: AppColors.kNeutral800, fontSize: 13),
+                    const Gap(8),
+                    ...payment.details.map(
+                      (detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText('${detail.quantity.toInt()}x', color: AppColors.kNeutral500, fontSize: 12, fontWeight: FontWeight.bold),
+                            const Gap(8),
+                            Expanded(child: AppText(detail.productName, color: AppColors.kNeutral800, fontSize: 13)),
+                            AppText('\$${detail.commission.toStringAsFixed(2)}', color: AppColors.kSuccess, fontSize: 13, fontWeight: FontWeight.bold),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

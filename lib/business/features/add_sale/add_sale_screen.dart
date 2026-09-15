@@ -34,9 +34,6 @@ class AddSaleScreen extends ConsumerWidget {
 
           if (!context.mounted) return;
 
-          debugPrint(variant.expirationDate?.toIso8601String());
-          debugPrint(DateTime.now().toIso8601String());
-
           if (variant.expirationDate != null && variant.expirationDate!.isBefore(DateTime.now())) {
             final proceed = await showDialog<bool>(
               context: context,
