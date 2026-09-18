@@ -52,7 +52,7 @@ class ScannedVariantModel {
       stockQuantity: (json['stockQuantity'] as num?)?.toDouble() ?? 0.0,
       minimumStock: (json['minimumStock'] as num?)?.toDouble(),
       maximumStock: (json['maximumStock'] as num?)?.toDouble(),
-      expirationDate: json['expirationDate'] != null ? DateTime.tryParse(json['expirationDate'] as String) : null,
+      expirationDate: json['expirationDate'] != null ? DateTime.tryParse(json['expirationDate'] as String)?.toLocal() : null,
       attributes: json['attributes'],
       images:
           (json['images'] as List<dynamic>?)
@@ -65,8 +65,8 @@ class ScannedVariantModel {
               .whereType<String>()
               .toList() ??
           [],
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'] as String) : null,
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String)?.toLocal() : null,
+      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'] as String)?.toLocal() : null,
     );
   }
 }

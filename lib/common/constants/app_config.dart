@@ -40,6 +40,11 @@ class AppConfig {
   static String getCommissionPaymentHistoryBusinessEndpoint(String businessId) => '/commission-payments/history/$businessId';
   static String getCommissionPaymentMyHistoryEndpoint(String businessId) => '/commission-payments/my-history/$businessId';
   static String updateBusinessEndpoint(String businessId) => '/businesses/$businessId';
+  static String searchCollaboratorEndpoint(String businessId) => '/users/$businessId/search-collaborator';
+  static String addUserToBusinessEndpoint(String businessId) => '/user-businesses/$businessId/users';
+  static String updateUserInBusinessEndpoint(String businessId, String userId) => '/user-businesses/$businessId/users/$userId';
+  static String users = '/users';
+  static String businessesRoles = '/businesses-roles';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];

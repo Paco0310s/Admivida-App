@@ -16,6 +16,7 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final void Function(String)? onChanged;
+  final void Function(String)? onSubmitted;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
@@ -35,6 +36,7 @@ class AppTextField extends StatelessWidget {
     this.keyboardType,
     this.obscureText = false,
     this.onChanged,
+    this.onSubmitted,
     this.prefixIcon,
     this.suffixIcon,
     this.validator,
@@ -81,6 +83,7 @@ class AppTextField extends StatelessWidget {
             keyboardType: keyboardType,
             obscureText: obscureText,
             onChanged: onChanged,
+            onFieldSubmitted: onSubmitted, // <-- 3. Asignado al TextFormField
           ),
         ],
       );
@@ -120,6 +123,7 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       onChanged: onChanged,
+      onFieldSubmitted: onSubmitted,
     );
   }
 }

@@ -289,6 +289,8 @@ class DioService {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
       }
     } on DioException catch (error) {
+      AppLogger.error('STATUS CODE: ${error.response?.statusCode}');
+      AppLogger.error('ERROR DATA: ${error.response?.data}');
       return _handleError<T>(error);
     } catch (error) {
       AppLogger.error('Unexpected error in PATCH: $error');

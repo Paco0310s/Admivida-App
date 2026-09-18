@@ -37,7 +37,7 @@ class BusinessModel {
       categoryName: json['categoryName'] ?? '',
       metadata: json['metadata'] is Map<String, dynamic> ? Map<String, dynamic>.from(json['metadata']) : null,
       image: json['image'] != null ? BusinessImageModel.fromJson(json['image'] as Map<String, dynamic>) : null,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']).toLocal() : DateTime.now(),
     );
   }
 

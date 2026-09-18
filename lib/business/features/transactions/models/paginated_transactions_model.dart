@@ -56,7 +56,7 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       type: _transactionTypeFromString(json['type'] as String),
       description: json['description'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     );
   }
 }

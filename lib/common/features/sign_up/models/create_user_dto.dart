@@ -6,7 +6,7 @@ class CreateUserDto {
   final String email;
   final String phone;
   final String password;
-  final DateTime birthdate;
+  final DateTime? birthdate;
   final Map<String, dynamic> metadata;
 
   CreateUserDto({
@@ -15,7 +15,7 @@ class CreateUserDto {
     required this.email,
     required this.phone,
     required this.password,
-    required this.birthdate,
+    this.birthdate, // Quitamos el 'required' para que sea opcional
     required this.metadata,
   });
 
@@ -29,7 +29,8 @@ class CreateUserDto {
     email: json["email"],
     phone: json["phone"],
     password: json["password"],
-    birthdate: DateTime.parse(json["birthdate"]),
+    // Validación: Si viene nulo, asignamos null directamente
+    birthdate: json["birthdate"] != null ? DateTime.parse(json["birthdate"]).toLocal() : null,
     metadata: json["metadata"] ?? {},
   );
 
@@ -39,7 +40,9 @@ class CreateUserDto {
     "email": email,
     "phone": phone,
     "password": password,
-    "birthdate": "${birthdate.year.toString().padLeft(4, '0')}-${birthdate.month.toString().padLeft(2, '0')}-${birthdate.day.toString().padLeft(2, '0')}",
+    "birthdate": birthdate != null
+        ? "${birthdate!.year.toString().padLeft(4, '0')}-${birthdate!.month.toString().padLeft(2, '0')}-${birthdate!.day.toString().padLeft(2, '0')}"
+        : null,
     "metadata": metadata,
   };
 }

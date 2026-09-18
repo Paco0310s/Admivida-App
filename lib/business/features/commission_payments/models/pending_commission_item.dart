@@ -22,7 +22,7 @@ class PendingCommissionItem {
       productName: json['productName'] as String,
       quantity: (json['quantity'] as num).toDouble(),
       commission: (json['commission'] as num).toDouble(),
-      soldAt: DateTime.parse(json['soldAt'] as String),
+      soldAt: DateTime.parse(json['soldAt'] as String).toLocal(),
     );
   }
 

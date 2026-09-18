@@ -22,7 +22,7 @@ class CommissionPaymentDetailModel {
       productName: json['productName'] as String,
       quantity: (json['quantity'] as num).toDouble(),
       commission: (json['commission'] as num).toDouble(),
-      soldAt: DateTime.parse(json['soldAt'] as String),
+      soldAt: DateTime.parse(json['soldAt'] as String).toLocal(),
     );
   }
 }
@@ -64,8 +64,8 @@ class CommissionPaymentResponseModel {
       expenseTransactionId: json['expenseTransactionId'] as String?,
       incomeTransactionId: json['incomeTransactionId'] as String?,
       notes: json['notes'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updatedAt'] as String).toLocal(),
       details: (json['details'] as List<dynamic>).map((item) => CommissionPaymentDetailModel.fromJson(item as Map<String, dynamic>)).toList(),
     );
   }

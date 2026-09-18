@@ -60,8 +60,8 @@ class SaleDetailModel {
       isPaid: json['isPaid'] as bool? ?? false,
       sellerComissionSnapshot: (json['sellerComissionSnapshot'] as num? ?? 0).toDouble(),
       isComissionPaid: json['isComissionPaid'] as bool? ?? false,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       // Si el JSON trae subtotal lo usa, si no, lo calcula automáticamente
       subtotal: json['subtotal'] != null ? (json['subtotal'] as num).toDouble() : (qty * price),
       imageUrl: json['imageUrl'] as String?,
@@ -148,8 +148,8 @@ class SaleModel {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       details: (json['details'] as List<dynamic>?)?.map((item) => SaleDetailModel.fromJson(item as Map<String, dynamic>)).toList() ?? [],
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
     );
   }
 

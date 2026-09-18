@@ -16,6 +16,7 @@ import 'package:admivida/business/features/sales/models/sale_model.dart';
 import 'package:admivida/business/features/sales/sale_detail_screen.dart';
 import 'package:admivida/business/features/sales/sales_screen.dart';
 import 'package:admivida/business/features/transactions/transactions_screen.dart';
+import 'package:admivida/business/features/user_businesses/user_business_screen.dart';
 import 'package:admivida/business/models/business_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -135,6 +136,10 @@ class AppRoutes {
       Routes.employeePayments: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return CreateEmployeePaymentScreen(businessId: businessId);
+      },
+      Routes.userBusinesses: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return UserBusinessScreen(businessId: businessId);
       },
       Routes.cart: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';

@@ -60,7 +60,7 @@ class UserModel {
   final DateTime? birthdate;
   final Map<String, dynamic> metadata;
   final DateTime createdAt;
-  final bool isRegistered; // 👈 Campo agregado del JSON
+  final bool isRegistered;
 
   UserModel({
     required this.id,
@@ -90,9 +90,9 @@ class UserModel {
     code: json["code"] ?? '',
     isActive: json["isActive"] ?? false,
     isVerified: json["isVerified"] ?? false,
-    birthdate: json["birthdate"] != null ? DateTime.tryParse(json["birthdate"].toString()) : null,
+    birthdate: json["birthdate"] != null ? DateTime.tryParse(json["birthdate"].toString())?.toLocal() : null,
     metadata: json["metadata"] is Map<String, dynamic> ? Map<String, dynamic>.from(json["metadata"]) : {},
-    createdAt: json["createdAt"] != null ? DateTime.parse(json["createdAt"]) : DateTime.now(),
+    createdAt: json["createdAt"] != null ? DateTime.parse(json["createdAt"]).toLocal() : DateTime.now(),
     isRegistered: json["isRegistered"] ?? false,
   );
 

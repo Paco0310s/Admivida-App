@@ -94,11 +94,11 @@ class ProductVariantModel {
       stockQuantity: _toDoubleOrNull(json['stockQuantity']),
       minimumStock: _toDoubleOrNull(json['minimumStock']),
       maximumStock: _toDoubleOrNull(json['maximumStock']),
-      expirationDate: json['expirationDate'] != null ? DateTime.parse(json['expirationDate']) : null, // <-- NUEVO CAMPO
+      expirationDate: json['expirationDate'] != null ? DateTime.parse(json['expirationDate']).toLocal() : null, // <-- NUEVO CAMPO
       attributes: json['attributes'] is Map<String, dynamic> ? Map<String, dynamic>.from(json['attributes']) : null,
       images: (json['images'] as List<dynamic>?)?.map((i) => ProductImageModel.fromJson(i as Map<String, dynamic>)).toList() ?? [],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']).toLocal() : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']).toLocal() : DateTime.now(),
     );
   }
 
@@ -282,8 +282,8 @@ class ProductModel {
       isActive: json['isActive'] as bool? ?? true,
       variants: (json['variants'] as List<dynamic>?)?.map((v) => ProductVariantModel.fromJson(v as Map<String, dynamic>)).toList() ?? [],
       images: (json['images'] as List<dynamic>?)?.map((i) => ProductImageModel.fromJson(i as Map<String, dynamic>)).toList() ?? [],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']).toLocal() : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']).toLocal() : DateTime.now(),
     );
   }
 

@@ -28,7 +28,7 @@ class EmployeePaymentResponseModel {
       notes: json['notes'] as String?,
       expenseTransactionId: json['expenseTransactionId'] as String?,
       incomeTransactionId: json['incomeTransactionId'] as String?,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String)?.toLocal() : null,
     );
   }
 }

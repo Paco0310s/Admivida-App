@@ -39,7 +39,7 @@ class TransactionModel {
       type: json['type'] as String,
       description: json['description'] as String?,
       // Parseamos el string de fecha que manda NestJS a un objeto DateTime de Dart
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     );
   }
 

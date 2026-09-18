@@ -103,6 +103,15 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         'route': Routes.transactions,
         'role': ['ADMIN'],
       },
+      {
+        'title': 'Colaboradores',
+        'subtitle': 'Busca usuarios, asigna roles y configura sus comisiones.',
+        'icon': Icons.manage_accounts_rounded,
+        'color': AppColors.kPrimaryColor,
+        'isEnabled': true,
+        'route': Routes.userBusinesses,
+        'role': ['ADMIN'],
+      },
     ];
 
     return SingleChildScrollView(
@@ -225,7 +234,8 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                             route == Routes.sales ||
                             route == Routes.transactions ||
                             route == Routes.commissionPayments ||
-                            route == Routes.employeePayments) {
+                            route == Routes.employeePayments ||
+                            route == Routes.userBusinesses) {
                           NavigationService.navigateTo(context, route, arguments: business.id);
                         } else if (route == Routes.paymentsHistory) {
                           NavigationService.navigateTo(context, route, arguments: {'businessId': business.id, 'isAdmin': roles.contains('ADMIN')});
