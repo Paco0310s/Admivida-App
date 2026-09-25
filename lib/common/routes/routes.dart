@@ -12,6 +12,7 @@ class Routes {
   static final String home = '/home';
   static final String businesses = '/businesses';
   static final String businessDetail = '/business_detail';
+  static final String clients = '/clients';
   static final String products = '/products';
   static final String productDetail = '/product_detail';
   static final String createOrUpdateProduct = '/create_or_update_product';

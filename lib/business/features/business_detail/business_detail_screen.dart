@@ -68,6 +68,15 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         'role': ['SELLER', 'ADMIN'],
       },
       {
+        'title': 'Clientes',
+        'subtitle': 'Consulta el directorio de clientes y sus saldos pendientes.',
+        'icon': Icons.people_alt_rounded,
+        'color': AppColors.kPrimaryColor,
+        'isEnabled': true,
+        'route': Routes.clients,
+        'role': ['SELLER', 'ADMIN'],
+      },
+      {
         'title': 'Historial de pagos',
         'subtitle': 'Consulta el historial de pagos recibidos y pendientes.',
         'icon': Icons.savings_rounded,
@@ -231,6 +240,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     onTap: () {
                       if (isEnabled) {
                         if (route == Routes.products ||
+                            route == Routes.clients ||
                             route == Routes.sales ||
                             route == Routes.transactions ||
                             route == Routes.commissionPayments ||

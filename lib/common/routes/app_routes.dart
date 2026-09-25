@@ -6,6 +6,7 @@ import 'package:admivida/business/features/add_sale/product_detail/product_detai
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
 import 'package:admivida/business/features/business_detail/business_detail_screen.dart';
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
+import 'package:admivida/business/features/clients/clients_screen.dart';
 import 'package:admivida/business/features/commission_payment_history/commission_payment_history_screen.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
 import 'package:admivida/business/features/create_employee_payments/create_employee_payment_screen.dart';
@@ -52,6 +53,10 @@ class AppRoutes {
           business:
               business ?? BusinessModel(id: '', name: '', description: '', businessCategoryId: '', categoryName: '', isActive: true, createdAt: DateTime.now()),
         );
+      },
+      Routes.clients: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return ClientsDebtScreen(businessId: businessId);
       },
       Routes.products: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
