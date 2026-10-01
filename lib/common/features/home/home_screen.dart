@@ -27,8 +27,9 @@ class HomeScreen extends StatelessWidget {
         actions: [
           // Log out
           IconButton(
-            onPressed: () {
-              StorageService.clear();
+            onPressed: () async {
+              await StorageService.clear();
+              if (!context.mounted) return;
               NavigationService.replaceUntil(context, Routes.signIn);
             },
             icon: const Icon(Icons.logout, color: AppColors.kPrimaryColor),

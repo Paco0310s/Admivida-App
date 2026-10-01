@@ -83,17 +83,21 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
       }
 
       // If everything is fine, we store the tokens and roles in local storage for future sessions
-      StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
-      StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
-      StorageService.setString(AppConfig.uuidKey, userData.userId);
-      StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      await StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
+      if (userData.refreshToken.isNotEmpty) {
+        await StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
+      }
+      await StorageService.setString(AppConfig.uuidKey, userData.userId);
+      await StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      if (!context.mounted) return;
 
       // Finally, we navigate the user to the appropriate screen based on their roles
       if (userData.roles.length > 1) {
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceWith(context, Routes.choosePlatformRole);
       } else if (userData.roles.length == 1) {
-        StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        await StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        if (!context.mounted) return;
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceWith(context, Routes.home);
       } else {

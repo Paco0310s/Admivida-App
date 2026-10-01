@@ -12,6 +12,25 @@ import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/connectivity_service.dart';
 
 class DioService {
+  static Object? _sanitizeSensitiveData(Object? value) {
+    if (value is Map) {
+      return value.map((key, item) {
+        final keyName = key.toString();
+        final isSensitive = RegExp(
+          r'password|token|secret|authorization|cookie',
+          caseSensitive: false,
+        ).hasMatch(keyName);
+        return MapEntry(keyName, isSensitive ? '***REDACTED***' : _sanitizeSensitiveData(item));
+      });
+    }
+
+    if (value is Iterable) {
+      return value.map(_sanitizeSensitiveData).toList();
+    }
+
+    return value;
+  }
+
   static final Dio _dio =
       Dio(
           BaseOptions(
@@ -126,7 +145,7 @@ class DioService {
     final cacheKey = 'GET_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
 
     try {
-      AppLogger.info('GET Request: $url ${queryParameters != null ? "with params: $queryParameters" : ""}');
+      AppLogger.info('GET Request: $url ${queryParameters != null ? "with params: ${_sanitizeSensitiveData(queryParameters)}" : ""}');
 
       final response = await _dio.get(url, queryParameters: queryParameters);
 
@@ -166,7 +185,7 @@ class DioService {
     final cacheKey = 'GET_LIST_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
 
     try {
-      AppLogger.info('GET LIST Request: $url ${queryParameters != null ? "with params: $queryParameters" : ""}');
+      AppLogger.info('GET LIST Request: $url ${queryParameters != null ? "with params: ${_sanitizeSensitiveData(queryParameters)}" : ""}');
 
       final response = await _dio.get(url, queryParameters: queryParameters);
 
@@ -210,13 +229,13 @@ class DioService {
     }
 
     try {
-      AppLogger.info('POST Request: $url, Data: $data');
+      AppLogger.info('POST Request: $url, Data: ${_sanitizeSensitiveData(data)}');
 
       final response = await _dio.post(url, data: data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data as Map<String, dynamic>;
-        AppLogger.info('Server response JSON: $responseData');
+        AppLogger.info('Server response JSON: ${_sanitizeSensitiveData(responseData)}');
         final result = fromJson(responseData);
         return EitherUtil.success(result);
       } else {
@@ -243,7 +262,7 @@ class DioService {
 
     try {
       final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
-      AppLogger.info('PUT Request: $url$queryLog, Data: $data');
+      AppLogger.info('PUT Request: $url$queryLog, Data: ${_sanitizeSensitiveData(data)}');
 
       final response = await _dio.put(url, data: data, queryParameters: queryParameters);
 
@@ -276,7 +295,7 @@ class DioService {
 
     try {
       final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
-      AppLogger.info('PATCH Request: $url$queryLog, Data: $data');
+      AppLogger.info('PATCH Request: $url$queryLog, Data: ${_sanitizeSensitiveData(data)}');
 
       final response = await _dio.patch(url, data: data, queryParameters: queryParameters);
 
@@ -290,7 +309,7 @@ class DioService {
       }
     } on DioException catch (error) {
       AppLogger.error('STATUS CODE: ${error.response?.statusCode}');
-      AppLogger.error('ERROR DATA: ${error.response?.data}');
+      AppLogger.error('ERROR DATA: ${_sanitizeSensitiveData(error.response?.data)}');
       return _handleError<T>(error);
     } catch (error) {
       AppLogger.error('Unexpected error in PATCH: $error');

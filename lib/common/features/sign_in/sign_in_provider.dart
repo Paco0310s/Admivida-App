@@ -38,10 +38,11 @@ Future<void> signIn(Ref ref, BuildContext context, LoginUserDto userLoginDto) as
         return;
       }
 
-      StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
-      StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
-      StorageService.setString(AppConfig.uuidKey, userData.userId);
-      StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      await StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
+      await StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
+      await StorageService.setString(AppConfig.uuidKey, userData.userId);
+      await StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      if (!context.mounted) return;
 
       if (userData.roles.length > 1) {
         // Navigate to the choose platform role screen
@@ -49,7 +50,8 @@ Future<void> signIn(Ref ref, BuildContext context, LoginUserDto userLoginDto) as
         NavigationService.replaceWith(context, Routes.choosePlatformRole);
       } else if (userData.roles.length == 1) {
         // Navigate to the home screen
-        StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        await StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        if (!context.mounted) return;
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceWith(context, Routes.home);
       } else {
