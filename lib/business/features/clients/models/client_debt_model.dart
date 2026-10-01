@@ -62,7 +62,7 @@ class PendingSaleModel {
       status: json['status'],
       total: (json['total'] as num).toDouble(),
       pendingBalance: (json['pendingBalance'] as num).toDouble(),
-      date: DateTime.parse(json['date']),
+      date: DateTime.parse(json['date']).toLocal(),
     );
   }
 }
