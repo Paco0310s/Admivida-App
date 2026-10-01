@@ -6,6 +6,7 @@ class AppConfig {
 
   // App version code
   static const int appVersionCode = 1;
+  static const String appVersionName = '0.5.0 (Beta)';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
@@ -55,6 +56,7 @@ class AppConfig {
   static const Duration sendTimeout = Duration(seconds: 10);
 
   // Storage keys
+  static const String uuidKey = 'uuid';
   static const String accessTokenKey = 'accessToken';
   static const String refreshTokenKey = 'refreshToken';
   static const String rolesKey = 'roles';

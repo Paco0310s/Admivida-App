@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:admivida/business/features/clients/clients_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -27,13 +29,12 @@ class ClientsDebtScreen extends StatelessWidget {
       mobile: ClientsDebtListView(businessId: businessId),
       tablet: ClientsDebtListView(businessId: businessId),
       desktop: ClientsDebtListView(businessId: businessId),
-      // Si a futuro quieres crear clientes manualmente desde aquí:
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () => NavigationService.navigateTo(context, Routes.createClient, arguments: {'businessId': businessId}),
-      //   backgroundColor: AppColors.kPrimaryColor,
-      //   icon: const Icon(Icons.person_add),
-      //   label: AppText('Nuevo Cliente', color: AppColors.kNeutral100),
-      // ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => NavigationService.navigateTo(context, Routes.createClient, arguments: {'businessId': businessId}),
+        backgroundColor: AppColors.kPrimaryColor,
+        icon: const Icon(Icons.person_add),
+        label: AppText('Nuevo Cliente', color: AppColors.kNeutral100),
+      ),
     );
   }
 }
@@ -123,12 +124,11 @@ class _ClientsDebtListViewState extends ConsumerState<ClientsDebtListView> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         onTap: () {
-                          // Navegamos a la pantalla de abonos pasando el ID del cliente
-                          // NavigationService.navigateTo(context, Routes.clientPayments, arguments: {
-                          //   'businessId': widget.businessId,
-                          //   'clientId': client.id,
-                          //   'clientName': client.fullName,
-                          // });
+                          NavigationService.navigateTo(
+                            context,
+                            Routes.clientPayments,
+                            arguments: {'businessId': widget.businessId, 'clientId': client.id, 'clientName': client.fullName},
+                          );
                         },
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,43 +204,48 @@ class _ClientsDebtListViewState extends ConsumerState<ClientsDebtListView> {
   Widget _buildSearchHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (value) {
-          FocusScope.of(context).unfocus();
-          ref.read(clientsDebtListProvider(widget.businessId).notifier).setSearchQuery(value);
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _searchController,
+        builder: (context, value, child) {
+          return TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) {
+              FocusScope.of(context).unfocus();
+              ref.read(clientsDebtListProvider(widget.businessId).notifier).setSearchQuery(value);
+            },
+            decoration: InputDecoration(
+              hintText: 'Buscar cliente por nombre...',
+              prefixIcon: const Icon(Icons.search, color: AppColors.kNeutral500),
+              suffixIcon: value.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        FocusScope.of(context).unfocus();
+                        ref.read(clientsDebtListProvider(widget.businessId).notifier).setSearchQuery('');
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              filled: true,
+              fillColor: AppColors.kNeutral50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.kNeutral200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.kNeutral200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.kPrimaryColor),
+              ),
+            ),
+          );
         },
-        decoration: InputDecoration(
-          hintText: 'Buscar cliente por nombre...',
-          prefixIcon: const Icon(Icons.search, color: AppColors.kNeutral500),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    FocusScope.of(context).unfocus();
-                    ref.read(clientsDebtListProvider(widget.businessId).notifier).setSearchQuery('');
-                  },
-                )
-              : null,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          filled: true,
-          fillColor: AppColors.kNeutral50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.kNeutral200),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.kNeutral200),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.kPrimaryColor),
-          ),
-        ),
       ),
     );
   }

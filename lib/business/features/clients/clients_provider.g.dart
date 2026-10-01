@@ -208,3 +208,235 @@ abstract class _$PendingSales extends $AsyncNotifier<List<PendingSaleModel>> {
     );
   }
 }
+
+@ProviderFor(PaymentDistribution)
+final paymentDistributionProvider = PaymentDistributionFamily._();
+
+final class PaymentDistributionProvider
+    extends $NotifierProvider<PaymentDistribution, PaymentDistributionState> {
+  PaymentDistributionProvider._({
+    required PaymentDistributionFamily super.from,
+    required ({String businessId, String clientId}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'paymentDistributionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$paymentDistributionHash();
+
+  @override
+  String toString() {
+    return r'paymentDistributionProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  PaymentDistribution create() => PaymentDistribution();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PaymentDistributionState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PaymentDistributionState>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PaymentDistributionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$paymentDistributionHash() =>
+    r'27f361ac1db3a1baca9ddd29dab62592ba4c2ca0';
+
+final class PaymentDistributionFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          PaymentDistribution,
+          PaymentDistributionState,
+          PaymentDistributionState,
+          PaymentDistributionState,
+          ({String businessId, String clientId})
+        > {
+  PaymentDistributionFamily._()
+    : super(
+        retry: null,
+        name: r'paymentDistributionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  PaymentDistributionProvider call({
+    required String businessId,
+    required String clientId,
+  }) => PaymentDistributionProvider._(
+    argument: (businessId: businessId, clientId: clientId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'paymentDistributionProvider';
+}
+
+abstract class _$PaymentDistribution
+    extends $Notifier<PaymentDistributionState> {
+  late final _$args = ref.$arg as ({String businessId, String clientId});
+  String get businessId => _$args.businessId;
+  String get clientId => _$args.clientId;
+
+  PaymentDistributionState build({
+    required String businessId,
+    required String clientId,
+  });
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<PaymentDistributionState, PaymentDistributionState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<PaymentDistributionState, PaymentDistributionState>,
+              PaymentDistributionState,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(
+      ref,
+      () => build(businessId: _$args.businessId, clientId: _$args.clientId),
+    );
+  }
+}
+
+@ProviderFor(ProcessClientPayment)
+final processClientPaymentProvider = ProcessClientPaymentProvider._();
+
+final class ProcessClientPaymentProvider
+    extends
+        $NotifierProvider<
+          ProcessClientPayment,
+          AsyncValue<ClientPaymentResponse?>
+        > {
+  ProcessClientPaymentProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'processClientPaymentProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$processClientPaymentHash();
+
+  @$internal
+  @override
+  ProcessClientPayment create() => ProcessClientPayment();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AsyncValue<ClientPaymentResponse?> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AsyncValue<ClientPaymentResponse?>>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$processClientPaymentHash() =>
+    r'75e6a942111f5dc3dcfcf448f5562a77f805a42b';
+
+abstract class _$ProcessClientPayment
+    extends $Notifier<AsyncValue<ClientPaymentResponse?>> {
+  AsyncValue<ClientPaymentResponse?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              AsyncValue<ClientPaymentResponse?>,
+              AsyncValue<ClientPaymentResponse?>
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<ClientPaymentResponse?>,
+                AsyncValue<ClientPaymentResponse?>
+              >,
+              AsyncValue<ClientPaymentResponse?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(CreateClient)
+final createClientProvider = CreateClientProvider._();
+
+final class CreateClientProvider
+    extends $NotifierProvider<CreateClient, AsyncValue<void>> {
+  CreateClientProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'createClientProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$createClientHash();
+
+  @$internal
+  @override
+  CreateClient create() => CreateClient();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AsyncValue<void> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AsyncValue<void>>(value),
+    );
+  }
+}
+
+String _$createClientHash() => r'7814cfb8a44b26b6c45773b434ee3cdfcde2cc5e';
+
+abstract class _$CreateClient extends $Notifier<AsyncValue<void>> {
+  AsyncValue<void> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<void>, AsyncValue<void>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<void>, AsyncValue<void>>,
+              AsyncValue<void>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

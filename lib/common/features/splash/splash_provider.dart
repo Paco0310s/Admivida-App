@@ -85,6 +85,7 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
       // If everything is fine, we store the tokens and roles in local storage for future sessions
       StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
       StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
+      StorageService.setString(AppConfig.uuidKey, userData.userId);
       StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
 
       // Finally, we navigate the user to the appropriate screen based on their roles

@@ -1,5 +1,6 @@
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
@@ -82,70 +83,101 @@ class BusinessDetailView extends StatelessWidget {
       },
     ];
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppImage(AdaptedFile.asset(AppAssets.logo), height: MediaQuery.of(context).size.width * 0.4, width: double.infinity, fit: BoxFit.cover),
-          AppText(AppTexts.modules, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-          const Gap(12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: modules.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.25,
-            ),
-            itemBuilder: (context, index) {
-              final option = modules[index];
-              final icon = option['icon'] as IconData;
-              final title = option['title'] as String;
-              final subtitle = option['subtitle'] as String;
-              final color = option['color'] as Color;
-              final isEnabled = option['isEnabled'] as bool;
-
-              return AppCard(
-                backgroundColor: !isEnabled ? AppColors.kNeutral200 : null,
-                padding: const EdgeInsets.all(16),
-                onTap: () {
-                  if (isEnabled) {
-                    NavigationService.navigateTo(context, option['route']);
-                  } else {
-                    SnackbarUtil.showInfo(context, 'El módulo $title estará disponible pronto.');
-                  }
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: AppColors.kBackgroundColor, shape: BoxShape.circle),
-                      child: Icon(icon, color: color, size: 28),
-                    ),
-                    const Gap(12),
-                    AppText(title, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                    const Gap(4),
-                    Flexible(
-                      child: AppText(
-                        subtitle,
-                        fontSize: 12,
-                        color: AppColors.kNeutral700,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Gap(30),
+                AppImage(
+                  AdaptedFile.asset(AppAssets.logo),
+                  height: (MediaQuery.of(context).size.height * 0.38).clamp(300, 300),
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
-              );
-            },
+                AppText(AppTexts.modules, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
+                const Gap(12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: modules.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.25,
+                  ),
+                  itemBuilder: (context, index) {
+                    final option = modules[index];
+                    final icon = option['icon'] as IconData;
+                    final title = option['title'] as String;
+                    final subtitle = option['subtitle'] as String;
+                    final color = option['color'] as Color;
+                    final isEnabled = option['isEnabled'] as bool;
+
+                    if (!isEnabled) return SizedBox.shrink();
+
+                    return AppCard(
+                      backgroundColor: !isEnabled ? AppColors.kNeutral200 : null,
+                      padding: const EdgeInsets.all(16),
+                      onTap: () {
+                        if (isEnabled) {
+                          NavigationService.navigateTo(context, option['route']);
+                        } else {
+                          SnackbarUtil.showInfo(context, 'El módulo $title estará disponible pronto.');
+                        }
+                      },
+
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: AppColors.kBackgroundColor, shape: BoxShape.circle),
+                            child: Icon(icon, color: color, size: 28),
+                          ),
+                          const Gap(12),
+                          AppText(title, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+                          const Gap(4),
+                          Flexible(
+                            child: AppText(
+                              subtitle,
+                              fontSize: 12,
+                              color: AppColors.kNeutral700,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppText('Desarrollado por Francisco Sotelo', fontSize: 12, color: AppColors.kNeutral500, fontWeight: FontWeight.w600),
+                const Gap(4),
+                AppText('Versión ${AppConfig.appVersionName} - code: ${AppConfig.appVersionCode}', fontSize: 12, color: AppColors.kNeutral500),
+                const Gap(4),
+                AppText('Usuario: ${StorageService.getString(AppConfig.uuidKey)}', fontSize: 10, color: AppColors.kNeutral400, fontWeight: FontWeight.w500),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

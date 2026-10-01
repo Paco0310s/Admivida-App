@@ -88,7 +88,7 @@ class SignInImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppImage(AdaptedFile.local(AppAssets.logo), height: double.infinity, width: double.infinity, fit: BoxFit.contain);
+    return AppImage(AdaptedFile.asset(AppAssets.logo), height: double.infinity, width: double.infinity, fit: BoxFit.contain);
   }
 }
 

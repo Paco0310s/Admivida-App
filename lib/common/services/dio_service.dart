@@ -325,7 +325,8 @@ class DioService {
   /// Uploads a file using multipart/form-data.
   static Future<EitherUtil<HttpFailure, T>> uploadFile<T>(
     String url, {
-    required String filePath,
+    required List<int> fileBytes,
+    required String fileName,
     required String fileKey,
     required T Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic>? extraFields,
@@ -336,10 +337,9 @@ class DioService {
     }
 
     try {
-      AppLogger.info('UPLOAD Request: $url with file: $filePath');
+      AppLogger.info('UPLOAD Request: $url with file: $fileName');
 
-      final fileName = filePath.split('/').last;
-      final formData = FormData.fromMap({fileKey: await MultipartFile.fromFile(filePath, filename: fileName), ...?extraFields});
+      final formData = FormData.fromMap({fileKey: MultipartFile.fromBytes(fileBytes, filename: fileName), ...?extraFields});
 
       final response = await _dio.post(
         url,

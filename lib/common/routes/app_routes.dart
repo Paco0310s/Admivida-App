@@ -6,7 +6,9 @@ import 'package:admivida/business/features/add_sale/product_detail/product_detai
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
 import 'package:admivida/business/features/business_detail/business_detail_screen.dart';
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
+import 'package:admivida/business/features/clients/client_payments_screen.dart';
 import 'package:admivida/business/features/clients/clients_screen.dart';
+import 'package:admivida/business/features/clients/create_client_screen.dart';
 import 'package:admivida/business/features/commission_payment_history/commission_payment_history_screen.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
 import 'package:admivida/business/features/create_employee_payments/create_employee_payment_screen.dart';
@@ -57,6 +59,18 @@ class AppRoutes {
       Routes.clients: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return ClientsDebtScreen(businessId: businessId);
+      },
+      Routes.createClient: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+        return CreateClientScreen(businessId: arguments['businessId'] as String? ?? '');
+      },
+      Routes.clientPayments: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+        return ClientPaymentsScreen(
+          businessId: arguments['businessId'] as String? ?? '',
+          clientId: arguments['clientId'] as String? ?? '',
+          clientName: arguments['clientName'] as String? ?? '',
+        );
       },
       Routes.products: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';

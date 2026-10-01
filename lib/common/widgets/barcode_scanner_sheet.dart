@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -20,91 +19,87 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
     super.dispose();
   }
 
+  String _scannerErrorMessage(MobileScannerException error) {
+    return switch (error.errorCode) {
+      MobileScannerErrorCode.permissionDenied => 'El navegador denegó el acceso a la cámara. Permite el acceso en los ajustes del sitio y vuelve a intentarlo.',
+      MobileScannerErrorCode.unsupported => 'No se encontró una cámara compatible en este dispositivo.',
+      _ => 'No se pudo iniciar la cámara. Verifica los permisos y abre la aplicación mediante HTTPS o localhost.',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: SizedBox(
         width: double.infinity,
-        child: Builder(
-          builder: (context) {
-            if (!Platform.isAndroid || !Platform.isIOS) {
-              return SizedBox(
-                width: double.infinity,
-                height: 120,
-                child: Center(
-                  child: Text(
-                    'Opción no disponible en este dispositivo',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(3)),
-                ),
-                const SizedBox(height: 12),
-                const Text('Escanea código de barras', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 280,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: MobileScanner(
-                      controller: _controller,
-                      onDetect: (capture) {
-                        if (_handled) return;
-                        final barcodes = capture.barcodes;
-                        if (barcodes.isEmpty) return;
-                        final code = barcodes.first.rawValue;
-                        if (code == null) return;
-                        _handled = true;
-                        widget.onCode(code.trim());
-                        Navigator.of(context).maybePop();
-                      },
-                      errorBuilder: (context, error) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              'Cámara no disponible en este dispositivo (${error.errorCode.name})',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.maybeOf(context);
-
-                    try {
-                      await _controller.toggleTorch();
-                      if (!mounted) return;
-                      setState(() {});
-                    } catch (_) {
-                      if (!mounted || messenger == null) return;
-                      messenger.showSnackBar(const SnackBar(content: Text('Flash no disponible en este dispositivo')));
-                    }
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(3)),
+            ),
+            const SizedBox(height: 12),
+            const Text('Escanea código de barras', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            const Text(
+              'En Web, permite el acceso a la cámara y abre esta página mediante HTTPS o localhost.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 280,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: MobileScanner(
+                  controller: _controller,
+                  onDetect: (capture) {
+                    if (_handled) return;
+                    final barcodes = capture.barcodes;
+                    if (barcodes.isEmpty) return;
+                    final code = barcodes.first.rawValue;
+                    if (code == null) return;
+                    _handled = true;
+                    widget.onCode(code.trim());
+                    Navigator.of(context).maybePop();
                   },
-                  icon: const Icon(Icons.flashlight_on_outlined),
-                  label: const Text('Flash'),
+                  errorBuilder: (context, error) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          _scannerErrorMessage(error),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
-              ],
-            );
-          },
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+
+                try {
+                  await _controller.toggleTorch();
+                  if (!mounted) return;
+                  setState(() {});
+                } catch (_) {
+                  if (!mounted || messenger == null) return;
+                  messenger.showSnackBar(const SnackBar(content: Text('Flash no disponible en este dispositivo')));
+                }
+              },
+              icon: const Icon(Icons.flashlight_on_outlined),
+              label: const Text('Flash'),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );

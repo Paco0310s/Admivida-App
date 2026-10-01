@@ -58,7 +58,7 @@ final class SignUpProvider
   }
 }
 
-String _$signUpHash() => r'f3e98f83874cf7f2214a2edd56d0dc7ea268466b';
+String _$signUpHash() => r'14f0926ab9a6aba327f611650c831c70f357871d';
 
 final class SignUpFamily extends $Family
     with

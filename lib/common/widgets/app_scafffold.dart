@@ -9,9 +9,9 @@ class AppScaffold extends StatelessWidget {
   final String title;
   final Widget mobile;
   final Widget? mobileWhenIsLoading;
-  final Widget tablet;
+  final Widget? tablet;
   final Widget? tabletWhenIsLoading;
-  final Widget desktop;
+  final Widget? desktop;
   final Widget? desktopWhenIsLoading;
   final bool isLoading;
   final Widget? floatingActionButton;
@@ -25,8 +25,8 @@ class AppScaffold extends StatelessWidget {
     this.appBar,
     required this.title,
     required this.mobile,
-    required this.tablet,
-    required this.desktop,
+    this.tablet,
+    this.desktop,
     this.mobileWhenIsLoading,
     this.tabletWhenIsLoading,
     this.desktopWhenIsLoading,
@@ -47,9 +47,9 @@ class AppScaffold extends StatelessWidget {
         child: Responsive(
           mobile: mobile,
           mobileWhenIsLoading: mobileWhenIsLoading,
-          tablet: tablet,
+          tablet: tablet ?? mobile,
           tabletWhenIsLoading: tabletWhenIsLoading,
-          desktop: desktop,
+          desktop: desktop ?? tablet ?? mobile,
           desktopWhenIsLoading: desktopWhenIsLoading,
           isLoading: isLoading,
           marginDesktop: marginDesktop,

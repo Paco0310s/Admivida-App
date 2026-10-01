@@ -216,7 +216,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (_pickedFile != null && finalFileId == null) {
       setState(() => _isUploadingImage = true);
 
-      final uploadResult = await FileService.uploadImage(_pickedFile!.path);
+      final uploadResult = await FileService.uploadImage(_pickedFile!);
 
       if (!mounted) return;
       setState(() => _isUploadingImage = false);
@@ -247,7 +247,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       // Upload newly picked images for this variant
       for (int i = 0; i < field.pickedImages.length; i++) {
         final imageFile = field.pickedImages[i];
-        final uploadRes = await FileService.uploadImage(imageFile.path);
+        final uploadRes = await FileService.uploadImage(imageFile);
 
         uploadRes.when(
           (failure) {

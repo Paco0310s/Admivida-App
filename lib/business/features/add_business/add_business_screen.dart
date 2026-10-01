@@ -146,7 +146,7 @@ class _CreateOrUpdateBusinessScreenState extends ConsumerState<CreateOrUpdateBus
     if (_pickedFile != null) {
       setState(() => _isUploadingImage = true);
 
-      final uploadResult = await FileService.uploadImage(_pickedFile!.path);
+      final uploadResult = await FileService.uploadImage(_pickedFile!);
 
       setState(() => _isUploadingImage = false);
 

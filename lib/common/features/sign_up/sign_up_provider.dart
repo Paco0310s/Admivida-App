@@ -40,6 +40,7 @@ Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel
 
       StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
       StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
+      StorageService.setString(AppConfig.uuidKey, userData.userId);
       StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
 
       if (userData.roles.length > 1) {

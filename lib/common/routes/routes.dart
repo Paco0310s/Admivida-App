@@ -13,6 +13,8 @@ class Routes {
   static final String businesses = '/businesses';
   static final String businessDetail = '/business_detail';
   static final String clients = '/clients';
+  static final String createClient = '/create_client';
+  static final String clientPayments = '/client_payments';
   static final String products = '/products';
   static final String productDetail = '/product_detail';
   static final String createOrUpdateProduct = '/create_or_update_product';
