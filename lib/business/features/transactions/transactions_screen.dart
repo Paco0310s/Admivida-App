@@ -28,12 +28,29 @@ class TransactionsScreen extends StatelessWidget {
       mobile: TransactionsListView(businessId: businessId),
       tablet: TransactionsListView(businessId: businessId),
       desktop: TransactionsListView(businessId: businessId),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          NavigationService.navigateTo(context, Routes.addTransaction, arguments: businessId);
-        },
-        backgroundColor: AppColors.kPrimaryColor,
-        child: const Icon(Icons.add, color: AppColors.kNeutral100),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'transferFunds',
+            tooltip: 'Transferir entre cuentas',
+            onPressed: () {
+              NavigationService.navigateTo(context, Routes.transferFunds, arguments: businessId);
+            },
+            backgroundColor: AppColors.kPrimaryColor,
+            child: const Icon(Icons.swap_horiz, color: AppColors.kNeutral100),
+          ),
+          const SizedBox(width: 16),
+          FloatingActionButton(
+            heroTag: 'addTransaction',
+            tooltip: 'Agregar movimiento',
+            onPressed: () {
+              NavigationService.navigateTo(context, Routes.addTransaction, arguments: businessId);
+            },
+            backgroundColor: AppColors.kPrimaryColor,
+            child: const Icon(Icons.add, color: AppColors.kNeutral100),
+          ),
+        ],
       ),
     );
   }

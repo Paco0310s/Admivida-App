@@ -4,6 +4,7 @@ import 'package:admivida/business/features/add_sale/add_sale_screen.dart';
 import 'package:admivida/business/features/add_sale/cart/cart_screen.dart';
 import 'package:admivida/business/features/add_sale/product_detail/product_detail_screen.dart';
 import 'package:admivida/business/features/add_transaction/add_transactions_screen.dart';
+import 'package:admivida/business/features/add_transaction/transfer_funds_screen.dart';
 import 'package:admivida/business/features/business_detail/business_detail_screen.dart';
 import 'package:admivida/business/features/businesses/businesses_screen.dart';
 import 'package:admivida/business/features/clients/client_payments_screen.dart';
@@ -128,6 +129,10 @@ class AppRoutes {
       Routes.addTransaction: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
         return AddTransactionScreen(businessId: businessId);
+      },
+      Routes.transferFunds: (context) {
+        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        return TransferFundsScreen(businessId: businessId);
       },
       Routes.saleDetail: (context) {
         final sale = ModalRoute.of(context)?.settings.arguments as SaleModel?;

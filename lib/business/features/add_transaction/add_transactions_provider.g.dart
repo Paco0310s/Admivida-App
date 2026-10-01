@@ -94,3 +94,47 @@ abstract class _$AddTransaction extends $AsyncNotifier<TransactionModel?> {
     element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(TransferFunds)
+final transferFundsProvider = TransferFundsProvider._();
+
+final class TransferFundsProvider
+    extends $AsyncNotifierProvider<TransferFunds, bool?> {
+  TransferFundsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'transferFundsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$transferFundsHash();
+
+  @$internal
+  @override
+  TransferFunds create() => TransferFunds();
+}
+
+String _$transferFundsHash() => r'78ee2dff582ca8fdbaa424512745f726ef59d951';
+
+abstract class _$TransferFunds extends $AsyncNotifier<bool?> {
+  FutureOr<bool?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<bool?>, bool?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<bool?>, bool?>,
+              AsyncValue<bool?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

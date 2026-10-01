@@ -2,7 +2,7 @@ class TransactionModel {
   final String id;
   final String accountId;
   final String? accountName;
-  final String paymentMethodId;
+  final String? paymentMethodId;
   final String? paymentMethodName;
   final String? businessId;
   final String? saleId;
@@ -15,7 +15,7 @@ class TransactionModel {
     required this.id,
     required this.accountId,
     this.accountName,
-    required this.paymentMethodId,
+    this.paymentMethodId,
     this.paymentMethodName,
     this.businessId,
     this.saleId,
@@ -30,7 +30,7 @@ class TransactionModel {
       id: json['id'] as String,
       accountId: json['accountId'] as String,
       accountName: json['accountName'] as String?,
-      paymentMethodId: json['paymentMethodId'] as String,
+      paymentMethodId: json['paymentMethodId'] as String?,
       paymentMethodName: json['paymentMethodName'] as String?,
       businessId: json['businessId'] as String?,
       saleId: json['saleId'] as String?,

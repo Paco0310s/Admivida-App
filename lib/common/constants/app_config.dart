@@ -46,6 +46,7 @@ class AppConfig {
   static String updateUserInBusinessEndpoint(String businessId, String userId) => '/user-businesses/$businessId/users/$userId';
   static String users = '/users';
   static String businessesRoles = '/businesses-roles';
+  static String transfersEndpoint = '/transactions/business/transfers';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];

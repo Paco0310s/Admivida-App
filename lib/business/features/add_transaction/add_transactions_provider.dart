@@ -2,6 +2,7 @@ import 'package:admivida/business/features/add_transaction/add_transactions_serv
 import 'package:admivida/business/features/add_transaction/models/create_transaction_dto.dart';
 import 'package:admivida/business/features/add_transaction/models/payment_method_model.dart';
 import 'package:admivida/business/features/add_transaction/models/transaction_model.dart';
+import 'package:admivida/business/features/add_transaction/models/transfer_funds_dto.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'add_transactions_provider.g.dart';
@@ -26,5 +27,21 @@ class AddTransaction extends _$AddTransaction {
     final result = await AddTransactionsService.createTransaction(dto);
 
     state = result.when((failure) => AsyncValue.error(failure, StackTrace.current), (transaction) => AsyncValue.data(transaction));
+  }
+}
+
+@riverpod
+class TransferFunds extends _$TransferFunds {
+  @override
+  FutureOr<bool?> build() {
+    return null;
+  }
+
+  Future<void> submit(TransferFundsDto dto) async {
+    state = const AsyncValue.loading();
+
+    final result = await AddTransactionsService.transferFunds(dto);
+
+    state = result.when((failure) => AsyncValue.error(failure, StackTrace.current), (success) => AsyncValue.data(success));
   }
 }
