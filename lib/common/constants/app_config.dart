@@ -1,8 +1,10 @@
 class AppConfig {
   // Base URLs
-  static const String baseUrl = 'http://localhost:7100/api/v1';
-  // static const String baseUrl = 'http://192.168.1.14:3000/api/v1';
-  static const String baseServerUrl = 'http://localhost:7100';
+  // static const String baseUrl = 'http://localhost:7100/api/v1';
+  // static const String baseServerUrl = 'http://localhost:7100';
+
+  static const String baseUrl = 'https://api.admivida.pacosotelo.com/api/v1';
+  static const String baseServerUrl = 'https://api.admivida.pacosotelo.com';
 
   // App version code
   static const int appVersionCode = 1;
