@@ -18,7 +18,8 @@ import 'package:gap/gap.dart';
 
 class AddSaleScreen extends ConsumerWidget {
   final String businessId;
-  const AddSaleScreen({super.key, required this.businessId});
+  final String businessName;
+  const AddSaleScreen({super.key, required this.businessId, required this.businessName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -107,13 +108,16 @@ class AddSaleScreen extends ConsumerWidget {
           backgroundColor: AppColors.kPrimaryColor,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        mobile: MobileTabletView(businessId: businessId, crossAxisCount: 2),
-        tablet: MobileTabletView(businessId: businessId, crossAxisCount: 4),
+        mobile: MobileTabletView(businessId: businessId, crossAxisCount: 2, businessName: businessName),
+        tablet: MobileTabletView(businessId: businessId, crossAxisCount: 4, businessName: businessName),
         desktop: Row(
           children: [
             Flexible(flex: 72, child: PosCatalogScreen(businessId: businessId, crossAxisCount: 6)),
             Container(width: 2, color: AppColors.kNeutral300),
-            Flexible(flex: 28, child: CartScreen(businessId: businessId)),
+            Flexible(
+              flex: 28,
+              child: CartScreen(businessId: businessId, businessName: businessName),
+            ),
           ],
         ),
         marginDesktop: 5,
@@ -123,8 +127,9 @@ class AddSaleScreen extends ConsumerWidget {
 }
 
 class MobileTabletView extends StatelessWidget {
-  const MobileTabletView({super.key, required this.businessId, required this.crossAxisCount});
+  const MobileTabletView({super.key, required this.businessId, required this.crossAxisCount, required this.businessName});
 
+  final String businessName;
   final String businessId;
   final int crossAxisCount;
 
@@ -138,7 +143,7 @@ class MobileTabletView extends StatelessWidget {
           right: 10,
           child: FloatingActionButton(
             onPressed: () {
-              NavigationService.navigateTo(context, Routes.cart, arguments: businessId);
+              NavigationService.navigateTo(context, Routes.cart, arguments: {'businessId': businessId, 'businessName': businessName});
             },
             backgroundColor: AppColors.kPrimaryColor,
             child: const Icon(Icons.shopping_cart, color: Colors.white),

@@ -241,12 +241,13 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       if (isEnabled) {
                         if (route == Routes.products ||
                             route == Routes.clients ||
-                            route == Routes.sales ||
                             route == Routes.transactions ||
                             route == Routes.commissionPayments ||
                             route == Routes.employeePayments ||
                             route == Routes.userBusinesses) {
                           NavigationService.navigateTo(context, route, arguments: business.id);
+                        } else if (route == Routes.sales) {
+                          NavigationService.navigateTo(context, route, arguments: {'businessId': business.id, 'businessName': business.name});
                         } else if (route == Routes.paymentsHistory) {
                           NavigationService.navigateTo(context, route, arguments: {'businessId': business.id, 'isAdmin': roles.contains('ADMIN')});
                         } else {

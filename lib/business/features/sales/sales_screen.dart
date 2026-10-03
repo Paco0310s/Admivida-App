@@ -14,9 +14,10 @@ import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 
 class SalesScreen extends StatelessWidget {
-  const SalesScreen({super.key, required this.businessId});
+  const SalesScreen({super.key, required this.businessId, required this.businessName});
 
   final String businessId;
+  final String businessName;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +32,7 @@ class SalesScreen extends StatelessWidget {
       tablet: SalesListView(businessId: businessId),
       desktop: SalesListView(businessId: businessId),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => NavigationService.navigateTo(context, Routes.addSale, arguments: businessId),
+        onPressed: () => NavigationService.navigateTo(context, Routes.addSale, arguments: {'businessId': businessId, 'businessName': businessName}),
         backgroundColor: AppColors.kPrimaryColor,
         icon: const Icon(Icons.add),
         label: AppText(AppTexts.addSaleButton, color: AppColors.kNeutral100),

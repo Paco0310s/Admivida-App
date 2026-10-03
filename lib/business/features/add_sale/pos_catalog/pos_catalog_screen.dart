@@ -9,6 +9,7 @@ import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -143,6 +144,8 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
 
   // --- HEADER: Search + Scanner ---
   Widget _buildSearchHeader() {
+    final hasPrinterAsync = ref.watch(hasSavedPrinterProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -197,6 +200,54 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
                 child: Icon(Icons.qr_code_scanner, color: Colors.white, size: 26),
               ),
             ),
+          ),
+          const Gap(5),
+          hasPrinterAsync.when(
+            loading: () => const CircularProgressIndicator(),
+            error: (err, stack) => const Icon(Icons.error, color: Colors.red),
+            data: (hasPrinter) {
+              return Container(
+                decoration: BoxDecoration(color: hasPrinter ? Colors.red : AppColors.kPrimaryColor, borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.all(4),
+                child: IconButton(
+                  tooltip: hasPrinter ? 'Desvincular Impresora' : 'Vincular Impresora',
+                  icon: Icon(hasPrinter ? Icons.print_disabled : Icons.print, color: Colors.white),
+                  onPressed: () async {
+                    if (hasPrinter) {
+                      // Lógica de Desvincular (Tu código actual)
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Eliminar impresora seleccionada'),
+                          content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.of(context).pop();
+                                await ref.read(printerServiceProvider).clearSavedPrinter();
+                                // Refrescar el estado de la UI
+                                ref.invalidate(hasSavedPrinterProvider);
+                                if (context.mounted) {
+                                  SnackbarUtil.showSuccess(context, 'Impresora desvinculada. Se pedirá seleccionar una nueva en la próxima venta.');
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                              child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // Lógica de Vincular
+                      await ref.read(printerServiceProvider).showPrinterSelectionModal(context);
+                      // Refrescar el estado de la UI para que el icono cambie
+                      ref.invalidate(hasSavedPrinterProvider);
+                    }
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),

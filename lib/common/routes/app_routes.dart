@@ -96,12 +96,17 @@ class AppRoutes {
         return CreateOrUpdateBusinessScreen(business: business);
       },
       Routes.addSale: (context) {
-        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
-        return AddSaleScreen(businessId: businessId);
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+        final businessId = args['businessId'] as String? ?? '';
+        final businessName = args['businessName'] as String? ?? 'Negocio';
+        return AddSaleScreen(businessId: businessId, businessName: businessName);
       },
       Routes.sales: (context) {
-        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
-        return SalesScreen(businessId: businessId);
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        final businessId = args['businessId'] as String? ?? '';
+        final businessName = args['businessName'] as String? ?? 'Negocio';
+        return SalesScreen(businessId: businessId, businessName: businessName);
       },
       Routes.transactions: (context) {
         final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
@@ -166,7 +171,11 @@ class AppRoutes {
         return UserBusinessScreen(businessId: businessId);
       },
       Routes.cart: (context) {
-        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+        final businessId = args['businessId'] as String? ?? '';
+        final businessName = args['businessName'] as String? ?? 'Negocio';
+
         return AppScaffold(
           title: AppTexts.cart,
           appBar: AppBar(
@@ -174,9 +183,9 @@ class AppRoutes {
             backgroundColor: AppColors.kPrimaryColor,
             iconTheme: const IconThemeData(color: Colors.white),
           ),
-          mobile: CartScreen(businessId: businessId),
-          tablet: CartScreen(businessId: businessId),
-          desktop: CartScreen(businessId: businessId),
+          mobile: CartScreen(businessId: businessId, businessName: businessName),
+          tablet: CartScreen(businessId: businessId, businessName: businessName),
+          desktop: CartScreen(businessId: businessId, businessName: businessName),
           marginDesktop: 5,
         );
       },

@@ -5,6 +5,7 @@ import 'package:admivida/common/routes/app_routes.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/utils/globals.dart';
 import 'package:admivida/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,8 @@ class _AdmividaAppState extends ConsumerState<AdmividaApp> with WidgetsBindingOb
         FocusManager.instance.primaryFocus?.unfocus();
       },
       child: MaterialApp(
+        navigatorKey: navigatorKey,
+        scaffoldMessengerKey: scaffoldMessengerKey,
         localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
         supportedLocales: const [Locale('es')],
         title: AppTexts.appName,

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:admivida/common/enums/app_failure_enum.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/utils/globals.dart';
 import 'package:dio/dio.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -10,16 +12,14 @@ import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/connectivity_service.dart';
+import 'package:flutter/material.dart';
 
 class DioService {
   static Object? _sanitizeSensitiveData(Object? value) {
     if (value is Map) {
       return value.map((key, item) {
         final keyName = key.toString();
-        final isSensitive = RegExp(
-          r'password|token|secret|authorization|cookie',
-          caseSensitive: false,
-        ).hasMatch(keyName);
+        final isSensitive = RegExp(r'password|token|secret|authorization|cookie', caseSensitive: false).hasMatch(keyName);
         return MapEntry(keyName, isSensitive ? '***REDACTED***' : _sanitizeSensitiveData(item));
       });
     }
@@ -53,6 +53,49 @@ class DioService {
                 }
               }
               return handler.next(options);
+            },
+            onError: (DioException error, handler) async {
+              if (error.response?.statusCode != 401) {
+                return handler.next(error);
+              }
+
+              final refreshToken = StorageService.getString(AppConfig.refreshTokenKey);
+
+              if (refreshToken != null) {
+                try {
+                  AppLogger.info('Token expirado (401). Intentando auto-refresh...');
+
+                  final refreshDio = Dio(BaseOptions(baseUrl: AppConfig.baseUrl));
+
+                  final response = await refreshDio.post(AppConfig.refreshTokenEndpoint, data: {'refreshToken': refreshToken});
+
+                  final newAccessToken = response.data['accessToken'];
+                  final newRefreshToken = response.data['refreshToken'];
+
+                  await StorageService.setString(AppConfig.accessTokenKey, newAccessToken);
+                  await StorageService.setString(AppConfig.refreshTokenKey, newRefreshToken);
+
+                  error.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+
+                  AppLogger.info('Token renovado con éxito. Reintentando petición original...');
+                  final cloneReq = await _dio.fetch(error.requestOptions);
+
+                  return handler.resolve(cloneReq);
+                } catch (e) {
+                  AppLogger.error('Falló el refresh token (Probablemente expiraron los 7 días): $e');
+
+                  await StorageService.clear();
+
+                  navigatorKey.currentState?.pushReplacementNamed(Routes.splash);
+
+                  scaffoldMessengerKey.currentState?.showSnackBar(
+                    const SnackBar(content: Text('Sesión expirada. Por favor, inicia sesión nuevamente.'), backgroundColor: Colors.red),
+                  );
+                  return handler.next(error);
+                }
+              }
+
+              return handler.next(error);
             },
           ),
         );

@@ -9,7 +9,9 @@ import 'package:admivida/business/features/sales/sales_provider.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/models/object_to_print.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -19,7 +21,9 @@ import 'package:gap/gap.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   final String businessId;
-  const CartScreen({super.key, required this.businessId});
+  final String businessName;
+
+  const CartScreen({super.key, required this.businessId, required this.businessName});
 
   @override
   ConsumerState<CartScreen> createState() => _CartScreenState();
@@ -161,9 +165,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 confirmed = true;
                 Navigator.pop(context);
               } else {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('El monto recibido no puede ser menor al total'), backgroundColor: AppColors.kWarning));
+                SnackbarUtil.showWarning(context, 'El monto recibido no puede ser menor al total');
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
@@ -317,9 +319,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   // --- Process Sale Action ---
   Future<void> _processSale(double finalTotal, List<CreateSaleDetailInnerDto> cartItems) async {
     if (_selectedAccountId == null || _selectedPaymentMethodId == null || _selectedSellerId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Selecciona vendedor, método de pago y cuenta destino'), backgroundColor: AppColors.kWarning));
+      SnackbarUtil.showWarning(context, 'Selecciona vendedor, método de pago y cuenta destino');
       return;
     }
 
@@ -367,17 +367,55 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       // 2. Handle success and failure using EitherUtil pattern
       saleResult.when(
         (failure) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al procesar la venta: ${failure.message}'), backgroundColor: Colors.red));
+          if (!mounted) return;
+          SnackbarUtil.showError(context, 'Error al procesar la venta: ${failure.message}');
         },
-        (saleResponse) {
-          // 3. Clear cart and show ticket on success
+        (saleResponse) async {
+          // 1. Mapear los detalles (productos) de la venta
+          final List<PrintableRow> ticketRows = saleResponse.details.map((detail) {
+            return PrintableRow(
+              quantity: detail.quantity,
+              // Si no está pagado, lo indicamos en el ticket físico igual que en la UI
+              description: '${detail.productNameSnapshot}${!detail.isPaid ? ' (No pagado)' : ''}',
+              price: detail.productPriceSnapshot,
+              total: detail.subtotal,
+            );
+          }).toList();
+
+          // 2. Calcular el subtotal bruto (antes de descuentos)
+          final double calculatedSubtotal = ticketRows.fold(0.0, (sum, row) => sum + row.total);
+
+          // 3. Construir el documento final
+          final document = ObjectToPrint(
+            businessName: widget.businessName,
+            ticketId: saleResponse.id,
+            date: saleResponse.createdAt,
+            cashierName: saleResponse.sellerName ?? 'Cajero Default',
+            customerName: saleResponse.clientNameSnapshot,
+            rows: ticketRows,
+            subtotal: calculatedSubtotal,
+            discount: saleResponse.discountAmount,
+            total: saleResponse.totalPriceSnapshot,
+            amountPaid: saleResponse.amountPaid ?? 0.0,
+            changeGiven: saleResponse.changeGiven ?? 0.0,
+            openDrawer: true, // Siempre intentar abrir el cajón en una venta nueva
+          );
+
+          final printerService = ref.read(printerServiceProvider);
+
+          if (!mounted) return;
+          await printerService.showPrintersAndPrint(context, document);
+
+          if (!mounted) return;
+
+          // Limpiar carrito y mostrar modal de UI
           ref.read(cartProvider.notifier).clearCart();
           _showTicketDialog(context, saleResponse);
         },
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error inesperado al procesar la venta'), backgroundColor: Colors.red));
+      SnackbarUtil.showError(context, 'Error inesperado al procesar la venta');
     } finally {
       if (mounted) setState(() => _isLoadingSale = false);
     }
@@ -600,6 +638,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                 ),
               ],
+              const Gap(8),
+              AppText(widget.businessName, fontSize: 10, color: AppColors.kNeutral600),
               const Gap(40),
             ],
           ),
@@ -646,7 +686,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     child: _isLoadingSale
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text(
-                            'Cobrar Venta',
+                            'Cobrar e Imprimir',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                   ),
