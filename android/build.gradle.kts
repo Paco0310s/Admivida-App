@@ -16,6 +16,14 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library")) {
+            // Several Flutter plugins pin compileSdk below what their AndroidX dependencies require.
+            extensions.configure<com.android.build.api.dsl.LibraryExtension>("android") {
+                compileSdk = 36
+            }
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 

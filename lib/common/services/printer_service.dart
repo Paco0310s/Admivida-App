@@ -1,68 +1,170 @@
+import 'dart:convert';
+import 'dart:io';
+
 // import 'dart:convert';
 // import 'package:admivida/common/logging/app_logger.dart';
 import 'package:admivida/common/models/object_to_print.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/printer_selection_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum PrinterTransport { usb, bluetooth }
+
+class PrinterChoice {
+  final PrinterDevice device;
+  final PrinterTransport transport;
+  final String? details;
+
+  const PrinterChoice({required this.device, required this.transport, this.details});
+}
 
 class PrinterService {
   final PrinterManager printerManager = PrinterManager.instance;
-  static const String _savedPrinterKey = 'saved_usb_printer';
+  static const MethodChannel _windowsUsbPrinterChannel = MethodChannel('admivida/windows_usb_printer');
+  static const String _savedPrinterKey = 'saved_printer';
+  static const String _legacySavedPrinterKey = 'saved_usb_printer';
 
   // 1. Escanea las impresoras USB conectadas
-  Future<List<PrinterDevice>> scanPrinters() async {
-    List<PrinterDevice> devices = [];
+  Future<PermissionStatus> requestBluetoothDiscoveryPermission() async {
+    if (!Platform.isAndroid) return PermissionStatus.granted;
+    return Permission.locationWhenInUse.request();
+  }
 
-    // 1. Escanear impresoras USB
-    PrinterManager.instance.discovery(type: PrinterType.usb).listen((device) {
-      if (!devices.any((d) => d.address == device.address)) devices.add(device);
-    });
+  Future<List<PrinterChoice>> scanPrinters({required bool includeBluetooth}) async {
+    if (Platform.isWindows) {
+      final printerList = await _windowsUsbPrinterChannel.invokeListMethod<Object?>('listPrinters') ?? const [];
+      return printerList.map((entry) {
+        if (entry is! Map<Object?, Object?> || entry['name'] is! String) {
+          throw const FormatException('Windows devolvió datos de impresora no válidos.');
+        }
+        final model = entry['model'] as String?;
+        final port = entry['port'] as String?;
+        final details = [
+          model,
+          port,
+          if (entry['available'] == false) 'Windows reporta fuera de línea',
+        ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
+        return PrinterChoice(
+          device: PrinterDevice(name: entry['name'] as String),
+          transport: PrinterTransport.usb,
+          details: details.isEmpty ? null : details,
+        );
+      }).toList();
+    }
 
-    // 2. Escanear impresoras Bluetooth
-    PrinterManager.instance.discovery(type: PrinterType.bluetooth).listen((device) {
-      if (!devices.any((d) => d.address == device.address)) devices.add(device);
-    });
+    final devices = <PrinterChoice>[];
 
-    // Le damos un par de segundos al escáner para recolectar las respuestas
-    await Future.delayed(const Duration(seconds: 2));
+    Future<void> collect(Stream<PrinterDevice> stream, PrinterTransport transport) async {
+      await for (final device in stream) {
+        final identity = transport == PrinterTransport.bluetooth
+            ? device.address ?? device.name
+            : device.vendorId == null && device.productId == null
+            ? device.name
+            : '${device.vendorId}:${device.productId}';
+        final alreadyAdded = devices.any((entry) {
+          if (entry.transport != transport) return false;
+          final existingIdentity = transport == PrinterTransport.bluetooth
+              ? entry.device.address ?? entry.device.name
+              : entry.device.vendorId == null && entry.device.productId == null
+              ? entry.device.name
+              : '${entry.device.vendorId}:${entry.device.productId}';
+          return existingIdentity == identity;
+        });
+        if (!alreadyAdded) {
+          devices.add(PrinterChoice(device: device, transport: transport));
+        }
+      }
+    }
+
+    await Future.wait([
+      collect(printerManager.discovery(type: PrinterType.usb), PrinterTransport.usb),
+      if (includeBluetooth) collect(printerManager.discovery(type: PrinterType.bluetooth, isBle: false), PrinterTransport.bluetooth),
+    ]);
     return devices;
   }
 
-  // 2. Guarda la impresora elegida en memoria
-  Future<void> savePrinter(PrinterDevice printer) async {
+  Future<void> savePrinter(PrinterChoice printer) async {
     final prefs = await SharedPreferences.getInstance();
-    // Guardamos el nombre y el vendor/product ID separados por comas
-    final printerData = '${printer.name},${printer.vendorId},${printer.productId}';
-    await prefs.setString(_savedPrinterKey, printerData);
+    await prefs.setString(
+      _savedPrinterKey,
+      jsonEncode({
+        'transport': printer.transport.name,
+        'name': printer.device.name,
+        'address': printer.device.address,
+        'vendorId': printer.device.vendorId,
+        'productId': printer.device.productId,
+        'details': printer.details,
+      }),
+    );
   }
 
-  // 3. Obtiene la impresora guardada
-  Future<PrinterDevice?> getSavedPrinter() async {
+  Future<PrinterChoice?> getSavedPrinter() async {
     final prefs = await SharedPreferences.getInstance();
-    final printerData = prefs.getString(_savedPrinterKey);
+    final printerData = prefs.getString(_savedPrinterKey) ?? prefs.getString(_legacySavedPrinterKey);
 
-    if (printerData != null) {
+    if (printerData == null) return null;
+
+    try {
+      final data = jsonDecode(printerData);
+      if (data is Map<String, dynamic>) {
+        final transport = PrinterTransport.values.byName(data['transport'] as String);
+        final device = PrinterDevice(
+          name: data['name'] as String,
+          address: data['address'] as String?,
+          vendorId: data['vendorId'] as String?,
+          productId: data['productId'] as String?,
+        );
+        return PrinterChoice(device: device, transport: transport, details: data['details'] as String?);
+      }
+    } on FormatException {
+      // Migrate printers saved by older versions, which stored USB details as CSV.
+    } on TypeError {
+      // Invalid persisted data is not usable as a printer configuration.
+    } on ArgumentError {
+      // Unknown transports can occur after a future or manually edited preference.
+    }
+
+    // Retain compatibility with USB printers saved by the previous app version.
+    if (!printerData.startsWith('{')) {
       final parts = printerData.split(',');
       if (parts.length == 3) {
-        return PrinterDevice(name: parts[0], vendorId: parts[1], productId: parts[2]);
+        return PrinterChoice(
+          device: PrinterDevice(name: parts[0], vendorId: parts[1], productId: parts[2]),
+          transport: PrinterTransport.usb,
+        );
       }
     }
     return null;
   }
 
-  // 4. Proceso de Impresión del Objeto
-  Future<bool> printDocument(PrinterDevice printer, ObjectToPrint document) async {
+  Future<bool> printDocument(PrinterChoice printer, ObjectToPrint document) async {
+    final transport = printer.transport == PrinterTransport.bluetooth ? PrinterType.bluetooth : PrinterType.usb;
+    final bluetoothAddress = printer.device.address;
+    if (printer.transport == PrinterTransport.bluetooth && (bluetoothAddress == null || bluetoothAddress.trim().isEmpty)) {
+      debugPrint('No se puede imprimir: la impresora Bluetooth guardada no tiene dirección.');
+      return false;
+    }
+    final windowsUsb = Platform.isWindows && printer.transport == PrinterTransport.usb;
+    var connected = false;
     try {
-      bool isConnected = await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(name: printer.name, productId: printer.productId, vendorId: printer.vendorId),
-      );
+      if (!windowsUsb) {
+        final isConnected = await printerManager.connect(
+          type: transport,
+          model: switch (printer.transport) {
+            PrinterTransport.bluetooth => BluetoothPrinterInput(address: bluetoothAddress!, name: printer.device.name, isBle: false),
+            PrinterTransport.usb => UsbPrinterInput(name: printer.device.name, productId: printer.device.productId, vendorId: printer.device.vendorId),
+          },
+        );
 
-      if (!isConnected) return false;
+        if (!isConnected) return false;
+        connected = true;
+      }
 
       final profile = await CapabilityProfile.load();
       final generator = Generator(PaperSize.mm80, profile);
@@ -179,19 +281,27 @@ class PrinterService {
       // AppLogger.info('\n========== TICKET PREVIEW ==========\n$ticketPreview\n====================================');
 
       // Enviar e imprimir
-      printerManager.send(type: PrinterType.usb, bytes: bytes);
-      await Future.delayed(const Duration(milliseconds: 500)); // Pequeña pausa para asegurar el envío
-      await printerManager.disconnect(type: PrinterType.usb);
-
-      return true;
+      final sent = windowsUsb
+          ? await _windowsUsbPrinterChannel.invokeMethod<bool>('printRaw', {'name': printer.device.name, 'bytes': Uint8List.fromList(bytes)}) ?? false
+          : await printerManager.send(type: transport, bytes: bytes);
+      if (sent) await Future.delayed(const Duration(milliseconds: 500));
+      return sent;
     } catch (e) {
       debugPrint('Error de impresión: $e');
       return false;
+    } finally {
+      if (connected) {
+        try {
+          await printerManager.disconnect(type: transport);
+        } catch (e) {
+          debugPrint('Error al desconectar la impresora: $e');
+        }
+      }
     }
   }
 
   Future<void> showPrintersAndPrint(BuildContext context, ObjectToPrint document) async {
-    PrinterDevice? savedPrinter = await getSavedPrinter();
+    final savedPrinter = await getSavedPrinter();
 
     if (savedPrinter != null) {
       bool success = await printDocument(savedPrinter, document);
@@ -218,6 +328,7 @@ class PrinterService {
   Future<void> clearSavedPrinter() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_savedPrinterKey);
+    await prefs.remove(_legacySavedPrinterKey);
   }
 
   // NUEVA FUNCIÓN EN PrinterService: Solo abre el modal para vincular

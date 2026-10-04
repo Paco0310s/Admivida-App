@@ -25,6 +25,8 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  windows_usb_printer_channel_ = std::make_unique<WindowsUsbPrinterChannel>(
+      flutter_controller_->engine()->messenger());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +42,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  windows_usb_printer_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

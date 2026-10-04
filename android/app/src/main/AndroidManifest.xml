@@ -1,17 +1,23 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Requerido para consumir la API y sincronizar los datos de la app. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Para buscar impresoras USB (requiere cable OTG) -->
-    <uses-feature android:name="android.hardware.usb.host" />
+    <!-- La cámara solo se usa al escanear códigos; el dispositivo puede instalarse sin cámara. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- La impresión USB es opcional; no debe impedir instalar la app sin OTG. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- Permisos de Bluetooth para Android 11 o inferior -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <!-- El plugin de impresión requiere ubicación para descubrir dispositivos Bluetooth. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Permisos de Bluetooth estrictos para Android 12 y superior -->
+    <!-- Permisos de Bluetooth para Android 12 y superior; el plugin los solicita al buscar. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" tools:node="remove" />
 
     <application
         android:label="Admivida"
