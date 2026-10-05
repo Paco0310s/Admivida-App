@@ -186,7 +186,7 @@ class PrinterService {
       for (final row in document.rows) {
         // Puedes dividir la fila en columnas para alinear cantidades y precios
         bytes += generator.row([
-          PosColumn(text: '${row.quantity}x', width: 2),
+          PosColumn(text: '${row.quantity} x', width: 2),
           PosColumn(text: row.description, width: 7),
           PosColumn(
             text: '\$${row.total.toStringAsFixed(2)}',
