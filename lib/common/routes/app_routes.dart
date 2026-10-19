@@ -28,6 +28,7 @@ import 'package:admivida/common/features/choose_platform_role/choose_platform_ro
 import 'package:admivida/common/features/home/home_screen.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/forgot_password/forgot_password_screen.dart';
 import 'package:admivida/common/features/sign_in/sign_in_screen.dart';
@@ -38,6 +39,31 @@ import 'package:admivida/common/features/status/status_screen.dart';
 import 'routes.dart';
 
 class AppRoutes {
+  static bool get _isInstantTransitionPlatform =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final builder = routes[settings.name];
+    if (builder == null) return null;
+
+    if (_isInstantTransitionPlatform) {
+      return PageRouteBuilder<dynamic>(
+        settings: settings,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+      );
+    }
+
+    return MaterialPageRoute<dynamic>(
+      settings: settings,
+      builder: builder,
+    );
+  }
+
   Map<String, Widget Function(BuildContext)> get routes {
     return {
       Routes.splash: (context) => const SplashScreen(),

@@ -8,6 +8,7 @@ import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -21,30 +22,43 @@ class SalesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = Responsive.isMobile(context);
+
     return AppScaffold(
       title: AppTexts.businessSales,
       appBar: AppBar(
-        title: AppText(AppTexts.businessSales, color: AppColors.kNeutral100),
+        title: const AppText(AppTexts.businessSales, color: AppColors.kNeutral100),
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
       ),
-      mobile: SalesListView(businessId: businessId),
-      tablet: SalesListView(businessId: businessId),
-      desktop: SalesListView(businessId: businessId),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => NavigationService.navigateTo(context, Routes.addSale, arguments: {'businessId': businessId, 'businessName': businessName}),
-        backgroundColor: AppColors.kPrimaryColor,
-        icon: const Icon(Icons.add),
-        label: AppText(AppTexts.addSaleButton, color: AppColors.kNeutral100),
-      ),
+      mobile: SalesListView(businessId: businessId, businessName: businessName),
+      tablet: SalesListView(businessId: businessId, businessName: businessName),
+      desktop: SalesListView(businessId: businessId, businessName: businessName),
+      floatingActionButton: isMobile
+          ? FloatingActionButton.extended(
+              onPressed: () => NavigationService.navigateTo(
+                context,
+                Routes.addSale,
+                arguments: {'businessId': businessId, 'businessName': businessName},
+              ),
+              backgroundColor: AppColors.kPrimaryColor,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const AppText(AppTexts.addSaleButton, color: AppColors.kNeutral100, fontWeight: FontWeight.w600),
+            )
+          : null,
     );
   }
 }
 
 class SalesListView extends ConsumerStatefulWidget {
-  const SalesListView({super.key, required this.businessId});
+  const SalesListView({
+    super.key,
+    required this.businessId,
+    required this.businessName,
+  });
 
   final String businessId;
+  final String businessName;
 
   @override
   ConsumerState<SalesListView> createState() => _SalesListViewState();
@@ -65,20 +79,17 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
     super.dispose();
   }
 
-  // 💡 Detects scroll proximity to trigger infinite scrolling via Riverpod.
   void _handleScroll() {
     if (_scrollController.position.extentAfter < 300) {
       ref.read(salesListProvider(widget.businessId).notifier).fetchNextPage();
     }
   }
 
-  // 💡 Helper to build a status badge based on the sale status
   Widget _buildStatusBadge(String status) {
     Color bgColor;
     Color textColor;
     String label;
 
-    // Puedes ajustar estos strings según lo que envíe tu enum SaleStatusEnum desde NestJS
     switch (status.toUpperCase()) {
       case 'PAID':
       case 'COMPLETED':
@@ -103,25 +114,78 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-      child: AppText(label, fontSize: 10, fontWeight: FontWeight.bold, color: textColor),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
+      child: AppText(label, fontSize: 10.5, fontWeight: FontWeight.bold, color: textColor),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final salesAsync = ref.watch(salesListProvider(widget.businessId));
+    final bool isMobile = Responsive.isMobile(context);
+    final bool isWideDesktop = MediaQuery.of(context).size.width >= 1280;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(salesListProvider(widget.businessId).notifier).refresh(),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppText(AppTexts.salesListTitle, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-            const Gap(12),
+            if (!isMobile) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const AppText(
+                        'Historial de ventas recientes',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.kNeutral700,
+                      ),
+                      if (salesAsync.value != null) ...[
+                        const Gap(8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.kPrimary50,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: AppText(
+                            '${salesAsync.value!.sales.length}',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.kPrimaryColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => NavigationService.navigateTo(
+                      context,
+                      Routes.addSale,
+                      arguments: {'businessId': widget.businessId, 'businessName': widget.businessName},
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                    label: const Text(
+                      AppTexts.addSaleButton,
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(16),
+            ],
             Expanded(
               child: salesAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
@@ -130,7 +194,40 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                   final sales = listState.sales;
 
                   if (sales.isEmpty) {
-                    return Center(child: AppText(AppTexts.noData, color: AppColors.kNeutral600));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(color: AppColors.kPrimary50, shape: BoxShape.circle),
+                            child: const Icon(Icons.receipt_long_rounded, size: 36, color: AppColors.kPrimaryColor),
+                          ),
+                          const Gap(12),
+                          const AppText(AppTexts.noData, color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (isWideDesktop) {
+                    return GridView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        mainAxisExtent: 128,
+                      ),
+                      itemCount: sales.length + (listState.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == sales.length) {
+                          return const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor));
+                        }
+                        return _buildSaleCard(context, sales[index], isGrid: true);
+                      },
+                    );
                   }
 
                   return ListView.builder(
@@ -144,60 +241,7 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                           child: Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
                         );
                       }
-
-                      final sale = sales[index];
-                      final dateFormatted = DateFormat('dd MMM yyyy • hh:mm a').format(sale.createdAt.toLocal());
-
-                      // 💡 Generate product preview text (e.g. "Bolis Oreo, Bolis Vainilla...")
-                      final previewNames = sale.details.take(3).map((d) => d.productNameSnapshot).join(', ');
-                      final hasMoreProducts = sale.details.length > 3;
-                      final productsPreview = hasMoreProducts ? '$previewNames...' : previewNames;
-
-                      return AppCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        onTap: () {
-                          NavigationService.navigateTo(context, Routes.saleDetail, arguments: sale);
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                AppText(dateFormatted, color: AppColors.kNeutral500, fontSize: 12),
-                                _buildStatusBadge(sale.status),
-                              ],
-                            ),
-                            const Gap(12),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                _StackedSaleImages(details: sale.details),
-                                const Gap(12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      AppText(sale.clientNameSnapshot, fontWeight: FontWeight.bold, color: AppColors.kNeutral900, fontSize: 15),
-                                      const Gap(4),
-                                      // 💡 Showing the preview text here
-                                      AppText(productsPreview, color: AppColors.kNeutral600, fontSize: 12, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    ],
-                                  ),
-                                ),
-                                const Gap(8),
-                                AppText(
-                                  '\$${sale.totalPriceSnapshot.toStringAsFixed(2)}',
-                                  color: AppColors.kPrimaryColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
+                      return _buildSaleCard(context, sales[index], isGrid: false);
                     },
                   );
                 },
@@ -205,6 +249,85 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSaleCard(BuildContext context, SaleModel sale, {required bool isGrid}) {
+    final dateFormatted = DateFormat('dd MMM yyyy • hh:mm a').format(sale.createdAt.toLocal());
+
+    final previewNames = sale.details.take(3).map((d) => d.productNameSnapshot).join(', ');
+    final hasMoreProducts = sale.details.length > 3;
+    final productsPreview = hasMoreProducts ? '$previewNames...' : previewNames;
+
+    return AppCard(
+      margin: isGrid ? EdgeInsets.zero : const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      onTap: () {
+        NavigationService.navigateTo(context, Routes.saleDetail, arguments: sale);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.schedule_rounded, size: 14, color: AppColors.kNeutral400),
+                  const Gap(5),
+                  AppText(dateFormatted, color: AppColors.kNeutral500, fontSize: 12),
+                ],
+              ),
+              _buildStatusBadge(sale.status),
+            ],
+          ),
+          const Gap(10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _StackedSaleImages(details: sale.details),
+              const Gap(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      sale.clientNameSnapshot.isNotEmpty ? sale.clientNameSnapshot : 'Público General',
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.kNeutral900,
+                      fontSize: 15,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Gap(3),
+                    AppText(
+                      productsPreview.isNotEmpty ? productsPreview : '${sale.details.length} artículos',
+                      color: AppColors.kNeutral600,
+                      fontSize: 12,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Gap(10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const AppText('Total', fontSize: 10, color: AppColors.kNeutral500),
+                  AppText(
+                    '\$${sale.totalPriceSnapshot.toStringAsFixed(2)}',
+                    color: AppColors.kPrimaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.5,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -217,46 +340,40 @@ class _StackedSaleImages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Filtramos los detalles que SÍ tienen imagen
     final itemsWithImages = details.where((d) => d.imageUrl != null).toList();
 
-    // Si no hay ninguna imagen, mostramos el ícono del recibo por defecto
     if (itemsWithImages.isEmpty) {
       return Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(color: AppColors.kPrimary50, borderRadius: BorderRadius.circular(14)),
-        child: const Icon(Icons.receipt_long_rounded, color: AppColors.kPrimaryColor),
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(color: AppColors.kPrimary50, borderRadius: BorderRadius.circular(13)),
+        child: const Icon(Icons.receipt_long_rounded, color: AppColors.kPrimaryColor, size: 22),
       );
     }
 
-    // 2. Tomamos hasta 3 imágenes
-    final maxImagesToShow = 3;
+    const maxImagesToShow = 3;
     final displayItems = itemsWithImages.take(maxImagesToShow).toList();
     final remainingCount = details.length - displayItems.length;
 
     return SizedBox(
-      width: 60, // Ancho suficiente para que quepan las imágenes apiladas
+      width: 60,
       height: 42,
       child: Stack(
         children: [
-          // Dibujamos las imágenes apiladas (de derecha a izquierda para que la primera quede arriba)
           for (int i = displayItems.length - 1; i >= 0; i--)
             Positioned(
-              left: i * 14.0, // Cada imagen se desplaza 14 pixeles a la derecha
+              left: i * 14.0,
               child: Container(
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2), // Borde blanco para el efecto apilado
+                  border: Border.all(color: Colors.white, width: 2),
                   color: AppColors.kNeutral200,
                 ),
                 child: ClipOval(child: AdaptedFile.network(displayItems[i].imageUrl!).getWidget(fit: BoxFit.cover)),
               ),
             ),
-
-          // 3. Si hay más productos, agregamos el circulito flotante "+X"
           if (remainingCount > 0)
             Positioned(
               right: 0,

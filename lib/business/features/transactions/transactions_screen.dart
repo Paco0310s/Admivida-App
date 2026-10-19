@@ -1,4 +1,5 @@
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
+import 'package:admivida/business/features/transactions/models/transactions_list_state.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -7,6 +8,7 @@ import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -18,6 +20,8 @@ class TransactionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = Responsive.isMobile(context);
+
     return AppScaffold(
       title: 'Movimientos',
       appBar: AppBar(
@@ -28,30 +32,32 @@ class TransactionsScreen extends StatelessWidget {
       mobile: TransactionsListView(businessId: businessId),
       tablet: TransactionsListView(businessId: businessId),
       desktop: TransactionsListView(businessId: businessId),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'transferFunds',
-            tooltip: 'Transferir entre cuentas',
-            onPressed: () {
-              NavigationService.navigateTo(context, Routes.transferFunds, arguments: businessId);
-            },
-            backgroundColor: AppColors.kPrimaryColor,
-            child: const Icon(Icons.swap_horiz, color: AppColors.kNeutral100),
-          ),
-          const SizedBox(width: 16),
-          FloatingActionButton(
-            heroTag: 'addTransaction',
-            tooltip: 'Agregar movimiento',
-            onPressed: () {
-              NavigationService.navigateTo(context, Routes.addTransaction, arguments: businessId);
-            },
-            backgroundColor: AppColors.kPrimaryColor,
-            child: const Icon(Icons.add, color: AppColors.kNeutral100),
-          ),
-        ],
-      ),
+      floatingActionButton: isMobile
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'transferFunds',
+                  tooltip: 'Transferir entre cuentas',
+                  onPressed: () {
+                    NavigationService.navigateTo(context, Routes.transferFunds, arguments: businessId);
+                  },
+                  backgroundColor: AppColors.kSecondaryColor,
+                  child: const Icon(Icons.swap_horiz, color: AppColors.kNeutral100),
+                ),
+                const SizedBox(width: 14),
+                FloatingActionButton(
+                  heroTag: 'addTransaction',
+                  tooltip: 'Agregar movimiento',
+                  onPressed: () {
+                    NavigationService.navigateTo(context, Routes.addTransaction, arguments: businessId);
+                  },
+                  backgroundColor: AppColors.kPrimaryColor,
+                  child: const Icon(Icons.add, color: AppColors.kNeutral100),
+                ),
+              ],
+            )
+          : null,
     );
   }
 }
@@ -91,96 +97,31 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsListProvider(widget.businessId, _selectedAccountId));
     final accountsAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
-
-    final accountOptions = <String, String>{};
-
-    for (final tx in transactionsAsync.value?.transactions ?? const <Transaction>[]) {
-      final accountName = tx.accountName?.trim().isNotEmpty == true ? tx.accountName! : tx.accountId;
-      accountOptions.putIfAbsent(tx.accountId, () => accountName);
-    }
+    final bool isMobile = Responsive.isMobile(context);
 
     return RefreshIndicator(
       onRefresh: () => ref.read(transactionsListProvider(widget.businessId, _selectedAccountId).notifier).refresh(),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+            // Summary + Filter Header
+            if (!isMobile) ...[
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText('Balance de la cuenta', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-                  const Gap(8),
-                  transactionsAsync.when(
-                    loading: () => const SizedBox(height: 36, child: Center(child: CircularProgressIndicator())),
-                    error: (error, stackTrace) => AppText('No se pudo cargar el balance', color: Colors.red),
-                    data: (state) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText('\$${state.summary.balance.toStringAsFixed(2)}', fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-                        const Gap(10),
-                        Row(
-                          children: [
-                            AppText('Ingresos: ', color: AppColors.kNeutral600),
-                            AppText('\$${state.summary.totalIncome.toStringAsFixed(2)}', color: AppColors.kSuccess),
-                            const Spacer(),
-                            AppText('Egresos: ', color: AppColors.kNeutral600),
-                            AppText('\$${state.summary.totalExpense.toStringAsFixed(2)}', color: AppColors.kWarning),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  Expanded(flex: 60, child: _buildBalanceCard(transactionsAsync)),
+                  const Gap(14),
+                  Expanded(flex: 40, child: _buildAccountFilterCard(accountsAsync, isMobile: false)),
                 ],
               ),
-            ),
-            const Gap(12),
-
-            // Recuerda leer tu provider al inicio de tu método build():
-            // final accountsAsync = ref.watch(accountsProvider(businessId: widget.businessId));
-            AppCard(
-              padding: const EdgeInsets.all(12),
-              child: accountsAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (error, stack) => Text('Error al cargar cuentas', style: const TextStyle(color: Colors.red)),
-                data: (accounts) {
-                  return DropdownButtonFormField<String>(
-                    initialValue: _selectedAccountId ?? '',
-                    decoration: InputDecoration(
-                      labelText: 'Cuenta',
-                      filled: true,
-                      fillColor: AppColors.kNeutral50,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    items: [
-                      // 1. La opción por defecto (Todas) hasta arriba
-                      const DropdownMenuItem<String>(
-                        value: '',
-                        child: Text('Todas las cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      // 2. Mapeamos las cuentas reales obtenidas de tu backend
-                      ...accounts.map((acc) => DropdownMenuItem<String>(value: acc.id, child: Text(acc.name))),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        // Si elige 'Todas' (valor vacío), lo pasamos a null
-                        _selectedAccountId = (value == null || value.isEmpty) ? null : value;
-
-                        // Invalidamos el provider de transacciones para que vuelva a disparar el GET
-                        // con o sin el accountId según corresponda
-                        ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-            const Gap(12),
+            ] else ...[
+              _buildBalanceCard(transactionsAsync),
+              const Gap(10),
+              _buildAccountFilterCard(accountsAsync, isMobile: true),
+            ],
+            const Gap(14),
             Expanded(
               child: transactionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -189,11 +130,25 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                   final transactions = listState.transactions;
 
                   if (transactions.isEmpty) {
-                    return Center(child: AppText(AppTexts.noData, color: AppColors.kNeutral600));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(color: AppColors.kPrimary50, shape: BoxShape.circle),
+                            child: const Icon(Icons.account_balance_wallet_rounded, size: 36, color: AppColors.kPrimaryColor),
+                          ),
+                          const Gap(12),
+                          const AppText(AppTexts.noData, color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
+                        ],
+                      ),
+                    );
                   }
 
                   return ListView.builder(
                     controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: transactions.length + (listState.isLoadingMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == transactions.length) {
@@ -207,55 +162,63 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                       final isIncome = transaction.type == TransactionType.income;
 
                       return AppCard(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(14),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
-                              width: 48,
-                              height: 48,
+                              width: 46,
+                              height: 46,
                               decoration: BoxDecoration(
                                 color: isIncome ? AppColors.kSuccess.withValues(alpha: 0.12) : AppColors.kWarning.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(13),
                               ),
                               child: Icon(
-                                isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
                                 color: isIncome ? AppColors.kSuccess : AppColors.kWarning,
+                                size: 22,
                               ),
                             ),
-                            const Gap(12),
+                            const Gap(14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  AppText(transaction.accountName ?? transaction.accountId, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                                  const Gap(4),
+                                  AppText(
+                                    transaction.accountName ?? transaction.accountId,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.kNeutral900,
+                                    fontSize: 14.5,
+                                  ),
+                                  const Gap(3),
                                   AppText(
                                     transaction.description?.isNotEmpty == true
                                         ? transaction.description!
                                         : '${transaction.type.name} · ${transaction.paymentMethodName ?? transaction.paymentMethodId}',
                                     color: AppColors.kNeutral600,
-                                    fontSize: 12,
-                                  ),
-                                  const Gap(8),
-                                  Row(
-                                    children: [
-                                      AppText(
-                                        '${isIncome ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
-                                        color: isIncome ? AppColors.kSuccess : AppColors.kWarning,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      const Spacer(),
-                                      AppText(
-                                        '${transaction.createdAt.day}/${transaction.createdAt.month}/${transaction.createdAt.year}, ${transaction.createdAt.hour}:${transaction.createdAt.minute.toString().padLeft(2, '0')}:${transaction.createdAt.second.toString().padLeft(2, '0')}',
-                                        color: AppColors.kNeutral500,
-                                        fontSize: 12,
-                                      ),
-                                    ],
+                                    fontSize: 12.5,
                                   ),
                                 ],
                               ),
+                            ),
+                            const Gap(12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                AppText(
+                                  '${isIncome ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
+                                  color: isIncome ? AppColors.kSuccess : AppColors.kWarning,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15.5,
+                                ),
+                                const Gap(4),
+                                AppText(
+                                  '${transaction.createdAt.day.toString().padLeft(2, '0')}/${transaction.createdAt.month.toString().padLeft(2, '0')}/${transaction.createdAt.year} • ${transaction.createdAt.hour.toString().padLeft(2, '0')}:${transaction.createdAt.minute.toString().padLeft(2, '0')}',
+                                  color: AppColors.kNeutral500,
+                                  fontSize: 11.5,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -267,6 +230,160 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceCard(AsyncValue<TransactionsListState> transactionsAsync) {
+    return AppCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppText('Balance de la cuenta', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.kNeutral600),
+          const Gap(6),
+          transactionsAsync.when(
+            loading: () => const SizedBox(height: 44, child: Center(child: CircularProgressIndicator())),
+            error: (error, stackTrace) => const AppText('No se pudo cargar el balance', color: Colors.red),
+            data: (state) => Row(
+              children: [
+                Expanded(
+                  child: AppText(
+                    '\$${state.summary.balance.toStringAsFixed(2)}',
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.kPrimaryColor,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.kSuccess.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const AppText('Ingresos', fontSize: 10, color: AppColors.kNeutral600),
+                      AppText(
+                        '+\$${state.summary.totalIncome.toStringAsFixed(2)}',
+                        color: AppColors.kSuccess,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.kWarning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const AppText('Egresos', fontSize: 10, color: AppColors.kNeutral600),
+                      AppText(
+                        '-\$${state.summary.totalExpense.toStringAsFixed(2)}',
+                        color: AppColors.kWarning,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountFilterCard(AsyncValue accountsAsync, {required bool isMobile}) {
+    return AppCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          accountsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, stack) => const Text('Error al cargar cuentas', style: TextStyle(color: Colors.red)),
+            data: (accounts) {
+              return DropdownButtonFormField<String>(
+                initialValue: _selectedAccountId ?? '',
+                decoration: InputDecoration(
+                  labelText: 'Filtrar por cuenta',
+                  filled: true,
+                  fillColor: AppColors.kNeutral50,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: '',
+                    child: Text('Todas las cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  ...accounts.map<DropdownMenuItem<String>>(
+                    (acc) => DropdownMenuItem<String>(value: acc.id, child: Text(acc.name)),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAccountId = (value == null || value.isEmpty) ? null : value;
+                    ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
+                  });
+                },
+              );
+            },
+          ),
+          if (!isMobile) ...[
+            const Gap(10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      NavigationService.navigateTo(context, Routes.transferFunds, arguments: widget.businessId);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.kSecondaryColor,
+                      side: const BorderSide(color: AppColors.kSecondaryColor),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 17),
+                    label: const Text('Transferir', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
+                  ),
+                ),
+                const Gap(8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      NavigationService.navigateTo(context, Routes.addTransaction, arguments: widget.businessId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 17),
+                    label: const Text('Movimiento', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

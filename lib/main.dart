@@ -69,7 +69,7 @@ class _AdmividaAppState extends ConsumerState<AdmividaApp> with WidgetsBindingOb
         title: AppTexts.appName,
         theme: AppTheme.lightTheme,
         initialRoute: Routes.splash,
-        routes: AppRoutes().routes,
+        onGenerateRoute: AppRoutes().onGenerateRoute,
         debugShowCheckedModeBanner: false,
       ),
     );

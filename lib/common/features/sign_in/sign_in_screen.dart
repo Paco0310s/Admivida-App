@@ -1,33 +1,30 @@
-import 'package:admivida/common/widgets/app_tap_text.dart';
-import 'package:admivida/common/widgets/app_text.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gap/gap.dart';
-import 'package:admivida/common/features/sign_in/sign_in_provider.dart';
-import 'package:admivida/common/features/sign_in/models/login_user_dto.dart';
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/features/sign_in/models/login_user_dto.dart';
+import 'package:admivida/common/features/sign_in/sign_in_provider.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/utils/validators.dart';
 import 'package:admivida/common/widgets/app_button.dart';
+import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_password_field.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
+import 'package:admivida/common/widgets/app_tap_text.dart';
+import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 
 class SignInScreen extends ConsumerWidget {
   const SignInScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoading = ref.watch(signInLoadingProvider);
-
     return AppScaffold(
-      appBar: AppBar(
-        title: AppText(AppTexts.signInForContinue, color: AppColors.kTertiaryColor),
-        backgroundColor: AppColors.kBackgroundColor,
-      ),
+      showAppBar: false,
+      showDashboardShell: false,
       title: AppTexts.signIn,
       mobile: SignInMobile(context),
       tablet: SignInTablet(context),
@@ -45,7 +42,12 @@ class SignInMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: SignInWidget(ponderContainers: 0, ponderForm: 100));
+    return const Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: SignInForm(showHeaderLogo: true),
+      ),
+    );
   }
 }
 
@@ -56,12 +58,17 @@ class SignInTablet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Flexible(flex: 100, child: SignInWidget(ponderContainers: 10, ponderForm: 90)),
-        // Flexible(flex: 30, child: SignInImage()),
-      ],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: const AppCard(
+            padding: EdgeInsets.all(32),
+            child: SignInForm(showHeaderLogo: true),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -74,11 +81,118 @@ class SignInDesktop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(flex: 45, child: SignInImage()),
-        Flexible(flex: 55, child: SignInWidget()),
+        // Left Branding Panel (40%)
+        Expanded(
+          flex: 40,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF132D38),
+                  AppColors.kPrimaryColor,
+                  AppColors.kSecondaryColor,
+                ],
+              ),
+            ),
+            padding: const EdgeInsets.all(48),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: AppImage(
+                    AdaptedFile.asset(AppAssets.icon),
+                    height: 64,
+                    width: 64,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const Gap(28),
+                const AppText(
+                  AppTexts.appName,
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                const Gap(10),
+                const AppText(
+                  'Plataforma integral de administración de negocios, punto de venta (POS), control de inventario y gestión financiera.',
+                  fontSize: 16,
+                  color: Color(0xE0FFFFFF),
+                ),
+                const Gap(32),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: const [
+                    _FeatureBadge(icon: Icons.point_of_sale_rounded, label: 'Punto de Venta Rápido'),
+                    _FeatureBadge(icon: Icons.inventory_2_rounded, label: 'Control de Inventario'),
+                    _FeatureBadge(icon: Icons.account_balance_wallet_rounded, label: 'Cuentas y Finanzas'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Right Form Panel (60%)
+        Expanded(
+          flex: 60,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: const AppCard(
+                  padding: EdgeInsets.all(32),
+                  child: SignInForm(showHeaderLogo: false),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _FeatureBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _FeatureBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.kPrimary100, size: 17),
+          const Gap(8),
+          AppText(label, fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w500),
+        ],
+      ),
     );
   }
 }
@@ -102,11 +216,11 @@ class SignInWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Container(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Row(
           children: [
             Flexible(flex: ponderContainers, child: Container()),
-            Flexible(flex: ponderForm, child: SignInForm()),
+            Flexible(flex: ponderForm, child: const SignInForm()),
             Flexible(flex: ponderContainers, child: Container()),
           ],
         ),
@@ -116,7 +230,9 @@ class SignInWidget extends StatelessWidget {
 }
 
 class SignInForm extends ConsumerStatefulWidget {
-  const SignInForm({super.key});
+  final bool showHeaderLogo;
+
+  const SignInForm({super.key, this.showHeaderLogo = true});
 
   @override
   ConsumerState<SignInForm> createState() => _SignInFormState();
@@ -167,8 +283,32 @@ class _SignInFormState extends ConsumerState<SignInForm> {
         absorbing: isLoading,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppImage(AdaptedFile.asset(AppAssets.icon), height: 200, width: 200, fit: BoxFit.contain),
+            if (widget.showHeaderLogo) ...[
+              Center(
+                child: AppImage(
+                  AdaptedFile.asset(AppAssets.icon),
+                  height: 120,
+                  width: 120,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const Gap(16),
+            ],
+            const AppText(
+              AppTexts.signIn,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.kNeutral900,
+            ),
+            const Gap(4),
+            const AppText(
+              AppTexts.signInForContinue,
+              fontSize: 13.5,
+              color: AppColors.kNeutral600,
+            ),
+            const Gap(24),
             AppTextField(
               text: AppTexts.emailOrPhoneLabel,
               hintText: AppTexts.emailOrPhoneHint,
@@ -177,9 +317,9 @@ class _SignInFormState extends ConsumerState<SignInForm> {
               fontWeight: FontWeight.bold,
               controller: _emailOrPhoneController,
               validator: (value) => ValidatorsUtil.validateEmailOrPhone(value),
-              prefixIcon: Icon(Icons.email, size: 20, color: AppColors.kDark3),
+              prefixIcon: const Icon(Icons.email_rounded, size: 20, color: AppColors.kDark3),
             ),
-            Gap(20),
+            const Gap(18),
             AppPasswordField(
               text: AppTexts.passwordLabel,
               hintText: AppTexts.passwordHint,
@@ -188,34 +328,39 @@ class _SignInFormState extends ConsumerState<SignInForm> {
               fontWeight: FontWeight.bold,
               controller: _passwordController,
               validator: (value) => ValidatorsUtil.validatePassword(value),
-              prefixIcon: Icon(Icons.lock, size: 20, color: AppColors.kDark3),
+              prefixIcon: const Icon(Icons.lock_rounded, size: 20, color: AppColors.kDark3),
             ),
-            Gap(10),
+            const Gap(10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: [AppTapText(text: AppTexts.forgotPasswordTitle, onTap: () => ref.read(goToForgotPasswordProvider(context)))],
+              children: [
+                AppTapText(
+                  text: AppTexts.forgotPasswordTitle,
+                  onTap: () => ref.read(goToForgotPasswordProvider(context)),
+                ),
+              ],
             ),
-            Gap(40),
+            const Gap(28),
             AppButton(
-              leadingWidget: Icon(Icons.login, size: 20),
+              leadingWidget: const Icon(Icons.login_rounded, size: 20),
               text: AppTexts.signIn,
               onPressed: _handleSignIn,
               width: double.infinity,
-              height: 55,
+              height: 52,
               backgroundColor: AppColors.kPrimaryColor,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
               isLoading: isLoading,
             ),
-            Gap(10),
+            const Gap(12),
             AppButton(
-              leadingWidget: Icon(Icons.arrow_forward, size: 20),
+              leadingWidget: const Icon(Icons.person_add_alt_1_rounded, size: 20),
               text: AppTexts.signUp,
               onPressed: () => ref.read(goToSignUpProvider(context)),
               width: double.infinity,
-              height: 55,
+              height: 52,
               backgroundColor: AppColors.kSecondaryColor,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
           ],
@@ -230,8 +375,6 @@ class ButtonApple extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoading = ref.watch(signInLoadingProvider);
-
     return AppButton(
       text: 'Use Apple',
       onPressed: () => ref.read(signInWithAppleProvider(context)),
@@ -252,8 +395,6 @@ class ButtonGoogle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoading = ref.watch(signInLoadingProvider);
-
     return AppButton(
       text: AppTexts.googleSignInButton,
       onPressed: () => ref.read(signInWithGoogleProvider(context)),

@@ -1,21 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gap/gap.dart';
-import 'package:admivida/common/features/sign_up/sign_up_provider.dart';
-import 'package:admivida/common/features/sign_up/models/create_user_dto.dart';
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/features/sign_up/models/create_user_dto.dart';
+import 'package:admivida/common/features/sign_up/sign_up_provider.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/utils/validators.dart';
 import 'package:admivida/common/widgets/app_button.dart';
+import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_password_field.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/app_text_field.dart';
 import 'package:admivida/common/widgets/responsive.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
-import '../../widgets/app_text_field.dart';
 
 class SignUpScreen extends ConsumerWidget {
   const SignUpScreen({super.key});
@@ -23,10 +24,8 @@ class SignUpScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AppScaffold(
-      appBar: AppBar(
-        title: AppText(AppTexts.signUpForContinue, color: AppColors.kTertiaryColor),
-        backgroundColor: AppColors.kBackgroundColor,
-      ),
+      showAppBar: false,
+      showDashboardShell: false,
       title: AppTexts.signUp,
       mobile: SignUpMobile(context),
       tablet: SignUpTablet(context),
@@ -44,7 +43,12 @@ class SignUpMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: SignUpWidget(ponderContainers: 0, ponderForm: 100));
+    return const Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: SignUpForm(showHeaderLogo: true),
+      ),
+    );
   }
 }
 
@@ -55,9 +59,17 @@ class SignUpTablet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [Flexible(flex: 100, child: SignUpWidget(ponderContainers: 10, ponderForm: 90))],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: const AppCard(
+            padding: EdgeInsets.all(32),
+            child: SignUpForm(showHeaderLogo: true),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -70,11 +82,130 @@ class SignUpDesktop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(flex: 45, child: SignUpImage()),
-        Flexible(flex: 55, child: SignUpWidget()),
+        // Left Branding Panel (40%)
+        Expanded(
+          flex: 40,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF132D38),
+                  AppColors.kPrimaryColor,
+                  AppColors.kSecondaryColor,
+                ],
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 48),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: AppImage(
+                    AdaptedFile.asset(AppAssets.icon),
+                    height: 56,
+                    width: 56,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const Gap(24),
+                const AppText(
+                  AppTexts.appName,
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                const Gap(10),
+                const AppText(
+                  'Crea tu cuenta para administrar tus negocios, inventario, ventas y equipo desde un solo lugar.',
+                  fontSize: 14.5,
+                  color: Color(0xE0FFFFFF),
+                ),
+                const Gap(28),
+                const _SignUpFeatureItem(
+                  icon: Icons.storefront_rounded,
+                  label: 'Multi-empresa y sucursales',
+                ),
+                const Gap(12),
+                const _SignUpFeatureItem(
+                  icon: Icons.point_of_sale_rounded,
+                  label: 'Punto de venta e inventario',
+                ),
+                const Gap(12),
+                const _SignUpFeatureItem(
+                  icon: Icons.security_rounded,
+                  label: 'Acceso seguro en la nube',
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Right Form Panel (60%)
+        Expanded(
+          flex: 60,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: const AppCard(
+                  padding: EdgeInsets.all(32),
+                  child: SignUpForm(showHeaderLogo: false),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _SignUpFeatureItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _SignUpFeatureItem({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.kPrimary100, size: 18),
+          const Gap(10),
+          Flexible(
+            child: AppText(
+              label,
+              fontSize: 12.5,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -84,7 +215,13 @@ class SignUpImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppImage(AdaptedFile.asset(AppAssets.logo), color: AppColors.kNeutral100, height: double.infinity, width: double.infinity, fit: BoxFit.contain);
+    return AppImage(
+      AdaptedFile.asset(AppAssets.logo),
+      color: AppColors.kNeutral100,
+      height: double.infinity,
+      width: double.infinity,
+      fit: BoxFit.contain,
+    );
   }
 }
 
@@ -98,11 +235,11 @@ class SignUpWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Container(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Row(
           children: [
             Flexible(flex: ponderContainers, child: Container()),
-            Flexible(flex: ponderForm, child: SignUpForm()),
+            Flexible(flex: ponderForm, child: const SignUpForm()),
             Flexible(flex: ponderContainers, child: Container()),
           ],
         ),
@@ -112,7 +249,9 @@ class SignUpWidget extends StatelessWidget {
 }
 
 class SignUpForm extends ConsumerStatefulWidget {
-  const SignUpForm({super.key});
+  final bool showHeaderLogo;
+
+  const SignUpForm({super.key, this.showHeaderLogo = true});
 
   @override
   ConsumerState<SignUpForm> createState() => _SignUpFormState();
@@ -169,6 +308,64 @@ class _SignUpFormState extends ConsumerState<SignUpForm> {
   @override
   Widget build(BuildContext context) {
     final isSignUpLoading = ref.watch(signUpLoadingProvider);
+    final isDesktop = Responsive.isDesktop(context);
+
+    final firstNameField = AppTextField(
+      text: AppTexts.firstNameLabel,
+      hintText: AppTexts.firstNameHint,
+      keyboardType: TextInputType.name,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      controller: _firstNameController,
+      validator: (value) => ValidatorsUtil.validateName(value),
+      prefixIcon: const Icon(Icons.person_rounded, size: 20, color: AppColors.kDark3),
+    );
+
+    final lastNameField = AppTextField(
+      text: AppTexts.lastNameLabel,
+      hintText: AppTexts.lastNameHint,
+      keyboardType: TextInputType.name,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      controller: _lastNameController,
+      validator: (value) => ValidatorsUtil.validateLastName(value),
+      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20, color: AppColors.kDark3),
+    );
+
+    final emailField = AppTextField(
+      text: AppTexts.emailLabel,
+      hintText: AppTexts.emailHint,
+      keyboardType: TextInputType.emailAddress,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      controller: _emailController,
+      validator: (value) => ValidatorsUtil.validateEmail(value),
+      prefixIcon: const Icon(Icons.email_rounded, size: 20, color: AppColors.kDark3),
+    );
+
+    final phoneField = AppTextField(
+      text: AppTexts.phoneLabel,
+      hintText: AppTexts.phoneHint,
+      keyboardType: TextInputType.phone,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      controller: _phoneController,
+      validator: (value) => ValidatorsUtil.validatePhone(value),
+      prefixIcon: const Icon(Icons.phone_rounded, size: 20, color: AppColors.kDark3),
+    );
+
+    final passwordField = AppPasswordField(
+      text: AppTexts.passwordLabel,
+      hintText: AppTexts.passwordHint,
+      keyboardType: TextInputType.visiblePassword,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      controller: _passwordController,
+      validator: (value) => ValidatorsUtil.validatePassword(value),
+      prefixIcon: const Icon(Icons.lock_rounded, size: 20, color: AppColors.kDark3),
+    );
+
+    final birthdayField = _AppBirthdayPicker(birthdateController: _birthdateController);
 
     return Form(
       key: _formKey,
@@ -177,171 +374,95 @@ class _SignUpFormState extends ConsumerState<SignUpForm> {
         absorbing: isSignUpLoading,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppImage(AdaptedFile.asset(AppAssets.icon), height: 200, width: 200, fit: BoxFit.contain),
-            Builder(
-              builder: (context) {
-                if (!Responsive.isDesktop(context)) {
-                  return Column(
-                    children: [
-                      AppTextField(
-                        text: AppTexts.firstNameLabel,
-                        hintText: AppTexts.firstNameHint,
-                        keyboardType: TextInputType.name,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        controller: _firstNameController,
-                        validator: (value) => ValidatorsUtil.validateName(value),
-                        prefixIcon: Icon(Icons.person, color: AppColors.kDark3),
-                      ),
-                      Gap(10),
-                      AppTextField(
-                        text: AppTexts.lastNameLabel,
-                        hintText: AppTexts.lastNameHint,
-                        keyboardType: TextInputType.name,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        controller: _lastNameController,
-                        validator: (value) => ValidatorsUtil.validateLastName(value),
-                        prefixIcon: Icon(Icons.person, color: AppColors.kDark3),
-                      ),
-                      Gap(10),
-                      AppTextField(
-                        text: AppTexts.emailLabel,
-                        hintText: AppTexts.emailHint,
-                        keyboardType: TextInputType.emailAddress,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        controller: _emailController,
-                        validator: (value) => ValidatorsUtil.validateEmail(value),
-                        prefixIcon: Icon(Icons.email, color: AppColors.kDark3),
-                      ),
-                      Gap(10),
-                      AppTextField(
-                        text: AppTexts.phoneLabel,
-                        hintText: AppTexts.phoneHint,
-                        keyboardType: TextInputType.phone,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        controller: _phoneController,
-                        validator: (value) => ValidatorsUtil.validatePhone(value),
-                        prefixIcon: Icon(Icons.phone, color: AppColors.kDark3),
-                      ),
-                      // AppPhoneField(
-                      //   text: AppTexts.phoneLabel,
-                      //   hintTextCode: AppTexts.codeExample,
-                      //   hintTextPhone: AppTexts.phoneHint,
-                      //   textColor: AppColors.kDark3,
-                      //   fontSize: 14,
-                      //   fontWeight: FontWeight.bold,
-                      //   controllerCode: _countryCodeController,
-                      //   controllerPhone: _phoneController,
-                      //   prefixIcon: Icon(Icons.phone, color: AppColors.kDark3),
-                      // ),
-                      Gap(10),
-                      AppPasswordField(
-                        text: AppTexts.passwordLabel,
-                        hintText: AppTexts.passwordHint,
-                        keyboardType: TextInputType.visiblePassword,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        controller: _passwordController,
-                        validator: (value) => ValidatorsUtil.validatePassword(value),
-                        prefixIcon: Icon(Icons.lock, color: AppColors.kDark3),
-                      ),
-                      Gap(10),
-                      _AppBirthdayPicker(birthdateController: _birthdateController),
-                    ],
-                  );
-                }
-                return GridView(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: MediaQuery.of(context).size.width * 0.00200005,
-                  ),
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  children: [
-                    AppTextField(
-                      text: AppTexts.firstNameLabel,
-                      hintText: AppTexts.firstNameHint,
-                      keyboardType: TextInputType.name,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      controller: _firstNameController,
-                      validator: (value) => ValidatorsUtil.validateName(value),
-                      prefixIcon: Icon(Icons.person, color: AppColors.kDark3),
-                    ),
-                    AppTextField(
-                      text: AppTexts.lastNameLabel,
-                      hintText: AppTexts.lastNameHint,
-                      keyboardType: TextInputType.name,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      controller: _lastNameController,
-                      validator: (value) => ValidatorsUtil.validateLastName(value),
-                      prefixIcon: Icon(Icons.person, color: AppColors.kDark3),
-                    ),
-                    AppTextField(
-                      text: AppTexts.emailLabel,
-                      hintText: AppTexts.emailHint,
-                      keyboardType: TextInputType.emailAddress,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      controller: _emailController,
-                      validator: (value) => ValidatorsUtil.validateEmail(value),
-                      prefixIcon: Icon(Icons.email, color: AppColors.kDark3),
-                    ),
-                    AppTextField(
-                      text: AppTexts.phoneLabel,
-                      hintText: AppTexts.phoneHint,
-                      keyboardType: TextInputType.phone,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      controller: _phoneController,
-                      validator: (value) => ValidatorsUtil.validatePhone(value),
-                      prefixIcon: Icon(Icons.phone, color: AppColors.kDark3),
-                    ),
-                    AppPasswordField(
-                      text: AppTexts.passwordLabel,
-                      hintText: AppTexts.passwordHint,
-                      keyboardType: TextInputType.visiblePassword,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      controller: _passwordController,
-                      validator: (value) => ValidatorsUtil.validatePassword(value),
-                      prefixIcon: Icon(Icons.lock, color: AppColors.kDark3),
-                    ),
-                    _AppBirthdayPicker(birthdateController: _birthdateController),
-                  ],
-                );
-              },
+            if (widget.showHeaderLogo) ...[
+              Center(
+                child: AppImage(
+                  AdaptedFile.asset(AppAssets.icon),
+                  height: 100,
+                  width: 100,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const Gap(16),
+            ],
+            const AppText(
+              AppTexts.signUp,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.kNeutral900,
             ),
-            Gap(40),
+            const Gap(4),
+            const AppText(
+              AppTexts.signUpForContinue,
+              fontSize: 13.5,
+              color: AppColors.kNeutral600,
+            ),
+            const Gap(24),
+            if (!isDesktop) ...[
+              firstNameField,
+              const Gap(14),
+              lastNameField,
+              const Gap(14),
+              emailField,
+              const Gap(14),
+              phoneField,
+              const Gap(14),
+              passwordField,
+              const Gap(14),
+              birthdayField,
+            ] else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: firstNameField),
+                  const Gap(16),
+                  Expanded(child: lastNameField),
+                ],
+              ),
+              const Gap(16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: emailField),
+                  const Gap(16),
+                  Expanded(child: phoneField),
+                ],
+              ),
+              const Gap(16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: passwordField),
+                  const Gap(16),
+                  Expanded(child: birthdayField),
+                ],
+              ),
+            ],
+            const Gap(28),
             AppButton(
-              leadingWidget: Icon(Icons.person_add, size: 20, color: AppColors.kWhiteColor),
+              leadingWidget: const Icon(Icons.person_add_alt_1_rounded, size: 20, color: AppColors.kWhiteColor),
               text: AppTexts.signUp,
               onPressed: _handleSignUp,
               width: double.infinity,
-              height: 55,
+              height: 52,
               backgroundColor: AppColors.kPrimaryColor,
               textColor: AppColors.kWhiteColor,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
-              isLoading: ref.watch(signUpLoadingProvider),
+              isLoading: isSignUpLoading,
             ),
-            Gap(10),
+            const Gap(12),
             AppButton(
-              leadingWidget: Icon(Icons.arrow_back, size: 20, color: AppColors.kWhiteColor),
+              leadingWidget: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.kWhiteColor),
               text: AppTexts.signIn,
               onPressed: () => ref.read(goToSignInProvider(context)),
               width: double.infinity,
-              height: 55,
+              height: 52,
               backgroundColor: AppColors.kSecondaryColor,
               textColor: AppColors.kWhiteColor,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
           ],
@@ -352,20 +473,21 @@ class _SignUpFormState extends ConsumerState<SignUpForm> {
 }
 
 class _AppBirthdayPicker extends StatelessWidget {
-  const _AppBirthdayPicker({required this._birthdateController});
+  const _AppBirthdayPicker({required this.birthdateController});
 
-  final TextEditingController _birthdateController;
+  final TextEditingController birthdateController;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(AppTexts.birthdateLabel, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kDark3),
-        Gap(10),
+        const AppText(AppTexts.birthdateLabel, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kDark3),
+        const Gap(10),
         TextFormField(
-          controller: _birthdateController,
+          controller: birthdateController,
           readOnly: true,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kDark3),
           decoration: InputDecoration(
             hintText: AppTexts.birthdateHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -373,13 +495,18 @@ class _AppBirthdayPicker extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: AppColors.kPrimary500, width: 2),
             ),
-            prefixIcon: Icon(Icons.calendar_today, color: AppColors.kDark3),
-            suffixIcon: Icon(Icons.arrow_drop_down, color: AppColors.kDark3),
+            prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.kDark3),
+            suffixIcon: const Icon(Icons.arrow_drop_down_rounded, color: AppColors.kDark3),
           ),
           onTap: () async {
-            final picked = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1900), lastDate: DateTime.now());
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+            );
             if (picked != null) {
-              _birthdateController.text = DateFormat('yyyy-MM-dd').format(picked);
+              birthdateController.text = DateFormat('yyyy-MM-dd').format(picked);
             }
           },
           validator: (value) => ValidatorsUtil.validateBirthdate(value),
@@ -394,8 +521,6 @@ class ButtonApple extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoading = ref.watch(signInLoadingProvider);
-
     return AppButton(
       text: AppTexts.appleSignInButton,
       onPressed: () => ref.read(signUpWithAppleProvider(context)),
@@ -416,8 +541,6 @@ class ButtonGoogle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoading = ref.watch(signInLoadingProvider);
-
     return AppButton(
       text: AppTexts.googleSignInButton,
       onPressed: () => ref.read(signUpWithGoogleProvider(context)),

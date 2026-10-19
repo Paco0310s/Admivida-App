@@ -46,13 +46,13 @@ class AppTheme {
       // 🔄 Intelligent global transitions control (Native navigation / Named Routes)
       pageTransitionsTheme: PageTransitionsTheme(
         builders: {
-          // If running on WEB, no transitions are applied to keep the app ultra-fast.
-          // If native (Mobile/Desktop), injects the premium animation.
+          // On Web and Desktop (Windows/macOS/Linux), no page transition animation is used so the Dashboard shell feels instant.
+          // On native Mobile (Android/iOS), uses the smooth slide + fade transition.
           TargetPlatform.android: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
           TargetPlatform.iOS: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
-          TargetPlatform.windows: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
-          TargetPlatform.macOS: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
-          TargetPlatform.linux: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
+          TargetPlatform.windows: const NoTransitionsBuilder(),
+          TargetPlatform.macOS: const NoTransitionsBuilder(),
+          TargetPlatform.linux: const NoTransitionsBuilder(),
         },
       ),
 

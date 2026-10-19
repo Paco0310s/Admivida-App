@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:flutter/material.dart';
 
 /// Custom reusable container card with clean borders, smooth shadows,
-/// and optional interaction capabilities for Admivida UI design system.
-class AppCard extends StatelessWidget {
+/// subtle desktop hover state, and tactile ink interaction for Admivida UI.
+class AppCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
@@ -28,27 +28,55 @@ class AppCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final effectiveBackgroundColor = backgroundColor ?? Theme.of(context).cardColor;
-    final effectiveBorderColor = borderColor ?? AppColors.kNeutral200;
+  State<AppCard> createState() => _AppCardState();
+}
 
-    return Container(
-      margin: margin ?? const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-      decoration: BoxDecoration(
-        color: effectiveBackgroundColor,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: border ?? Border.all(color: effectiveBorderColor, width: 1.0),
-        boxShadow: showShadow ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12.0, offset: const Offset(0, 4))] : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(borderRadius),
-          onTap: onTap,
-          highlightColor: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-          splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          child: Padding(padding: padding ?? const EdgeInsets.all(16.0), child: child),
+class _AppCardState extends State<AppCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveBackgroundColor = widget.backgroundColor ?? Theme.of(context).cardColor;
+    final bool isInteractive = widget.onTap != null;
+    final effectiveBorderColor = _isHovered && isInteractive
+        ? AppColors.kPrimary300
+        : (widget.borderColor ?? AppColors.kNeutral200);
+
+    return MouseRegion(
+      onEnter: isInteractive ? (_) => setState(() => _isHovered = true) : null,
+      onExit: isInteractive ? (_) => setState(() => _isHovered = false) : null,
+      cursor: isInteractive ? SystemMouseCursors.click : MouseCursor.defer,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        margin: widget.margin ?? const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        decoration: BoxDecoration(
+          color: effectiveBackgroundColor,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: widget.border ?? Border.all(color: effectiveBorderColor, width: _isHovered && isInteractive ? 1.3 : 1.0),
+          boxShadow: widget.showShadow
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: _isHovered && isInteractive ? 0.07 : 0.035),
+                    blurRadius: _isHovered && isInteractive ? 16.0 : 12.0,
+                    offset: Offset(0, _isHovered && isInteractive ? 6 : 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            onTap: widget.onTap,
+            highlightColor: Theme.of(context).primaryColor.withValues(alpha: 0.04),
+            splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.08),
+            child: Padding(
+              padding: widget.padding ?? const EdgeInsets.all(16.0),
+              child: widget.child,
+            ),
+          ),
         ),
       ),
     );

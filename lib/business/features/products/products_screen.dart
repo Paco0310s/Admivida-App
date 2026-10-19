@@ -12,6 +12,7 @@ import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/barcode_scanner_sheet.dart';
+import 'package:admivida/common/widgets/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -23,22 +24,30 @@ class ProductsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = Responsive.isMobile(context);
+
     return AppScaffold(
       title: AppTexts.businessProducts,
       appBar: AppBar(
-        title: AppText(AppTexts.businessProducts, color: AppColors.kNeutral100),
+        title: const AppText(AppTexts.businessProducts, color: AppColors.kNeutral100),
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
       ),
       mobile: ProductsListView(businessId: businessId),
       tablet: ProductsListView(businessId: businessId),
       desktop: ProductsListView(businessId: businessId),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': null}),
-        backgroundColor: AppColors.kPrimaryColor,
-        icon: const Icon(Icons.add),
-        label: AppText(AppTexts.addProductButton, color: AppColors.kNeutral100),
-      ),
+      floatingActionButton: isMobile
+          ? FloatingActionButton.extended(
+              onPressed: () => NavigationService.navigateTo(
+                context,
+                Routes.createOrUpdateProduct,
+                arguments: {'businessId': businessId, 'product': null},
+              ),
+              backgroundColor: AppColors.kPrimaryColor,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const AppText(AppTexts.addProductButton, color: AppColors.kNeutral100, fontWeight: FontWeight.w600),
+            )
+          : null,
     );
   }
 }
@@ -78,7 +87,6 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
     });
   }
 
-  /// Detects scroll proximity to trigger infinite scrolling via Riverpod.
   void _handleScroll() {
     if (_scrollController.position.extentAfter < 300) {
       ref.read(productsListProvider(widget.businessId).notifier).fetchNextPage();
@@ -88,17 +96,18 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsListProvider(widget.businessId));
+    final bool isMobile = Responsive.isMobile(context);
+    final bool isWideDesktop = MediaQuery.of(context).size.width >= 1280;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(productsListProvider(widget.businessId).notifier).refresh(),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppText(AppTexts.productsListTitle, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
-            const Gap(12),
-            _buildSearchHeader(),
+            _buildSearchHeader(isMobile: isMobile),
+            const Gap(8),
             Expanded(
               child: productsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -107,11 +116,45 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                   final products = listState.products;
 
                   if (products.isEmpty) {
-                    return Center(child: AppText(AppTexts.noData, color: AppColors.kNeutral600));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(color: AppColors.kPrimary50, shape: BoxShape.circle),
+                            child: const Icon(Icons.inventory_2_rounded, size: 36, color: AppColors.kPrimaryColor),
+                          ),
+                          const Gap(12),
+                          const AppText(AppTexts.noData, color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (isWideDesktop) {
+                    return GridView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        mainAxisExtent: 140,
+                      ),
+                      itemCount: products.length + (listState.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == products.length) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        return _buildProductCard(context, products[index], isGrid: true);
+                      },
+                    );
                   }
 
                   return ListView.builder(
                     controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: products.length + (listState.isLoadingMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == products.length) {
@@ -120,153 +163,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
-
-                      final product = products[index];
-                      final firstVariant = product.defaultVariant;
-                      final productImage = product.mainImageUrl;
-
-                      return AppCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        onTap: () {
-                          NavigationService.navigateTo(context, Routes.productDetail, arguments: {'businessId': widget.businessId, 'productId': product.id});
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: productImage == null
-                                  ? Container(
-                                      width: 72,
-                                      height: 72,
-                                      decoration: BoxDecoration(color: AppColors.kPrimary50, borderRadius: BorderRadius.circular(12)),
-                                      child: const Icon(Icons.inventory_2_rounded, size: 32, color: AppColors.kPrimaryColor),
-                                    )
-                                  : SizedBox(
-                                      width: 72,
-                                      height: 72,
-                                      child: AdaptedFile.network(productImage, blurHash: product.images.first.blurHash).getWidget(width: 72, height: 72),
-                                    ),
-                            ),
-                            const Gap(12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  AppText(product.name, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                                  const Gap(4),
-                                  if (product.description != null && product.description!.isNotEmpty)
-                                    AppText(product.description!, color: AppColors.kNeutral700, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  const Gap(6),
-                                  Row(
-                                    children: [
-                                      AppText(
-                                        product.productCategoryName ?? AppTexts.noData,
-                                        color: AppColors.kSecondaryColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      const Spacer(),
-                                      if (firstVariant != null)
-                                        AppText(
-                                          '\$${firstVariant.salePrice.toStringAsFixed(2)}',
-                                          color: AppColors.kPrimaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                        ),
-                                    ],
-                                  ),
-                                  const Gap(6),
-                                  Row(
-                                    children: [
-                                      AppText('${AppTexts.unitOfMeasure}: ${product.unitOfMeasure}', color: AppColors.kNeutral600, fontSize: 11),
-                                      const Spacer(),
-                                      Builder(
-                                        builder: (context) {
-                                          if (firstVariant?.stockQuantity == null) {
-                                            return SizedBox.shrink();
-                                          }
-
-                                          if (product.variants.length > 1) {
-                                            return SizedBox.shrink();
-                                          }
-
-                                          return InkWell(
-                                            onTap: () {
-                                              if (firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0) {
-                                                ref
-                                                    .read(stockAdjustmentProvider.notifier)
-                                                    .adjustStock(
-                                                      businessId: widget.businessId,
-                                                      productId: product.id,
-                                                      variantId: firstVariant.id,
-                                                      currentStock: firstVariant.stockQuantity!, // Es de tipo double
-                                                      adjustment: -1.0,
-                                                    );
-                                              }
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0
-                                                    ? Colors.white
-                                                    : AppColors.kNeutral100,
-                                                border: Border.all(color: AppColors.kNeutral300),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: const Icon(Icons.remove, size: 20),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: firstVariant?.stockQuantity == null ? 0 : 12),
-                                        child: _buildStockLabel(product, firstVariant),
-                                      ),
-                                      Builder(
-                                        builder: (context) {
-                                          if (firstVariant?.stockQuantity == null) {
-                                            return SizedBox.shrink();
-                                          }
-
-                                          if (product.variants.length > 1) {
-                                            return SizedBox.shrink();
-                                          }
-
-                                          return InkWell(
-                                            onTap: () {
-                                              if (firstVariant?.stockQuantity != null) {
-                                                ref
-                                                    .read(stockAdjustmentProvider.notifier)
-                                                    .adjustStock(
-                                                      businessId: widget.businessId,
-                                                      productId: product.id,
-                                                      variantId: firstVariant!.id,
-                                                      currentStock: firstVariant.stockQuantity!,
-                                                      adjustment: 1.0,
-                                                    );
-                                              }
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(color: AppColors.kNeutral300),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: const Icon(Icons.add, size: 20),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      return _buildProductCard(context, products[index], isGrid: false);
                     },
                   );
                 },
@@ -278,103 +175,148 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
     );
   }
 
-  // 💡 Extracting this builder logic to a separate method keeps your main UI code much cleaner.
-  Widget _buildStockLabel(ProductModel product, ProductVariantModel? firstVariant) {
-    if (product.variants.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildProductCard(BuildContext context, ProductModel product, {required bool isGrid}) {
+    final firstVariant = product.defaultVariant;
+    final productImage = product.mainImageUrl;
 
-    // Single variant logic
-    if (product.variants.length == 1) {
-      if (firstVariant?.stockQuantity == null) {
-        return AppText(AppTexts.ilimited, color: AppColors.kWarning, fontSize: 12, fontWeight: FontWeight.bold);
-      }
-
-      // Format quantity to remove '.0' if it's an integer
-      final stockVal = firstVariant!.stockQuantity!;
-      final displayStock = stockVal == stockVal.toInt() ? stockVal.toInt().toString() : stockVal.toString();
-
-      return AppText(
-        displayStock,
-        color: stockVal > 0 ? AppColors.kSuccess : AppColors.kWarning, // Dynamic color based on stock
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      );
-    }
-
-    // Multiple variants logic (Total sum)
-    final double totalQuantity = product.variants.fold(0.0, (sum, variant) => sum + (variant.stockQuantity ?? 0.0));
-
-    final displayTotal = totalQuantity == totalQuantity.toInt() ? totalQuantity.toInt().toString() : totalQuantity.toString();
-
-    return AppText(
-      '$displayTotal (Total)', // Adding "(Total)" as we discussed earlier
-      color: totalQuantity > 0 ? AppColors.kSuccess : AppColors.kWarning,
-      fontSize: 12,
-      fontWeight: FontWeight.bold,
-    );
-  }
-
-  // --- HEADER: Search + Scanner ---
-  Widget _buildSearchHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    return AppCard(
+      margin: isGrid ? EdgeInsets.zero : const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      onTap: () {
+        NavigationService.navigateTo(
+          context,
+          Routes.productDetail,
+          arguments: {'businessId': widget.businessId, 'productId': product.id},
+        );
+      },
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (value) {
-                FocusScope.of(context).unfocus();
-                ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery(value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Buscar por nombre, SKU o código...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.kNeutral500),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () {
-                          _searchController.clear();
-                          FocusScope.of(context).unfocus();
-                          ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery('');
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                filled: true,
-                fillColor: AppColors.kNeutral50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.kNeutral200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.kNeutral200),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.kPrimaryColor),
-                ),
-              ),
-            ),
-          ),
-          const Gap(10),
-
-          // Scanner Button
-          Material(
-            color: AppColors.kPrimaryColor,
+          ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            elevation: 2, // Small shadow to highlight it as a primary action button
-            child: InkWell(
-              onTap: _openBarcodeScanner,
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.qr_code_scanner, color: Colors.white, size: 26),
-              ),
+            child: productImage == null
+                ? Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(color: AppColors.kPrimary50, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.inventory_2_rounded, size: 32, color: AppColors.kPrimaryColor),
+                  )
+                : SizedBox(
+                    width: 76,
+                    height: 76,
+                    child: AdaptedFile.network(productImage, blurHash: product.images.first.blurHash).getWidget(width: 76, height: 76),
+                  ),
+          ),
+          const Gap(14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppText(
+                        product.name,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.kNeutral900,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (firstVariant != null)
+                      AppText(
+                        '\$${firstVariant.salePrice.toStringAsFixed(2)}',
+                        color: AppColors.kPrimaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15.5,
+                      ),
+                  ],
+                ),
+                const Gap(4),
+                if (product.description != null && product.description!.isNotEmpty)
+                  AppText(
+                    product.description!,
+                    color: AppColors.kNeutral600,
+                    fontSize: 12,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const Gap(8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.kPrimary50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: AppText(
+                        product.productCategoryName ?? AppTexts.withoutCategory,
+                        color: AppColors.kSecondaryColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Gap(8),
+                    AppText('${AppTexts.unitOfMeasure}: ${product.unitOfMeasure}', color: AppColors.kNeutral500, fontSize: 11),
+                    const Spacer(),
+                    if (firstVariant?.stockQuantity != null && product.variants.length <= 1)
+                      InkWell(
+                        onTap: () {
+                          if (firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0) {
+                            ref.read(stockAdjustmentProvider.notifier).adjustStock(
+                                  businessId: widget.businessId,
+                                  productId: product.id,
+                                  variantId: firstVariant.id,
+                                  currentStock: firstVariant.stockQuantity!,
+                                  adjustment: -1.0,
+                                );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0
+                                ? Colors.white
+                                : AppColors.kNeutral100,
+                            border: Border.all(color: AppColors.kNeutral300),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.remove, size: 18),
+                        ),
+                      ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: firstVariant?.stockQuantity == null ? 0 : 10),
+                      child: _buildStockLabel(product, firstVariant),
+                    ),
+                    if (firstVariant?.stockQuantity != null && product.variants.length <= 1)
+                      InkWell(
+                        onTap: () {
+                          if (firstVariant?.stockQuantity != null) {
+                            ref.read(stockAdjustmentProvider.notifier).adjustStock(
+                                  businessId: widget.businessId,
+                                  productId: product.id,
+                                  variantId: firstVariant!.id,
+                                  currentStock: firstVariant.stockQuantity!,
+                                  adjustment: 1.0,
+                                );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: AppColors.kNeutral300),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.add, size: 18),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -382,9 +324,137 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
     );
   }
 
-  // 💡 Barcode Scanner Logic using your custom Bottom Sheet
+  Widget _buildStockLabel(ProductModel product, ProductVariantModel? firstVariant) {
+    if (product.variants.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (product.variants.length == 1) {
+      if (firstVariant?.stockQuantity == null) {
+        return const AppText(AppTexts.ilimited, color: AppColors.kWarning, fontSize: 12, fontWeight: FontWeight.bold);
+      }
+
+      final stockVal = firstVariant!.stockQuantity!;
+      final displayStock = stockVal == stockVal.toInt() ? stockVal.toInt().toString() : stockVal.toString();
+
+      return AppText(
+        displayStock,
+        color: stockVal > 0 ? AppColors.kSuccess : AppColors.kWarning,
+        fontSize: 12.5,
+        fontWeight: FontWeight.bold,
+      );
+    }
+
+    final double totalQuantity = product.variants.fold(0.0, (sum, variant) => sum + (variant.stockQuantity ?? 0.0));
+    final displayTotal = totalQuantity == totalQuantity.toInt() ? totalQuantity.toInt().toString() : totalQuantity.toString();
+
+    return AppText(
+      '$displayTotal (Total)',
+      color: totalQuantity > 0 ? AppColors.kSuccess : AppColors.kWarning,
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+    );
+  }
+
+  // --- HEADER: Search + Scanner + Desktop Action ---
+  Widget _buildSearchHeader({required bool isMobile}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _searchController,
+              builder: (context, value, _) {
+                return TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (val) {
+                    FocusScope.of(context).unfocus();
+                    ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery(val);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por nombre, SKU o código...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.kNeutral500),
+                    suffixIcon: value.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              _searchController.clear();
+                              FocusScope.of(context).unfocus();
+                              ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.kNeutral200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.kNeutral200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.kPrimaryColor, width: 1.5),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const Gap(10),
+          Material(
+            color: isMobile ? AppColors.kPrimaryColor : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: isMobile ? BorderSide.none : const BorderSide(color: AppColors.kNeutral200),
+            ),
+            child: InkWell(
+              onTap: _openBarcodeScanner,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  Icons.qr_code_scanner,
+                  color: isMobile ? Colors.white : AppColors.kPrimaryColor,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+          if (!isMobile) ...[
+            const Gap(10),
+            ElevatedButton.icon(
+              onPressed: () => NavigationService.navigateTo(
+                context,
+                Routes.createOrUpdateProduct,
+                arguments: {'businessId': widget.businessId, 'product': null},
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.kPrimaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text(
+                AppTexts.addProductButton,
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _openBarcodeScanner() {
-    // Hide keyboard if it was open for name search
     FocusScope.of(context).unfocus();
 
     showModalBottomSheet(
@@ -395,13 +465,8 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
       builder: (context) {
         return BarcodeScannerSheet(
           onCode: (String code) {
-            // 1. Write the scanned code into the search text field
             _searchController.text = code;
-
-            // 2. Trigger the search in the provider immediately
             ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery(code);
-
-            // 3. Visual confirmation for the cashier
             SnackbarUtil.showSuccess(context, 'Código escaneado: $code');
           },
         );

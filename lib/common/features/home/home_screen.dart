@@ -11,6 +11,7 @@ import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -22,12 +23,13 @@ class HomeScreen extends StatelessWidget {
     return AppScaffold(
       title: AppTexts.home,
       appBar: AppBar(
-        title: AppText(AppTexts.home, color: AppColors.kPrimaryColor),
+        title: const AppText(AppTexts.home, color: AppColors.kPrimaryColor),
         backgroundColor: Colors.transparent,
         actions: [
-          // Log out
           IconButton(
+            tooltip: AppTexts.logout,
             onPressed: () async {
+              DashboardSession.clear();
               await StorageService.clear();
               if (!context.mounted) return;
               NavigationService.replaceUntil(context, Routes.signIn);
@@ -36,9 +38,9 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      mobile: BusinessDetailView(crossAxisCount: 2),
-      tablet: BusinessDetailView(crossAxisCount: 3),
-      desktop: BusinessDetailView(crossAxisCount: 4),
+      mobile: const BusinessDetailView(crossAxisCount: 2),
+      tablet: const BusinessDetailView(crossAxisCount: 3),
+      desktop: const BusinessDetailView(crossAxisCount: 4),
     );
   }
 }
@@ -49,10 +51,12 @@ class BusinessDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = crossAxisCount >= 3;
+
     final List<Map<String, dynamic>> modules = [
       {
         'title': 'Negocios',
-        'subtitle': 'Gestiona tus negocios',
+        'subtitle': 'Punto de venta, inventario, clientes y finanzas',
         'icon': Icons.storefront_rounded,
         'color': AppColors.kPrimaryColor,
         'isEnabled': true,
@@ -60,7 +64,7 @@ class BusinessDetailView extends StatelessWidget {
       },
       {
         'title': 'Control Personal',
-        'subtitle': 'Gastos compartidos y billetera',
+        'subtitle': 'Gastos compartidos y billetera personal',
         'icon': Icons.account_balance_wallet_rounded,
         'color': AppColors.kSecondaryColor,
         'isEnabled': false,
@@ -68,7 +72,7 @@ class BusinessDetailView extends StatelessWidget {
       },
       {
         'title': 'Portal Clientes',
-        'subtitle': 'Compras, consultas y tickets',
+        'subtitle': 'Compras, consultas y tickets digitales',
         'icon': Icons.people_alt_rounded,
         'color': AppColors.kTertiaryColor,
         'isEnabled': false,
@@ -88,18 +92,99 @@ class BusinessDetailView extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isDesktop ? 28 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Gap(30),
-                AppImage(
-                  AdaptedFile.asset(AppAssets.logo),
-                  height: (MediaQuery.of(context).size.height * 0.38).clamp(300, 300),
+                // Sleek Welcome Banner
+                Container(
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 28 : 20,
+                    vertical: isDesktop ? 24 : 20,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF163542),
+                        AppColors.kPrimaryColor,
+                        AppColors.kSecondaryColor,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.kPrimaryColor.withValues(alpha: 0.18),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: AppImage(
+                          AdaptedFile.asset(AppAssets.icon),
+                          height: isDesktop ? 52 : 44,
+                          width: isDesktop ? 52 : 44,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const Gap(18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              'Bienvenido a ${AppTexts.appName}',
+                              fontSize: isDesktop ? 22 : 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            const Gap(4),
+                            const AppText(
+                              'Selecciona un módulo para comenzar a administrar tus operaciones.',
+                              fontSize: 13,
+                              color: Color(0xD9FFFFFF),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isDesktop) ...[
+                        const Gap(16),
+                        ElevatedButton.icon(
+                          onPressed: () => NavigationService.navigateTo(context, Routes.businesses),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.kPrimaryColor,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.storefront_rounded, size: 18),
+                          label: const Text(
+                            'Ir a Mis Empresas',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                AppText(AppTexts.modules, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor),
+                const Gap(24),
+                const AppText(
+                  AppTexts.modules,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.kNeutral900,
+                ),
                 const Gap(12),
                 GridView.builder(
                   shrinkWrap: true,
@@ -107,9 +192,9 @@ class BusinessDetailView extends StatelessWidget {
                   itemCount: modules.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.25,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: isDesktop ? 1.45 : 1.15,
                   ),
                   itemBuilder: (context, index) {
                     final option = modules[index];
@@ -119,11 +204,11 @@ class BusinessDetailView extends StatelessWidget {
                     final color = option['color'] as Color;
                     final isEnabled = option['isEnabled'] as bool;
 
-                    if (!isEnabled) return SizedBox.shrink();
-
                     return AppCard(
-                      backgroundColor: !isEnabled ? AppColors.kNeutral200 : null,
-                      padding: const EdgeInsets.all(16),
+                      margin: EdgeInsets.zero,
+                      backgroundColor: isEnabled ? Colors.white : AppColors.kNeutral50,
+                      borderColor: isEnabled ? AppColors.kPrimary100 : AppColors.kNeutral200,
+                      padding: const EdgeInsets.all(18),
                       onTap: () {
                         if (isEnabled) {
                           NavigationService.navigateTo(context, option['route']);
@@ -131,27 +216,67 @@ class BusinessDetailView extends StatelessWidget {
                           SnackbarUtil.showInfo(context, 'El módulo $title estará disponible pronto.');
                         }
                       },
-
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: AppColors.kBackgroundColor, shape: BoxShape.circle),
-                            child: Icon(icon, color: color, size: 28),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: isEnabled
+                                      ? color.withValues(alpha: 0.12)
+                                      : AppColors.kNeutral200.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  icon,
+                                  color: isEnabled ? color : AppColors.kNeutral500,
+                                  size: 24,
+                                ),
+                              ),
+                              if (!isEnabled)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.kNeutral200,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const AppText(
+                                    'Próximamente',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.kNeutral600,
+                                  ),
+                                )
+                              else
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                  color: AppColors.kPrimaryColor,
+                                ),
+                            ],
                           ),
-                          const Gap(12),
-                          AppText(title, fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                          const Gap(4),
-                          Flexible(
-                            child: AppText(
-                              subtitle,
-                              fontSize: 12,
-                              color: AppColors.kNeutral700,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                title,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: isEnabled ? AppColors.kNeutral900 : AppColors.kNeutral600,
+                              ),
+                              const Gap(4),
+                              AppText(
+                                subtitle,
+                                fontSize: 12,
+                                color: AppColors.kNeutral600,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -162,18 +287,25 @@ class BusinessDetailView extends StatelessWidget {
             ),
           ),
         ),
-
         SafeArea(
+          top: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 14.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppText('Desarrollado por Francisco Sotelo', fontSize: 12, color: AppColors.kNeutral500, fontWeight: FontWeight.w600),
-                const Gap(4),
-                AppText('Versión ${AppConfig.appVersionName} - code: ${AppConfig.appVersionCode}', fontSize: 12, color: AppColors.kNeutral500),
-                const Gap(4),
-                AppText('Usuario: ${StorageService.getString(AppConfig.uuidKey)}', fontSize: 10, color: AppColors.kNeutral400, fontWeight: FontWeight.w500),
+                const AppText(
+                  'Desarrollado por Francisco Sotelo',
+                  fontSize: 12,
+                  color: AppColors.kNeutral500,
+                  fontWeight: FontWeight.w600,
+                ),
+                const Gap(2),
+                AppText(
+                  'Versión ${AppConfig.appVersionName} (${AppConfig.appVersionCode})',
+                  fontSize: 11,
+                  color: AppColors.kNeutral400,
+                ),
               ],
             ),
           ),
