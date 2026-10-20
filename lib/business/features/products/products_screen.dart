@@ -15,6 +15,7 @@ import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/barcode_scanner_sheet.dart';
 import 'package:admivida/common/widgets/responsive.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
@@ -67,19 +68,62 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  String _scannerBuffer = '';
+  DateTime? _lastKeyEventTime;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    HardwareKeyboard.instance.addHandler(_handleGlobalKeyEvent);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleGlobalKeyEvent);
     _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  bool _handleGlobalKeyEvent(KeyEvent event) {
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) return false;
+    if (event is! KeyDownEvent) return false;
+
+    final now = DateTime.now();
+
+    // Si pasan más de 100 ms entre teclas, es escritura manual; reiniciamos el buffer del lector
+    if (_lastKeyEventTime != null && now.difference(_lastKeyEventTime!).inMilliseconds > 100) {
+      _scannerBuffer = '';
+    }
+    _lastKeyEventTime = now;
+
+    if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      if (_scannerBuffer.trim().isNotEmpty) {
+        final scannedCode = _scannerBuffer.trim();
+        _scannerBuffer = '';
+
+        _debounce?.cancel();
+        FocusManager.instance.primaryFocus?.unfocus();
+
+        _searchController.value = TextEditingValue(
+          text: scannedCode,
+          selection: TextSelection.collapsed(offset: scannedCode.length),
+        );
+
+        ref.read(productsListProvider(widget.businessId).notifier).setSearchQuery(scannedCode);
+        SnackbarUtil.showSuccess(context, 'Código escaneado: $scannedCode');
+        return true;
+      }
+    }
+
+    final character = event.character;
+    if (character != null && character.isNotEmpty) {
+      _scannerBuffer += character;
+    }
+
+    return false;
   }
 
   void _onSearchChanged(String query) {
