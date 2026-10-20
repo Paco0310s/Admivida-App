@@ -20,49 +20,58 @@ part 'sign_up_provider.g.dart';
 
 @riverpod
 Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel) async {
-  final EitherUtil<HttpFailure, UserLoggedModel> userDataResponse = await SignUpService.signUp(userCreateModel);
+  final keepAliveLink = ref.keepAlive();
+  try {
+    final EitherUtil<HttpFailure, UserLoggedModel> userDataResponse = await SignUpService.signUp(userCreateModel);
 
-  userDataResponse.when(
-    (failure) {
-      SnackbarUtil.showError(context, failure.message);
-    },
-    (userData) async {
-      if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
+    await userDataResponse.when<Future<void>>(
+      (failure) async {
         if (context.mounted) {
-          NavigationService.replaceWith(context, Routes.updateRequired);
+          SnackbarUtil.showError(context, failure.message);
         }
-        return;
-      }
-
-      if (userData.inMaintenance) {
-        if (context.mounted) {
-          NavigationService.replaceWith(context, Routes.maintenance);
+      },
+      (userData) async {
+        if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
+          if (context.mounted) {
+            NavigationService.replaceWith(context, Routes.updateRequired);
+          }
+          return;
         }
-        return;
-      }
 
-      await IsarCacheService.clearCache();
-      await SecureStorageService.saveUserSession(userData);
-      ref.invalidate(businessesListProvider);
-      ref.invalidate(businessRolesProvider);
-      ref.invalidate(isBusinessAdminProvider);
-      if (!context.mounted) return;
+        if (userData.inMaintenance) {
+          if (context.mounted) {
+            NavigationService.replaceWith(context, Routes.maintenance);
+          }
+          return;
+        }
 
-      if (userData.roles.length > 1) {
-        // Navigate to the choose platform role screen
-        SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
-        NavigationService.replaceWith(context, Routes.choosePlatformRole);
-      } else if (userData.roles.length == 1) {
-        // Navigate to the home screen
-        await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        await IsarCacheService.clearCache();
+        await SecureStorageService.saveUserSession(userData);
+        if (ref.mounted) {
+          ref.invalidate(businessesListProvider);
+          ref.invalidate(businessRolesProvider);
+          ref.invalidate(isBusinessAdminProvider);
+        }
         if (!context.mounted) return;
-        SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
-        NavigationService.replaceUntil(context, Routes.home);
-      } else {
-        SnackbarUtil.showError(context, 'No tienes roles asignados, por favor contacta al administrador.');
-      }
-    },
-  );
+
+        if (userData.roles.length > 1) {
+          // Navigate to the choose platform role screen
+          SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
+          NavigationService.replaceWith(context, Routes.choosePlatformRole);
+        } else if (userData.roles.length == 1) {
+          // Navigate to the home screen
+          await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+          if (!context.mounted) return;
+          SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
+          NavigationService.replaceUntil(context, Routes.home);
+        } else {
+          SnackbarUtil.showError(context, 'No tienes roles asignados, por favor contacta al administrador.');
+        }
+      },
+    );
+  } finally {
+    keepAliveLink.close();
+  }
 }
 
 @riverpod

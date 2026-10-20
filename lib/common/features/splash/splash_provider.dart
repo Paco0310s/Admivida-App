@@ -19,98 +19,105 @@ part 'splash_provider.g.dart';
 
 @riverpod
 Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
-  // 1. Check if the user is signed in and if there is physical internet connectivity FIRST
-  final bool isSignedIn = await SignInService.isSignedIn();
-  final hasInternet = await ConnectivityService.hasInternet();
+  final keepAliveLink = ref.keepAlive();
+  try {
+    // 1. Check if the user is signed in and if there is physical internet connectivity FIRST
+    final bool isSignedIn = await SignInService.isSignedIn();
+    final hasInternet = await ConnectivityService.hasInternet();
 
-  // 2. Without internet, we check if the user has a local session (OFFLINE MODE)
-  if (!hasInternet) {
-    if (isSignedIn) {
-      // The user has a local session but no internet: we can allow them to continue in offline mode
+    // 2. Without internet, we check if the user has a local session (OFFLINE MODE)
+    if (!hasInternet) {
+      if (isSignedIn) {
+        // The user has a local session but no internet: we can allow them to continue in offline mode
+        if (context.mounted) {
+          SnackbarUtil.showWarning(context, 'Modo Offline: Operando sin conexión a internet');
+
+          // Check if the user has a current role stored in local storage
+          final currentRole = SecureStorageService.getString(AppConfig.currentPlatformRoleKey);
+          if (currentRole != null && currentRole.isNotEmpty) {
+            NavigationService.replaceWith(context, Routes.home);
+          } else {
+            NavigationService.replaceWith(context, Routes.choosePlatformRole);
+          }
+        }
+      } else {
+        // The user has no internet and no local session: we cannot allow them to continue
+        if (context.mounted) NavigationService.replaceWith(context, Routes.offline);
+      }
+      return;
+    }
+
+    // 3. WITH INTERNET: Check if the server is live, if not we show a maintenance screen
+    final bool serverLive = await ConnectivityService.isServerLive();
+    if (!serverLive) {
       if (context.mounted) {
-        SnackbarUtil.showWarning(context, 'Modo Offline: Operando sin conexión a internet');
+        NavigationService.replaceWith(context, Routes.maintenance);
+      }
+      return;
+    }
 
-        // Check if the user has a current role stored in local storage
-        final currentRole = SecureStorageService.getString(AppConfig.currentPlatformRoleKey);
-        if (currentRole != null && currentRole.isNotEmpty) {
+    // 4. With internet and server live, but without a session: we redirect to the sign-in screen
+    if (!isSignedIn) {
+      if (context.mounted) NavigationService.replaceWith(context, Routes.signIn);
+      return;
+    }
+
+    // 5. IDEAL SCENARIO: Fetch user data to validate versions and refresh tokens
+    final EitherUtil<HttpFailure, UserLoggedModel> userDataResponse = await SignInService.getUserData();
+
+    await userDataResponse.when<Future<void>>(
+      (failure) async {
+        await SecureStorageService.clear();
+        await IsarCacheService.clearCache();
+        // Si fue 401, DioService._handleSessionExpired() ya redirigió a signIn y mostró el mensaje
+        if (failure.statusCode != 401 && context.mounted) {
+          SnackbarUtil.showError(context, failure.message);
+          NavigationService.replaceWith(context, Routes.signIn);
+        }
+      },
+      (userData) async {
+        // Validate if the app version is below the minimum required version
+        if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
+          if (context.mounted) {
+            NavigationService.replaceWith(context, Routes.updateRequired);
+          }
+          return;
+        }
+
+        // Validate internal maintenance flag for the user (just in case)
+        if (userData.inMaintenance) {
+          if (context.mounted) {
+            NavigationService.replaceWith(context, Routes.maintenance);
+          }
+          return;
+        }
+
+        // If everything is fine, we store the tokens and roles in secure storage for future sessions
+        await SecureStorageService.saveUserSession(userData);
+        if (ref.mounted) {
+          ref.invalidate(businessesListProvider);
+          ref.invalidate(businessRolesProvider);
+          ref.invalidate(isBusinessAdminProvider);
+        }
+        if (!context.mounted) return;
+
+        // Finally, we navigate the user to the appropriate screen based on their roles
+        if (userData.roles.length > 1) {
+          SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
+          NavigationService.replaceWith(context, Routes.choosePlatformRole);
+        } else if (userData.roles.length == 1) {
+          await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+          if (!context.mounted) return;
+          SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
           NavigationService.replaceWith(context, Routes.home);
         } else {
-          NavigationService.replaceWith(context, Routes.choosePlatformRole);
+          SnackbarUtil.showError(context, 'No tienes roles asignados, por favor contacta al administrador.');
         }
-      }
-    } else {
-      // The user has no internet and no local session: we cannot allow them to continue
-      if (context.mounted) NavigationService.replaceWith(context, Routes.offline);
-    }
-    return;
+      },
+    );
+  } finally {
+    keepAliveLink.close();
   }
-
-  // 3. WITH INTERNET: Check if the server is live, if not we show a maintenance screen
-  final bool serverLive = await ConnectivityService.isServerLive();
-  if (!serverLive) {
-    if (context.mounted) {
-      NavigationService.replaceWith(context, Routes.maintenance);
-    }
-    return;
-  }
-
-  // 4. With internet and server live, but without a session: we redirect to the sign-in screen
-  if (!isSignedIn) {
-    if (context.mounted) NavigationService.replaceWith(context, Routes.signIn);
-    return;
-  }
-
-  // 5. IDEAL SCENARIO: Fetch user data to validate versions and refresh tokens
-  final EitherUtil<HttpFailure, UserLoggedModel> userDataResponse = await SignInService.getUserData();
-
-  userDataResponse.when(
-    (failure) async {
-      await SecureStorageService.clear();
-      await IsarCacheService.clearCache();
-      // Si fue 401, DioService._handleSessionExpired() ya redirigió a signIn y mostró el mensaje
-      if (failure.statusCode != 401 && context.mounted) {
-        SnackbarUtil.showError(context, failure.message);
-        NavigationService.replaceWith(context, Routes.signIn);
-      }
-    },
-    (userData) async {
-      // Validate if the app version is below the minimum required version
-      if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
-        if (context.mounted) {
-          NavigationService.replaceWith(context, Routes.updateRequired);
-        }
-        return;
-      }
-
-      // Validate internal maintenance flag for the user (just in case)
-      if (userData.inMaintenance) {
-        if (context.mounted) {
-          NavigationService.replaceWith(context, Routes.maintenance);
-        }
-        return;
-      }
-
-      // If everything is fine, we store the tokens and roles in secure storage for future sessions
-      await SecureStorageService.saveUserSession(userData);
-      ref.invalidate(businessesListProvider);
-      ref.invalidate(businessRolesProvider);
-      ref.invalidate(isBusinessAdminProvider);
-      if (!context.mounted) return;
-
-      // Finally, we navigate the user to the appropriate screen based on their roles
-      if (userData.roles.length > 1) {
-        SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
-        NavigationService.replaceWith(context, Routes.choosePlatformRole);
-      } else if (userData.roles.length == 1) {
-        await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
-        if (!context.mounted) return;
-        SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
-        NavigationService.replaceWith(context, Routes.home);
-      } else {
-        SnackbarUtil.showError(context, 'No tienes roles asignados, por favor contacta al administrador.');
-      }
-    },
-  );
 }
 
 @riverpod
