@@ -525,7 +525,31 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: AppTextField(text: AppTexts.productSkuLabel, hintText: AppTexts.productSkuHint, controller: field.skuController),
+                      child: AppTextField(
+                        text: AppTexts.productSkuLabel,
+                        hintText: AppTexts.productSkuHint,
+                        controller: field.skuController,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner, size: 20),
+                          tooltip: 'Escanear código de barras',
+                          onPressed: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                              builder: (_) => BarcodeScannerSheet(
+                                onCode: (scannedCode) {
+                                  setState(() {
+                                    field.barcodeController.text = scannedCode;
+                                  });
+                                  SnackbarUtil.showSuccess(context, 'Código asignado: $scannedCode');
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

@@ -101,61 +101,31 @@ class BusinessDetailView extends StatelessWidget {
                 // Sleek Welcome Banner
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? 28 : 20,
-                    vertical: isDesktop ? 24 : 20,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20, vertical: isDesktop ? 24 : 20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF163542),
-                        AppColors.kPrimaryColor,
-                        AppColors.kSecondaryColor,
-                      ],
+                      colors: [Color(0xFF163542), AppColors.kPrimaryColor, AppColors.kSecondaryColor],
                     ),
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.kPrimaryColor.withValues(alpha: 0.18),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                    boxShadow: [BoxShadow(color: AppColors.kPrimaryColor.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6))],
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: AppImage(
-                          AdaptedFile.asset(AppAssets.icon),
-                          height: isDesktop ? 52 : 44,
-                          width: isDesktop ? 52 : 44,
-                          fit: BoxFit.contain,
-                        ),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                        child: AppImage(AdaptedFile.asset(AppAssets.icon), height: isDesktop ? 52 : 44, width: isDesktop ? 52 : 44, fit: BoxFit.contain),
                       ),
                       const Gap(18),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AppText(
-                              'Bienvenido a ${AppTexts.appName}',
-                              fontSize: isDesktop ? 22 : 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            AppText('Bienvenido a ${AppTexts.appName}', fontSize: isDesktop ? 22 : 18, fontWeight: FontWeight.bold, color: Colors.white),
                             const Gap(4),
-                            const AppText(
-                              'Selecciona un módulo para comenzar a administrar tus operaciones.',
-                              fontSize: 13,
-                              color: Color(0xD9FFFFFF),
-                            ),
+                            const AppText('Selecciona un módulo para comenzar a administrar tus operaciones.', fontSize: 13, color: Color(0xD9FFFFFF)),
                           ],
                         ),
                       ),
@@ -171,22 +141,14 @@ class BusinessDetailView extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.storefront_rounded, size: 18),
-                          label: const Text(
-                            'Ir a Mis Empresas',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
+                          label: const Text('Ir a Mis Empresas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
                       ],
                     ],
                   ),
                 ),
                 const Gap(24),
-                const AppText(
-                  AppTexts.modules,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.kNeutral900,
-                ),
+                const AppText(AppTexts.modules, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
                 const Gap(12),
                 GridView.builder(
                   shrinkWrap: true,
@@ -206,6 +168,9 @@ class BusinessDetailView extends StatelessWidget {
                     final color = option['color'] as Color;
                     final isEnabled = option['isEnabled'] as bool;
 
+                    if (!isEnabled) {
+                      return SizedBox.shrink();
+                    }
                     return AppCard(
                       margin: EdgeInsets.zero,
                       backgroundColor: isEnabled ? Colors.white : AppColors.kNeutral50,
@@ -228,56 +193,27 @@ class BusinessDetailView extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: isEnabled
-                                      ? color.withValues(alpha: 0.12)
-                                      : AppColors.kNeutral200.withValues(alpha: 0.6),
+                                  color: isEnabled ? color.withValues(alpha: 0.12) : AppColors.kNeutral200.withValues(alpha: 0.6),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(
-                                  icon,
-                                  color: isEnabled ? color : AppColors.kNeutral500,
-                                  size: 24,
-                                ),
+                                child: Icon(icon, color: isEnabled ? color : AppColors.kNeutral500, size: 24),
                               ),
                               if (!isEnabled)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.kNeutral200,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const AppText(
-                                    'Próximamente',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.kNeutral600,
-                                  ),
+                                  decoration: BoxDecoration(color: AppColors.kNeutral200, borderRadius: BorderRadius.circular(20)),
+                                  child: const AppText('Próximamente', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.kNeutral600),
                                 )
                               else
-                                const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18,
-                                  color: AppColors.kPrimaryColor,
-                                ),
+                                const Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.kPrimaryColor),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AppText(
-                                title,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: isEnabled ? AppColors.kNeutral900 : AppColors.kNeutral600,
-                              ),
+                              AppText(title, fontSize: 15, fontWeight: FontWeight.bold, color: isEnabled ? AppColors.kNeutral900 : AppColors.kNeutral600),
                               const Gap(4),
-                              AppText(
-                                subtitle,
-                                fontSize: 12,
-                                color: AppColors.kNeutral600,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              AppText(subtitle, fontSize: 12, color: AppColors.kNeutral600, maxLines: 2, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ],
@@ -296,18 +232,9 @@ class BusinessDetailView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const AppText(
-                  'Desarrollado por Francisco Sotelo',
-                  fontSize: 12,
-                  color: AppColors.kNeutral500,
-                  fontWeight: FontWeight.w600,
-                ),
+                const AppText('Desarrollado por Francisco Sotelo', fontSize: 12, color: AppColors.kNeutral500, fontWeight: FontWeight.w600),
                 const Gap(2),
-                AppText(
-                  'Versión ${AppConfig.appVersionName} (${AppConfig.appVersionCode})',
-                  fontSize: 11,
-                  color: AppColors.kNeutral400,
-                ),
+                AppText('Versión ${AppConfig.appVersionName} (${AppConfig.appVersionCode})', fontSize: 11, color: AppColors.kNeutral400),
               ],
             ),
           ),
