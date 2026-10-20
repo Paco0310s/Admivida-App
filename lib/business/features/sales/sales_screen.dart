@@ -5,6 +5,8 @@ import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -14,15 +16,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 
-class SalesScreen extends StatelessWidget {
+class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key, required this.businessId, required this.businessName});
 
   final String businessId;
   final String businessName;
 
+  Future<void> _handlePrinterToggle(BuildContext context, WidgetRef ref, bool hasPrinter) async {
+    if (hasPrinter) {
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Eliminar impresora seleccionada'),
+          content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await ref.read(printerServiceProvider).clearSavedPrinter();
+                ref.invalidate(hasSavedPrinterProvider);
+                if (context.mounted) {
+                  SnackbarUtil.showSuccess(context, 'Impresora desvinculada correctamente.');
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      await ref.read(printerServiceProvider).showPrinterSelectionModal(context);
+      ref.invalidate(hasSavedPrinterProvider);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool isMobile = Responsive.isMobile(context);
+    final hasPrinterAsync = ref.watch(hasSavedPrinterProvider);
 
     return AppScaffold(
       title: AppTexts.businessSales,
@@ -30,6 +63,17 @@ class SalesScreen extends StatelessWidget {
         title: const AppText(AppTexts.businessSales, color: AppColors.kNeutral100),
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
+        actions: [
+          hasPrinterAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (hasPrinter) => IconButton(
+              tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
+              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white),
+              onPressed: () => _handlePrinterToggle(context, ref, hasPrinter),
+            ),
+          ),
+        ],
       ),
       mobile: SalesListView(businessId: businessId, businessName: businessName),
       tablet: SalesListView(businessId: businessId, businessName: businessName),
@@ -163,24 +207,72 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                       ],
                     ],
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => NavigationService.navigateTo(
-                      context,
-                      Routes.addSale,
-                      arguments: {'businessId': widget.businessId, 'businessName': widget.businessName},
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                    label: const Text(
-                      AppTexts.addSaleButton,
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
+                  Row(
+                    children: [
+                      ref.watch(hasSavedPrinterProvider).when(
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                            data: (hasPrinter) => Container(
+                              decoration: BoxDecoration(
+                                color: hasPrinter ? Colors.red : AppColors.kPrimaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: IconButton(
+                                tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
+                                icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white, size: 20),
+                                onPressed: () async {
+                                  if (hasPrinter) {
+                                    await showDialog(
+                                      context: context,
+                                      builder: (dialogContext) => AlertDialog(
+                                        title: const Text('Eliminar impresora seleccionada'),
+                                        content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              Navigator.of(dialogContext).pop();
+                                              await ref.read(printerServiceProvider).clearSavedPrinter();
+                                              ref.invalidate(hasSavedPrinterProvider);
+                                              if (context.mounted) {
+                                                SnackbarUtil.showSuccess(context, 'Impresora desvinculada correctamente.');
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                                            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    await ref.read(printerServiceProvider).showPrinterSelectionModal(context);
+                                    ref.invalidate(hasSavedPrinterProvider);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                      const Gap(10),
+                      ElevatedButton.icon(
+                        onPressed: () => NavigationService.navigateTo(
+                          context,
+                          Routes.addSale,
+                          arguments: {'businessId': widget.businessId, 'businessName': widget.businessName},
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.kPrimaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                        label: const Text(
+                          AppTexts.addSaleButton,
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -253,6 +345,14 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
     );
   }
 
+  Future<void> _reprintSale(BuildContext context, SaleModel sale) async {
+    final document = sale.toObjectToPrint(
+      businessName: widget.businessName,
+      openDrawer: false,
+    );
+    await ref.read(printerServiceProvider).showPrintersAndPrint(context, document);
+  }
+
   Widget _buildSaleCard(BuildContext context, SaleModel sale, {required bool isGrid}) {
     final dateFormatted = DateFormat('dd MMM yyyy • hh:mm a').format(sale.createdAt.toLocal());
 
@@ -280,7 +380,37 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                   AppText(dateFormatted, color: AppColors.kNeutral500, fontSize: 12),
                 ],
               ),
-              _buildStatusBadge(sale.status),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStatusBadge(sale.status),
+                  const Gap(8),
+                  Material(
+                    color: AppColors.kPrimary50,
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      onTap: () => _reprintSale(context, sale),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.print_rounded, size: 14, color: AppColors.kPrimaryColor),
+                            Gap(4),
+                            AppText(
+                              'Reimprimir',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.kPrimaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           const Gap(10),

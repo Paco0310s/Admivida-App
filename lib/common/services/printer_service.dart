@@ -143,6 +143,64 @@ class PrinterService {
     return null;
   }
 
+  /// Intenta abrir únicamente el cajón de dinero sin imprimir ningún ticket.
+  /// Si no hay impresora guardada o falla la conexión, termina silenciosamente.
+  Future<bool> openCashDrawerOnly() async {
+    final savedPrinter = await getSavedPrinter();
+    if (savedPrinter == null) return false;
+
+    final transport = savedPrinter.transport == PrinterTransport.bluetooth ? PrinterType.bluetooth : PrinterType.usb;
+    final bluetoothAddress = savedPrinter.device.address;
+    if (savedPrinter.transport == PrinterTransport.bluetooth && (bluetoothAddress == null || bluetoothAddress.trim().isEmpty)) {
+      return false;
+    }
+
+    final windowsUsb = Platform.isWindows && savedPrinter.transport == PrinterTransport.usb;
+    var connected = false;
+    try {
+      if (!windowsUsb) {
+        final isConnected = await printerManager.connect(
+          type: transport,
+          model: switch (savedPrinter.transport) {
+            PrinterTransport.bluetooth => BluetoothPrinterInput(address: bluetoothAddress!, name: savedPrinter.device.name, isBle: false),
+            PrinterTransport.usb => UsbPrinterInput(
+              name: savedPrinter.device.name,
+              productId: savedPrinter.device.productId,
+              vendorId: savedPrinter.device.vendorId,
+            ),
+          },
+        );
+
+        if (!isConnected) return false;
+        connected = true;
+      }
+
+      final profile = await CapabilityProfile.load();
+      final generator = Generator(PaperSize.mm80, profile);
+      List<int> bytes = [];
+
+      bytes += generator.drawer(pin: PosDrawer.pin2);
+      bytes += generator.drawer(pin: PosDrawer.pin5);
+
+      final sent = windowsUsb
+          ? await _windowsUsbPrinterChannel.invokeMethod<bool>('printRaw', {'name': savedPrinter.device.name, 'bytes': Uint8List.fromList(bytes)}) ?? false
+          : await printerManager.send(type: transport, bytes: bytes);
+      if (sent) await Future.delayed(const Duration(milliseconds: 300));
+      return sent;
+    } catch (e) {
+      debugPrint('Error al abrir cajón: $e');
+      return false;
+    } finally {
+      if (connected) {
+        try {
+          await printerManager.disconnect(type: transport);
+        } catch (e) {
+          debugPrint('Error al desconectar la impresora tras abrir cajón: $e');
+        }
+      }
+    }
+  }
+
   Future<bool> printDocument(PrinterChoice printer, ObjectToPrint document) async {
     final transport = printer.transport == PrinterTransport.bluetooth ? PrinterType.bluetooth : PrinterType.usb;
     final bluetoothAddress = printer.device.address;
@@ -272,14 +330,6 @@ class PrinterService {
       }
       bytes += generator.cut();
 
-      // Decodifica los bytes saltando los caracteres ocultos del hardware
-      // final String ticketPreview = latin1.decode(bytes, allowInvalid: true);
-
-      // AppLogger.info('BASE64: ${base64Encode(bytes)}');
-
-      // Imprímelo en tu consola usando tu AppLogger
-      // AppLogger.info('\n========== TICKET PREVIEW ==========\n$ticketPreview\n====================================');
-
       // Enviar e imprimir
       final sent = windowsUsb
           ? await _windowsUsbPrinterChannel.invokeMethod<bool>('printRaw', {'name': printer.device.name, 'bytes': Uint8List.fromList(bytes)}) ?? false
@@ -303,25 +353,23 @@ class PrinterService {
   Future<void> showPrintersAndPrint(BuildContext context, ObjectToPrint document) async {
     final savedPrinter = await getSavedPrinter();
 
-    if (savedPrinter != null) {
-      bool success = await printDocument(savedPrinter, document);
-      if (success) return;
-
+    if (savedPrinter == null) {
       if (context.mounted) {
-        SnackbarUtil.showError(context, 'Impresora guardada no disponible. Buscando dispositivos...');
+        SnackbarUtil.showWarning(
+          context,
+          'Selecciona una impresora primero desde el botón con el ícono de impresora en la parte superior.',
+        );
       }
+      return;
     }
 
-    if (!context.mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isDismissible: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (BuildContext modalContext) {
-        return PrinterSelectionModal(printerService: this, document: document);
-      },
-    );
+    final success = await printDocument(savedPrinter, document);
+    if (!success && context.mounted) {
+      SnackbarUtil.showError(
+        context,
+        'No se pudo conectar con la impresora seleccionada. Verifica su conexión o cámbiala desde el botón con el ícono de impresora en la parte superior.',
+      );
+    }
   }
 
   // Elimina la impresora de la memoria
@@ -331,7 +379,7 @@ class PrinterService {
     await prefs.remove(_legacySavedPrinterKey);
   }
 
-  // NUEVA FUNCIÓN EN PrinterService: Solo abre el modal para vincular
+  // Solo abre el modal para vincular manualmente desde el botón superior
   Future<void> showPrinterSelectionModal(BuildContext context) async {
     if (!context.mounted) return;
     await showModalBottomSheet(

@@ -42,12 +42,12 @@ class PrinterSelectionModalState extends State<PrinterSelectionModal> {
       });
 
       if (devices.isEmpty) {
-        final message = includeBluetooth
-            ? 'No se encontraron impresoras USB o Bluetooth emparejadas.'
-            : Platform.isWindows
-                ? 'Windows no reportó impresoras instaladas. Conecta la impresora e instala su controlador.'
-                : 'No se encontraron impresoras USB conectadas.';
-        SnackbarUtil.showWarning(context, message);
+        // final message = includeBluetooth
+        //     ? 'No se encontraron impresoras USB o Bluetooth emparejadas.'
+        //     : Platform.isWindows
+        //         ? 'Windows no reportó impresoras instaladas. Conecta la impresora e instala su controlador.'
+        //         : 'No se encontraron impresoras USB conectadas.';
+        // SnackbarUtil.showWarning(context, message);
       } else if (bluetoothSupported && !includeBluetooth) {
         final message = permissionStatus == PermissionStatus.permanentlyDenied
             ? 'Permite la ubicación en los ajustes para buscar impresoras Bluetooth. La búsqueda USB sigue disponible.'
@@ -83,7 +83,10 @@ class PrinterSelectionModalState extends State<PrinterSelectionModal> {
           if (_isScanning)
             Center(child: Column(children: const [CircularProgressIndicator(), SizedBox(height: 8), Text('Escaneando impresoras...')]))
           else if (_scanError != null)
-            Padding(padding: const EdgeInsets.all(16), child: Text(_scanError!, style: const TextStyle(color: Colors.red)))
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(_scanError!, style: const TextStyle(color: Colors.red)),
+            )
           else if (_devices.isEmpty)
             const Padding(padding: EdgeInsets.all(16), child: Text('No se encontraron impresoras.'))
           else
@@ -96,10 +99,9 @@ class PrinterSelectionModalState extends State<PrinterSelectionModal> {
                   return ListTile(
                     leading: const Icon(Icons.print),
                     title: Text(printer.device.name),
-                    subtitle: Text([
-                      if (printer.transport == PrinterTransport.bluetooth) 'Bluetooth' else 'USB',
-                      if (printer.details != null) printer.details!,
-                    ].join(' · ')),
+                    subtitle: Text(
+                      [if (printer.transport == PrinterTransport.bluetooth) 'Bluetooth' else 'USB', if (printer.details != null) printer.details!].join(' · '),
+                    ),
                     onTap: () async {
                       // 1. Guardar como favorita
                       await widget.printerService.savePrinter(printer);

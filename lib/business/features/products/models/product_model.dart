@@ -326,4 +326,11 @@ class ProductModel {
   double get defaultPrice {
     return defaultVariant?.salePrice ?? 0.0;
   }
+
+  /// Indica si ninguna de las variantes del producto tiene stock disponible.
+  /// (Si `stockQuantity == null`, el stock es ilimitado y por lo tanto sí está disponible).
+  bool get isOutOfStock {
+    if (variants.isEmpty) return true;
+    return variants.every((v) => v.stockQuantity != null && v.stockQuantity! <= 0);
+  }
 }

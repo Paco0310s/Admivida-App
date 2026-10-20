@@ -3,27 +3,46 @@ import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 
-class SaleDetailScreen extends StatelessWidget {
+class SaleDetailScreen extends ConsumerWidget {
   const SaleDetailScreen({super.key, required this.sale});
 
   final SaleModel sale;
 
+  Future<void> _reprintSale(BuildContext context, WidgetRef ref) async {
+    final businessName = DashboardSession.activeBusiness.value?.name ?? 'Ticket de Venta';
+    final document = sale.toObjectToPrint(
+      businessName: businessName,
+      openDrawer: false,
+    );
+    await ref.read(printerServiceProvider).showPrintersAndPrint(context, document);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppScaffold(
       title: 'Detalle de Venta',
       appBar: AppBar(
         title: const AppText('Detalle de Venta', color: AppColors.kNeutral100),
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
+        actions: [
+          IconButton(
+            tooltip: 'Reimprimir ticket',
+            onPressed: () => _reprintSale(context, ref),
+            icon: const Icon(Icons.print_rounded, color: AppColors.kNeutral100),
+          ),
+        ],
       ),
       mobile: _SaleDetailView(sale: sale),
       tablet: _SaleDetailView(sale: sale),
@@ -32,13 +51,13 @@ class SaleDetailScreen extends StatelessWidget {
   }
 }
 
-class _SaleDetailView extends StatelessWidget {
+class _SaleDetailView extends ConsumerWidget {
   const _SaleDetailView({required this.sale});
 
   final SaleModel sale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormatted = DateFormat('dd/MM/yyyy • hh:mm a').format(sale.createdAt.toLocal());
     final isPaid = sale.status.toUpperCase() == 'PAID' || sale.status.toUpperCase() == 'COMPLETED';
 
@@ -167,6 +186,28 @@ class _SaleDetailView extends StatelessWidget {
                       _SummaryRow(label: 'Efectivo recibido', value: '\$${sale.amountPaid!.toStringAsFixed(2)}'),
                       _SummaryRow(label: 'Cambio', value: '\$${(sale.changeGiven ?? 0).toStringAsFixed(2)}'),
                     ],
+                    const Gap(20),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final businessName = DashboardSession.activeBusiness.value?.name ?? 'Ticket de Venta';
+                        final document = sale.toObjectToPrint(
+                          businessName: businessName,
+                          openDrawer: false,
+                        );
+                        await ref.read(printerServiceProvider).showPrintersAndPrint(context, document);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.print_rounded, size: 20),
+                      label: const Text(
+                        'Reimprimir Ticket',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
               ),

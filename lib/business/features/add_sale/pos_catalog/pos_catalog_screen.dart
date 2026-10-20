@@ -214,7 +214,6 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
                   icon: Icon(hasPrinter ? Icons.print_disabled : Icons.print, color: Colors.white),
                   onPressed: () async {
                     if (hasPrinter) {
-                      // Lógica de Desvincular (Tu código actual)
                       await showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
@@ -229,7 +228,7 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
                                 // Refrescar el estado de la UI
                                 ref.invalidate(hasSavedPrinterProvider);
                                 if (context.mounted) {
-                                  SnackbarUtil.showSuccess(context, 'Impresora desvinculada. Se pedirá seleccionar una nueva en la próxima venta.');
+                                  SnackbarUtil.showSuccess(context, 'Impresora desvinculada correctamente.');
                                 }
                               },
                               style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
@@ -262,9 +261,11 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
     final imageUrl = mainImage?.url ?? product.mainImageUrl;
     final blurHash = mainImage?.blurHash;
     final price = product.defaultPrice;
+    final isOutOfStock = product.isOutOfStock;
 
     return AppCard(
       padding: EdgeInsets.zero,
+      backgroundColor: isOutOfStock ? AppColors.kNeutral100 : Colors.white,
       child: InkWell(
         onTap: () => _onProductTap(product),
         borderRadius: BorderRadius.circular(12),
@@ -272,19 +273,60 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.kNeutral100,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                // 💡 Using AdaptedFile class for advanced image handling
-                child: imageUrl != null && imageUrl.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        child: AdaptedFile.network(imageUrl, blurHash: blurHash).getWidget(fit: BoxFit.cover, width: double.infinity),
-                      )
-                    : const Center(child: Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.kNeutral400)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: AppColors.kNeutral100,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                    ),
+                    child: ColorFiltered(
+                      colorFilter: isOutOfStock
+                          ? const ColorFilter.matrix(<double>[
+                              0.2126, 0.7152, 0.0722, 0, 0, //
+                              0.2126, 0.7152, 0.0722, 0, 0, //
+                              0.2126, 0.7152, 0.0722, 0, 0, //
+                              0, 0, 0, 0.45, 0, //
+                            ])
+                          : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                      child: imageUrl != null && imageUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                              child: AdaptedFile.network(imageUrl, blurHash: blurHash).getWidget(fit: BoxFit.cover, width: double.infinity),
+                            )
+                          : const Center(child: Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.kNeutral400)),
+                    ),
+                  ),
+                  if (isOutOfStock)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.kNeutral800.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.inventory_2_outlined, size: 12, color: Colors.white),
+                            Gap(4),
+                            Text(
+                              'Sin stock',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             Padding(
@@ -292,16 +334,32 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(product.name, fontWeight: FontWeight.bold, fontSize: 14, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  AppText(
+                    product.name,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    color: isOutOfStock ? AppColors.kNeutral500 : AppColors.kNeutral900,
+                  ),
                   const Gap(4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      AppText('\$${price.toStringAsFixed(2)}', fontWeight: FontWeight.bold, color: AppColors.kPrimaryColor, fontSize: 15),
-                      const CircleAvatar(
+                      AppText(
+                        '\$${price.toStringAsFixed(2)}',
+                        fontWeight: FontWeight.bold,
+                        color: isOutOfStock ? AppColors.kNeutral500 : AppColors.kPrimaryColor,
+                        fontSize: 15,
+                      ),
+                      CircleAvatar(
                         radius: 12,
-                        backgroundColor: AppColors.kPrimaryColor,
-                        child: Icon(Icons.add, size: 16, color: Colors.white),
+                        backgroundColor: isOutOfStock ? AppColors.kNeutral300 : AppColors.kPrimaryColor,
+                        child: Icon(
+                          isOutOfStock ? Icons.block_rounded : Icons.add,
+                          size: 15,
+                          color: isOutOfStock ? AppColors.kNeutral600 : Colors.white,
+                        ),
                       ),
                     ],
                   ),

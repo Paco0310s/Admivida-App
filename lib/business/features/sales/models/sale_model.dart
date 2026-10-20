@@ -1,3 +1,5 @@
+import 'package:admivida/common/models/object_to_print.dart';
+
 class SaleDetailModel {
   final String id;
   final String saleId;
@@ -173,5 +175,36 @@ class SaleModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+
+  ObjectToPrint toObjectToPrint({
+    required String businessName,
+    bool openDrawer = false,
+  }) {
+    final List<PrintableRow> ticketRows = details.map((detail) {
+      return PrintableRow(
+        quantity: detail.quantity,
+        description: '${detail.productNameSnapshot}${!detail.isPaid ? ' (No pagado)' : ''}',
+        price: detail.productPriceSnapshot,
+        total: detail.subtotal,
+      );
+    }).toList();
+
+    final double calculatedSubtotal = ticketRows.fold(0.0, (sum, row) => sum + row.total);
+
+    return ObjectToPrint(
+      businessName: businessName,
+      ticketId: id,
+      date: createdAt,
+      cashierName: sellerName ?? 'Cajero Default',
+      customerName: clientNameSnapshot,
+      rows: ticketRows,
+      subtotal: calculatedSubtotal,
+      discount: discountAmount,
+      total: totalPriceSnapshot,
+      amountPaid: amountPaid ?? 0.0,
+      changeGiven: changeGiven ?? 0.0,
+      openDrawer: openDrawer,
+    );
   }
 }

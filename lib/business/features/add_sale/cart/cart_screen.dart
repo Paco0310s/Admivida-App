@@ -9,7 +9,6 @@ import 'package:admivida/business/features/sales/sales_provider.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
-import 'package:admivida/common/models/object_to_print.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
@@ -223,95 +222,283 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   // --- Ticket Preview Dialog ---
   void _showTicketDialog(BuildContext context, SaleModel sale) {
+    bool isPrinting = false;
+    String? printerFeedbackMessage;
+    bool isPrinterError = false;
+
+    Future<void> openPrinterSelectorFromDialog(BuildContext dialogContext, StateSetter setDialogState) async {
+      final printerService = ref.read(printerServiceProvider);
+      await printerService.showPrinterSelectionModal(dialogContext);
+      ref.invalidate(hasSavedPrinterProvider);
+
+      final selectedPrinter = await printerService.getSavedPrinter();
+      if (dialogContext.mounted && selectedPrinter != null) {
+        setDialogState(() {
+          isPrinterError = false;
+          printerFeedbackMessage = 'Impresora "${selectedPrinter.device.name}" vinculada. Ya puedes imprimir el ticket.';
+        });
+      }
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: AppColors.kSuccess, size: 28),
-            Gap(8),
-            AppText('¡Venta Exitosa!', fontWeight: FontWeight.bold, fontSize: 18),
-          ],
-        ),
-        content: SizedBox(
-          width: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText('Folio ID: ${sale.id}', fontSize: 12, color: AppColors.kNeutral600),
-                AppText('Estatus: ${sale.status}', fontSize: 12, color: AppColors.kNeutral600),
-                AppText('Vendedor: ${sale.sellerName ?? 'N/D'}', fontSize: 12, color: AppColors.kNeutral600),
-                AppText('Cliente: ${sale.clientNameSnapshot}', fontSize: 12, color: AppColors.kNeutral600),
-                const Divider(height: 20),
-                const AppText('Resumen de Productos:', fontWeight: FontWeight.bold, fontSize: 14),
-                const Gap(8),
-                // Al usar el modelo, el mapeo de los detalles queda súper limpio:
-                ...sale.details.map((detail) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+      builder: (dialogContext) => Consumer(
+        builder: (dialogContext, dialogRef, _) {
+          final hasPrinterAsync = dialogRef.watch(hasSavedPrinterProvider);
+          final hasPrinter = hasPrinterAsync.value ?? false;
+
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) => AlertDialog(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '${detail.quantity}x ${detail.productNameSnapshot} ${!detail.isPaid ? '(No pagado)' : ''}',
-                            style: TextStyle(fontSize: 13, color: !detail.isPaid ? Colors.orange : Colors.black),
-                          ),
-                        ),
-                        Text(
-                          '\$${(detail.productPriceSnapshot * detail.quantity).toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
+                        Icon(Icons.check_circle, color: AppColors.kSuccess, size: 28),
+                        Gap(8),
+                        Flexible(child: AppText('¡Venta Exitosa!', fontWeight: FontWeight.bold, fontSize: 18)),
                       ],
                     ),
-                  );
-                }),
-                const Divider(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const AppText('Total Cobrado:', fontWeight: FontWeight.bold),
-                    AppText('\$${sale.totalPriceSnapshot.toStringAsFixed(2)}', fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.kPrimaryColor),
-                  ],
+                  ),
+                  Container(
+                    decoration: BoxDecoration(color: hasPrinter ? Colors.red : AppColors.kPrimaryColor, borderRadius: BorderRadius.circular(10)),
+                    child: IconButton(
+                      constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                      padding: const EdgeInsets.all(8),
+                      tooltip: hasPrinter ? 'Desvincular Impresora' : 'Agregar Impresora',
+                      icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white, size: 20),
+                      onPressed: () async {
+                        if (hasPrinter) {
+                          await showDialog(
+                            context: dialogContext,
+                            builder: (confirmContext) => AlertDialog(
+                              title: const Text('Eliminar impresora seleccionada'),
+                              content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(confirmContext).pop(), child: const Text('Cancelar')),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    Navigator.of(confirmContext).pop();
+                                    await ref.read(printerServiceProvider).clearSavedPrinter();
+                                    ref.invalidate(hasSavedPrinterProvider);
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        isPrinterError = true;
+                                        printerFeedbackMessage = 'Impresora desvinculada.';
+                                      });
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                                  child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          await openPrinterSelectorFromDialog(dialogContext, setDialogState);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppText('Folio ID: ${sale.id}', fontSize: 12, color: AppColors.kNeutral600),
+                      AppText('Estatus: ${sale.status}', fontSize: 12, color: AppColors.kNeutral600),
+                      AppText('Vendedor: ${sale.sellerName ?? 'N/D'}', fontSize: 12, color: AppColors.kNeutral600),
+                      AppText('Cliente: ${sale.clientNameSnapshot}', fontSize: 12, color: AppColors.kNeutral600),
+                      const Divider(height: 20),
+                      const AppText('Resumen de Productos:', fontWeight: FontWeight.bold, fontSize: 14),
+                      const Gap(8),
+                      ...sale.details.map((detail) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${detail.quantity}x ${detail.productNameSnapshot} ${!detail.isPaid ? '(No pagado)' : ''}',
+                                  style: TextStyle(fontSize: 13, color: !detail.isPaid ? Colors.orange : Colors.black),
+                                ),
+                              ),
+                              Text(
+                                '\$${(detail.productPriceSnapshot * detail.quantity).toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText('Total Cobrado:', fontWeight: FontWeight.bold),
+                          AppText('\$${sale.totalPriceSnapshot.toStringAsFixed(2)}', fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.kPrimaryColor),
+                        ],
+                      ),
+                      const Gap(4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [const AppText('Efectivo Recibido:'), AppText('\$${sale.amountPaid?.toStringAsFixed(2) ?? '0.00'}')],
+                      ),
+                      const Gap(4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText('Cambio Devuelto:', fontWeight: FontWeight.bold, color: AppColors.kSuccess),
+                          AppText('\$${sale.changeGiven?.toStringAsFixed(2) ?? '0.00'}', fontWeight: FontWeight.bold, color: AppColors.kSuccess),
+                        ],
+                      ),
+                      if (printerFeedbackMessage != null) ...[
+                        const Gap(14),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isPrinterError ? Colors.orange.withValues(alpha: 0.12) : AppColors.kSuccess.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: isPrinterError ? Colors.orange : AppColors.kSuccess),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    isPrinterError ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                                    size: 18,
+                                    color: isPrinterError ? Colors.orange.shade800 : AppColors.kSuccess,
+                                  ),
+                                  const Gap(8),
+                                  Expanded(
+                                    child: Text(
+                                      printerFeedbackMessage!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: isPrinterError ? Colors.orange.shade900 : AppColors.kNeutral800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (isPrinterError && !hasPrinter) ...[
+                                const Gap(8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: () => openPrinterSelectorFromDialog(dialogContext, setDialogState),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.kPrimaryColor,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                                    label: const Text('Agregar Impresora', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                const Gap(4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [const AppText('Efectivo Recibido:'), AppText('\$${sale.amountPaid?.toStringAsFixed(2) ?? '0.00'}')],
+              ),
+              actions: [
+                // if (!hasPrinter)
+                //   TextButton.icon(
+                //     onPressed: () => openPrinterSelectorFromDialog(dialogContext, setDialogState),
+                //     style: TextButton.styleFrom(foregroundColor: AppColors.kPrimaryColor),
+                //     icon: const Icon(Icons.add_rounded, size: 18),
+                //     label: const Text('Agregar Impresora', style: TextStyle(fontWeight: FontWeight.w600)),
+                //   ),
+                OutlinedButton.icon(
+                  onPressed: isPrinting
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isPrinting = true;
+                            printerFeedbackMessage = null;
+                          });
+
+                          final printerService = ref.read(printerServiceProvider);
+                          final savedPrinter = await printerService.getSavedPrinter();
+
+                          if (savedPrinter == null) {
+                            if (context.mounted) {
+                              SnackbarUtil.showWarning(context, 'Selecciona una impresora primero desde el botón de impresora.');
+                            }
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                isPrinting = false;
+                                isPrinterError = true;
+                                printerFeedbackMessage =
+                                    'Selecciona una impresora primero usando el botón de impresora en la esquina superior de esta ventana o "Agregar Impresora".';
+                              });
+                            }
+                            return;
+                          }
+
+                          final document = sale.toObjectToPrint(businessName: widget.businessName, openDrawer: false);
+
+                          final success = await printerService.printDocument(savedPrinter, document);
+                          if (dialogContext.mounted) {
+                            setDialogState(() {
+                              isPrinting = false;
+                              isPrinterError = !success;
+                              printerFeedbackMessage = success
+                                  ? 'Ticket enviado a la impresora. Puedes volver a imprimir si necesitas otra copia.'
+                                  : 'No se pudo conectar con la impresora seleccionada. Verifica su conexión o cámbiala desde el botón superior.';
+                            });
+                          }
+                          if (!success && context.mounted) {
+                            SnackbarUtil.showError(
+                              context,
+                              'No se pudo conectar con la impresora seleccionada. Verifica su conexión o cámbiala desde el botón de impresora.',
+                            );
+                          }
+                        },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.kPrimaryColor,
+                    side: const BorderSide(color: AppColors.kPrimaryColor),
+                  ),
+                  icon: isPrinting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.print_rounded, size: 18),
+                  label: const Text('Imprimir Ticket'),
                 ),
-                const Gap(4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const AppText('Cambio Devuelto:', fontWeight: FontWeight.bold, color: AppColors.kSuccess),
-                    AppText('\$${sale.changeGiven?.toStringAsFixed(2) ?? '0.00'}', fontWeight: FontWeight.bold, color: AppColors.kSuccess),
-                  ],
+                ElevatedButton(
+                  onPressed: () {
+                    NavigationService.pop(dialogContext); // Close the dialog
+                    ref.read(cartProvider.notifier).clearCart();
+
+                    // Clean up the checkout form fields
+                    _clientNameController.text = 'Público General';
+                    _notesController.clear();
+                    _discountController.clear();
+                    _amountPaidController.clear();
+
+                    ref.invalidate(salesListProvider(widget.businessId));
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                  child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              NavigationService.pop(context); // Close the dialog
-              ref.read(cartProvider.notifier).clearCart();
-
-              // Clean up the checkout form fields
-              _clientNameController.text = 'Público General';
-              _notesController.clear();
-              _discountController.clear();
-              _amountPaidController.clear();
-
-              ref.invalidate(salesListProvider(widget.businessId));
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
-            child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -352,10 +539,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         discountAmount: _discountAmount,
         amountPaid: _amountPaid > 0 ? _amountPaid : (_selectedSaleStatus == 'COMPLETED' ? finalTotal : 0.0),
         notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-        // Opcional: Si tienes acceso a la ubicación y hora, pásalos aquí
-        // latitude: 20.357812,
-        // longitude: -102.775833,
-        // soldAt: DateTime.now(),
         details: cartItems,
       );
 
@@ -364,51 +547,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
       if (!mounted) return;
 
-      // 2. Handle success and failure using EitherUtil pattern
+      // 3. Handle success and failure using EitherUtil pattern
       saleResult.when(
         (failure) {
           if (!mounted) return;
           SnackbarUtil.showError(context, 'Error al procesar la venta: ${failure.message}');
         },
         (saleResponse) async {
-          // 1. Mapear los detalles (productos) de la venta
-          final List<PrintableRow> ticketRows = saleResponse.details.map((detail) {
-            return PrintableRow(
-              quantity: detail.quantity,
-              // Si no está pagado, lo indicamos en el ticket físico igual que en la UI
-              description: '${detail.productNameSnapshot}${!detail.isPaid ? ' (No pagado)' : ''}',
-              price: detail.productPriceSnapshot,
-              total: detail.subtotal,
-            );
-          }).toList();
-
-          // 2. Calcular el subtotal bruto (antes de descuentos)
-          final double calculatedSubtotal = ticketRows.fold(0.0, (sum, row) => sum + row.total);
-
-          // 3. Construir el documento final
-          final document = ObjectToPrint(
-            businessName: widget.businessName,
-            ticketId: saleResponse.id,
-            date: saleResponse.createdAt,
-            cashierName: saleResponse.sellerName ?? 'Cajero Default',
-            customerName: saleResponse.clientNameSnapshot,
-            rows: ticketRows,
-            subtotal: calculatedSubtotal,
-            discount: saleResponse.discountAmount,
-            total: saleResponse.totalPriceSnapshot,
-            amountPaid: saleResponse.amountPaid ?? 0.0,
-            changeGiven: saleResponse.changeGiven ?? 0.0,
-            openDrawer: true, // Siempre intentar abrir el cajón en una venta nueva
-          );
-
-          final printerService = ref.read(printerServiceProvider);
-
-          if (!mounted) return;
-          await printerService.showPrintersAndPrint(context, document);
+          // Intentar abrir el cajón silenciosamente (sin imprimir ticket y sin mostrar avisos)
+          await ref.read(printerServiceProvider).openCashDrawerOnly();
 
           if (!mounted) return;
 
-          // Limpiar carrito y mostrar modal de UI
+          // Limpiar carrito y mostrar modal de UI desde donde puede imprimir las veces que desee
           ref.read(cartProvider.notifier).clearCart();
           _showTicketDialog(context, saleResponse);
         },
@@ -676,19 +827,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 const Gap(16),
                 SizedBox(
                   width: double.infinity,
+                  height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoadingSale ? null : () => _processSale(finalTotal, cartItems),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.kPrimaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: _isLoadingSale
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text(
-                            'Cobrar e Imprimir',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isLoadingSale)
+                          const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        else
+                          const Icon(Icons.point_of_sale_rounded, size: 22, color: Colors.white),
+                        const Gap(10),
+                        const Text(
+                          'Cobrar',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
