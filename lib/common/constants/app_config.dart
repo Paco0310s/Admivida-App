@@ -1,10 +1,14 @@
-class AppConfig {
-  // Base URLs
-  static const String baseUrl = 'http://localhost:7100/api/v1';
-  static const String baseServerUrl = 'http://localhost:7100';
+import 'package:flutter/foundation.dart';
 
-  // static const String baseUrl = 'https://api.admivida.pacosotelo.com/api/v1';
-  // static const String baseServerUrl = 'https://api.admivida.pacosotelo.com';
+class AppConfig {
+  // Base URLs (automáticamente usa localhost en Debug y el servidor real en Release)
+  static const String baseUrl = kReleaseMode
+      ? 'https://api.admivida.pacosotelo.com/api/v1'
+      : 'http://localhost:7100/api/v1';
+
+  static const String baseServerUrl = kReleaseMode
+      ? 'https://api.admivida.pacosotelo.com'
+      : 'http://localhost:7100';
 
   // App version code
   static const int appVersionCode = 1;
