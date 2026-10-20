@@ -2,17 +2,13 @@ import 'package:flutter/foundation.dart';
 
 class AppConfig {
   // Base URLs (automáticamente usa localhost en Debug y el servidor real en Release)
-  static const String baseUrl = kReleaseMode
-      ? 'https://api.admivida.pacosotelo.com/api/v1'
-      : 'http://localhost:7100/api/v1';
+  static const String baseUrl = kReleaseMode ? 'https://api.admivida.pacosotelo.com/api/v1' : 'http://localhost:7100/api/v1';
 
-  static const String baseServerUrl = kReleaseMode
-      ? 'https://api.admivida.pacosotelo.com'
-      : 'http://localhost:7100';
+  static const String baseServerUrl = kReleaseMode ? 'https://api.admivida.pacosotelo.com' : 'http://localhost:7100';
 
   // App version code
-  static const int appVersionCode = 1;
-  static const String appVersionName = '0.5.0 (Beta)';
+  static const int appVersionCode = 2;
+  static const String appVersionName = '0.6.0 (Beta)';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
