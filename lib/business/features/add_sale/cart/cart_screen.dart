@@ -8,9 +8,11 @@ import 'package:admivida/business/features/sales/models/sale_model.dart';
 import 'package:admivida/business/features/sales/sales_provider.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -526,10 +528,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ref.read(cartProvider.notifier).clearCart();
 
                     // Clean up the checkout form fields
-                    _clientNameController.text = 'Público General';
-                    _notesController.clear();
-                    _discountController.clear();
-                    _amountPaidController.clear();
+                    setState(() {
+                      _selectedSellerId = null;
+                      _clientNameController.text = 'Público General';
+                      _notesController.clear();
+                      _discountController.clear();
+                      _amountPaidController.clear();
+                    });
 
                     ref.invalidate(salesListProvider(widget.businessId));
                   },
@@ -669,7 +674,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               // Seller Dropdown
               sellersAsync.when(
                 data: (sellers) {
-                  _selectedSellerId ??= sellers.isNotEmpty ? sellers.first.userId : null;
+                  if ((_selectedSellerId == null || !sellers.any((s) => s.userId == _selectedSellerId)) && sellers.isNotEmpty) {
+                    final currentUserId = SecureStorageService.getString(AppConfig.uuidKey);
+                    final currentUserAsSeller = currentUserId != null
+                        ? sellers.where((s) => s.userId == currentUserId).firstOrNull
+                        : null;
+                    _selectedSellerId = currentUserAsSeller?.userId ?? sellers.first.userId;
+                  }
                   final itemsMap = {for (var s in sellers) s.userId: '${s.firstName} ${s.lastName}'};
                   return _buildDropdown(
                     label: 'Vendedor',
@@ -1058,6 +1069,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
+      key: ValueKey('$label-$value'),
       initialValue: value,
       isExpanded: true,
       decoration: InputDecoration(
