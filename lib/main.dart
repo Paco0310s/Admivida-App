@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/constants/app_theme.dart';
 import 'package:admivida/common/logging/app_logger.dart';
@@ -6,7 +8,9 @@ import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/utils/globals.dart';
+import 'package:admivida/common/widgets/windows_update_dialog.dart';
 import 'package:admivida/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -39,14 +43,29 @@ class AdmividaApp extends ConsumerStatefulWidget {
 }
 
 class _AdmividaAppState extends ConsumerState<AdmividaApp> with WidgetsBindingObserver {
+  Timer? _updateCheckTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Windows: revisar periódicamente si hay una nueva versión mientras la app sigue abierta
+    if (WindowsUpdaterService.isSupported) {
+      _updateCheckTimer = Timer.periodic(const Duration(hours: 3), (_) => _checkForWindowsUpdate());
+    }
+  }
+
+  Future<void> _checkForWindowsUpdate() async {
+    final update = await WindowsUpdaterService.checkForUpdate();
+    final dialogContext = navigatorKey.currentState?.overlay?.context;
+    if (update == null || dialogContext == null || !dialogContext.mounted) return;
+    await WindowsUpdateDialog.show(dialogContext, update);
   }
 
   @override
   void dispose() {
+    _updateCheckTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

@@ -2,11 +2,13 @@ import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/widgets/app_button.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/windows_update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
@@ -132,10 +134,16 @@ class _StatusView extends StatelessWidget {
                       ),
                       const SizedBox(height: 28),
                       AppButton(
-                        text: isMaintenance ? AppTexts.retry : AppTexts.close,
-                        onPressed: () {
+                        text: isMaintenance ? AppTexts.retry : (WindowsUpdaterService.isSupported ? 'Actualizar ahora' : AppTexts.close),
+                        onPressed: () async {
                           if (isMaintenance) {
                             Navigator.of(context).pushReplacementNamed('/splash');
+                            return;
+                          }
+                          if (WindowsUpdaterService.isSupported) {
+                            final update = await WindowsUpdaterService.checkForUpdate(ignoreDismissed: true);
+                            if (!context.mounted) return;
+                            await WindowsUpdateDialog.show(context, update ?? WindowsUpdateInfo.fallbackMandatory());
                             return;
                           }
                           SystemNavigator.pop();

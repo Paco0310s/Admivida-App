@@ -10,8 +10,10 @@ import 'package:admivida/common/services/connectivity_service.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/secure_storage_service.dart';
+import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
+import 'package:admivida/common/widgets/windows_update_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -54,6 +56,14 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
         NavigationService.replaceWith(context, Routes.maintenance);
       }
       return;
+    }
+
+    // 3.1 WINDOWS: Revisar si hay un nuevo instalador publicado y ofrecer actualizar
+    if (WindowsUpdaterService.isSupported) {
+      final update = await WindowsUpdaterService.checkForUpdate();
+      if (update != null && context.mounted) {
+        await WindowsUpdateDialog.show(context, update);
+      }
     }
 
     // 4. With internet and server live, but without a session: we redirect to the sign-in screen

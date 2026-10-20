@@ -6,9 +6,18 @@ class AppConfig {
 
   static const String baseServerUrl = kReleaseMode ? 'https://api.admivida.pacosotelo.com' : 'http://localhost:7100';
 
+  // MinIO Public Storage
+  static const String minioPublicUrl = kReleaseMode
+      ? 'https://minio.pacosotelo.com/admivida-bucket'
+      : 'http://localhost:9000/admivida-bucket';
+
   // App version code
   static const int appVersionCode = 2;
   static const String appVersionName = '0.6.0 (Beta)';
+
+  // Windows auto-update (almacenado en MinIO S3)
+  static const String windowsInstallerUrl = '$minioPublicUrl/releases/AdmividaSetup.exe';
+  static const String windowsUpdateManifestUrl = '$minioPublicUrl/releases/latest.json';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
