@@ -7,6 +7,7 @@ import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -17,14 +18,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
-class ProductsScreen extends StatelessWidget {
+class ProductsScreen extends ConsumerWidget {
   const ProductsScreen({super.key, required this.businessId});
 
   final String businessId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool isMobile = Responsive.isMobile(context);
+    final bool isAdmin = ref.watch(isBusinessAdminProvider(businessId)).value ?? SecureStorageService.isBusinessAdmin(businessId);
 
     return AppScaffold(
       title: AppTexts.businessProducts,
@@ -36,7 +38,7 @@ class ProductsScreen extends StatelessWidget {
       mobile: ProductsListView(businessId: businessId),
       tablet: ProductsListView(businessId: businessId),
       desktop: ProductsListView(businessId: businessId),
-      floatingActionButton: isMobile
+      floatingActionButton: isMobile && isAdmin
           ? FloatingActionButton.extended(
               onPressed: () => NavigationService.navigateTo(
                 context,
@@ -178,6 +180,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
   Widget _buildProductCard(BuildContext context, ProductModel product, {required bool isGrid}) {
     final firstVariant = product.defaultVariant;
     final productImage = product.mainImageUrl;
+    final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId)).value ?? SecureStorageService.isBusinessAdmin(widget.businessId);
 
     return AppCard(
       margin: isGrid ? EdgeInsets.zero : const EdgeInsets.only(bottom: 12),
@@ -262,7 +265,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                     const Gap(8),
                     AppText('${AppTexts.unitOfMeasure}: ${product.unitOfMeasure}', color: AppColors.kNeutral500, fontSize: 11),
                     const Spacer(),
-                    if (firstVariant?.stockQuantity != null && product.variants.length <= 1)
+                    if (isAdmin && firstVariant?.stockQuantity != null && product.variants.length <= 1)
                       InkWell(
                         onTap: () {
                           if (firstVariant?.stockQuantity != null && firstVariant!.stockQuantity! > 0) {
@@ -288,10 +291,10 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                         ),
                       ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: firstVariant?.stockQuantity == null ? 0 : 10),
+                      padding: EdgeInsets.symmetric(horizontal: (!isAdmin || firstVariant?.stockQuantity == null) ? 0 : 10),
                       child: _buildStockLabel(product, firstVariant),
                     ),
-                    if (firstVariant?.stockQuantity != null && product.variants.length <= 1)
+                    if (isAdmin && firstVariant?.stockQuantity != null && product.variants.length <= 1)
                       InkWell(
                         onTap: () {
                           if (firstVariant?.stockQuantity != null) {
@@ -358,6 +361,8 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
 
   // --- HEADER: Search + Scanner + Desktop Action ---
   Widget _buildSearchHeader({required bool isMobile}) {
+    final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId)).value ?? SecureStorageService.isBusinessAdmin(widget.businessId);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -427,7 +432,7 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
               ),
             ),
           ),
-          if (!isMobile) ...[
+          if (!isMobile && isAdmin) ...[
             const Gap(10),
             ElevatedButton.icon(
               onPressed: () => NavigationService.navigateTo(

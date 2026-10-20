@@ -5,7 +5,7 @@ import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/widgets/app_button.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -66,7 +66,7 @@ class ChoosePlatform extends StatelessWidget {
             return AppButton(
               text: role,
               onPressed: () {
-                StorageService.setString(AppConfig.currentPlatformRoleKey, role);
+                SecureStorageService.setString(AppConfig.currentPlatformRoleKey, role);
                 NavigationService.replaceWith(context, Routes.home);
               },
             );
@@ -141,7 +141,7 @@ class ChoosePlatformWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String rolesString = StorageService.getString(AppConfig.rolesKey) ?? '';
+    String rolesString = SecureStorageService.getString(AppConfig.rolesKey) ?? '';
     List<String> roles = rolesString.split(',');
 
     return SingleChildScrollView(

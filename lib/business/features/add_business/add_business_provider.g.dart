@@ -34,7 +34,7 @@ final class CreateOrUpdateBusinessProvider
 }
 
 String _$createOrUpdateBusinessHash() =>
-    r'af1602182ea20d2caeedac25872c933483672382';
+    r'eef518490d87cd004e46619515612224c0e56717';
 
 abstract class _$CreateOrUpdateBusiness extends $AsyncNotifier<BusinessModel?> {
   FutureOr<BusinessModel?> build();

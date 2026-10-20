@@ -1,27 +1,30 @@
+import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/business/models/business_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
-class BusinessDetailScreen extends StatefulWidget {
+class BusinessDetailScreen extends ConsumerStatefulWidget {
   const BusinessDetailScreen({super.key, required this.business});
 
   final BusinessModel business;
 
   @override
-  State<BusinessDetailScreen> createState() => _BusinessDetailScreenState();
+  ConsumerState<BusinessDetailScreen> createState() => _BusinessDetailScreenState();
 }
 
-class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
+class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
   late BusinessModel business;
 
   @override
@@ -48,7 +51,8 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
 
   Widget _buildView({required int crossAxisCount}) {
     final bool isDesktop = crossAxisCount >= 3;
-    final List<String> roles = ['SELLER', 'ADMIN'];
+    final List<String> roles = ref.watch(businessRolesProvider(business.id)).value ?? SecureStorageService.getBusinessRoles(business.id);
+    final bool isAdmin = roles.any((role) => role == 'ADMIN' || role.contains('ADMIN'));
 
     final List<Map<String, dynamic>> options = [
       {
@@ -224,36 +228,38 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       ),
                     ),
                     if (isDesktop) ...[
-                      const Gap(12),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final updatedBusiness = await NavigationService.navigateTo(
-                            context,
-                            Routes.createOrUpdateBusinessScreen,
-                            arguments: business,
-                          );
+                      if (isAdmin) ...[
+                        const Gap(12),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final updatedBusiness = await NavigationService.navigateTo(
+                              context,
+                              Routes.createOrUpdateBusinessScreen,
+                              arguments: business,
+                            );
 
-                          if (updatedBusiness != null && updatedBusiness is BusinessModel) {
-                            setState(() {
-                              business = updatedBusiness;
-                            });
-                            DashboardSession.setActiveBusiness(updatedBusiness);
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            if (updatedBusiness != null && updatedBusiness is BusinessModel) {
+                              setState(() {
+                                business = updatedBusiness;
+                              });
+                              DashboardSession.setActiveBusiness(updatedBusiness);
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.edit_rounded, size: 17, color: Colors.white),
+                          label: const AppText(
+                            AppTexts.editBusinessButton,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                        icon: const Icon(Icons.edit_rounded, size: 17, color: Colors.white),
-                        label: const AppText(
-                          AppTexts.editBusinessButton,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
+                      ],
                       const Gap(10),
                       ElevatedButton.icon(
                         onPressed: () {
@@ -276,7 +282,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
-                    ] else ...[
+                    ] else if (isAdmin) ...[
                       IconButton(
                         tooltip: AppTexts.editBusinessButton,
                         onPressed: () async {
@@ -311,87 +317,90 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
             color: AppColors.kNeutral900,
           ),
           const Gap(12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: options.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: isDesktop ? 1.5 : 1.18,
-            ),
-            itemBuilder: (context, index) {
-              final option = options[index];
-              final icon = option['icon'] as IconData;
-              final title = option['title'] as String;
-              final subtitle = option['subtitle'] as String;
-              final color = option['color'] as Color;
-              final isEnabled = option['isEnabled'] as bool;
-              final route = option['route'] as String;
-              final roleRequired = option['role'] as List<String>;
-              final hasRole = roles.any((role) => roleRequired.contains(role));
+          Builder(
+            builder: (context) {
+              final visibleOptions = options.where((option) {
+                final roleRequired = option['role'] as List<String>;
+                return roles.any((role) => roleRequired.contains(role));
+              }).toList();
 
-              if (!hasRole) {
-                return const SizedBox.shrink();
-              }
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: visibleOptions.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: isDesktop ? 1.5 : 1.18,
+                ),
+                itemBuilder: (context, index) {
+                  final option = visibleOptions[index];
+                  final icon = option['icon'] as IconData;
+                  final title = option['title'] as String;
+                  final subtitle = option['subtitle'] as String;
+                  final color = option['color'] as Color;
+                  final isEnabled = option['isEnabled'] as bool;
+                  final route = option['route'] as String;
 
-              return AppCard(
-                margin: EdgeInsets.zero,
-                backgroundColor: !isEnabled ? AppColors.kNeutral200 : Colors.white,
-                padding: const EdgeInsets.all(16),
-                onTap: () {
-                  if (isEnabled) {
-                    DashboardSession.navigateToBusinessRoute(context, route, business);
-                  } else {
-                    SnackbarUtil.showInfo(context, 'El módulo $title estará disponible pronto.');
-                  }
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                  return AppCard(
+                    margin: EdgeInsets.zero,
+                    backgroundColor: !isEnabled ? AppColors.kNeutral200 : Colors.white,
+                    padding: const EdgeInsets.all(16),
+                    onTap: () {
+                      if (isEnabled) {
+                        DashboardSession.navigateToBusinessRoute(context, route, business);
+                      } else {
+                        SnackbarUtil.showInfo(context, 'El módulo $title estará disponible pronto.');
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(icon, color: color, size: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(icon, color: color, size: 24),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: AppColors.kNeutral400,
+                            ),
+                          ],
                         ),
-                        Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 14,
-                          color: AppColors.kNeutral400,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              title,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.kNeutral900,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Gap(4),
+                            AppText(
+                              subtitle,
+                              fontSize: 12,
+                              color: AppColors.kNeutral600,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          title,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.kNeutral900,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const Gap(4),
-                        AppText(
-                          subtitle,
-                          fontSize: 12,
-                          color: AppColors.kNeutral600,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),

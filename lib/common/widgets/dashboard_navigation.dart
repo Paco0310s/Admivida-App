@@ -1,4 +1,5 @@
 import 'package:admivida/business/features/businesses/businesses_provider.dart';
+import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/business/features/sales/models/sale_model.dart';
 import 'package:admivida/business/models/business_model.dart';
 import 'package:admivida/common/constants/app_assets.dart';
@@ -6,8 +7,9 @@ import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
@@ -144,7 +146,10 @@ class DashboardSession {
     } else if (targetRoute == Routes.sales || targetRoute == Routes.addSale) {
       arguments = {'businessId': business.id, 'businessName': business.name};
     } else if (targetRoute == Routes.paymentsHistory) {
-      arguments = {'businessId': business.id, 'isAdmin': true};
+      arguments = {
+        'businessId': business.id,
+        'isAdmin': SecureStorageService.isBusinessAdmin(business.id),
+      };
     } else {
       arguments = business.id;
     }
@@ -239,6 +244,11 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                   child: ValueListenableBuilder<BusinessModel?>(
                     valueListenable: DashboardSession.activeBusiness,
                     builder: (context, activeBiz, _) {
+                      final bool isAdmin = activeBiz != null
+                          ? (ref.watch(isBusinessAdminProvider(activeBiz.id)).value ??
+                              SecureStorageService.isBusinessAdmin(activeBiz.id))
+                          : false;
+
                       return ListView(
                         padding: EdgeInsets.symmetric(
                           horizontal: isCollapsed ? 10 : 12,
@@ -326,77 +336,87 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                               onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.clients, activeBiz),
                             ),
                             const Gap(4),
-                            _SidebarItem(
-                              icon: Icons.account_balance_wallet_rounded,
-                              label: 'Movimientos',
-                              isSelected: currentRoute == Routes.transactions ||
-                                  currentRoute == Routes.addTransaction ||
-                                  currentRoute == Routes.transferFunds,
-                              isCollapsed: isCollapsed,
-                              onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.transactions, activeBiz),
-                            ),
-                            const Gap(4),
-
-                            // Grouped Secondary Admin Options ("Equipo y Pagos")
-                            _SidebarItem(
-                              icon: Icons.groups_rounded,
-                              label: 'Equipo y Pagos',
-                              isSelected: DashboardSession.isTeamOrPaymentsRoute(currentRoute) && (isCollapsed || !_teamMenuExpanded),
-                              isCollapsed: isCollapsed,
-                              trailingIcon: isCollapsed
-                                  ? null
-                                  : (_teamMenuExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
-                              onTap: () {
-                                if (isCollapsed) {
-                                  DashboardSession.navigateToBusinessRoute(context, Routes.userBusinesses, activeBiz);
-                                } else {
-                                  setState(() => _teamMenuExpanded = !_teamMenuExpanded);
-                                }
-                              },
-                            ),
-                            if (_teamMenuExpanded && !isCollapsed)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 14, top: 4),
-                                child: Column(
-                                  children: [
-                                    _SidebarItem(
-                                      icon: Icons.manage_accounts_rounded,
-                                      label: 'Colaboradores',
-                                      isSelected: currentRoute == Routes.userBusinesses,
-                                      isCollapsed: false,
-                                      isCompact: true,
-                                      onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.userBusinesses, activeBiz),
-                                    ),
-                                    const Gap(2),
-                                    _SidebarItem(
-                                      icon: Icons.payments_rounded,
-                                      label: 'Pago de Comisiones',
-                                      isSelected: currentRoute == Routes.commissionPayments,
-                                      isCollapsed: false,
-                                      isCompact: true,
-                                      onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.commissionPayments, activeBiz),
-                                    ),
-                                    const Gap(2),
-                                    _SidebarItem(
-                                      icon: Icons.payment_rounded,
-                                      label: 'Pago a Empleados',
-                                      isSelected: currentRoute == Routes.employeePayments,
-                                      isCollapsed: false,
-                                      isCompact: true,
-                                      onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.employeePayments, activeBiz),
-                                    ),
-                                    const Gap(2),
-                                    _SidebarItem(
-                                      icon: Icons.savings_rounded,
-                                      label: 'Historial de Pagos',
-                                      isSelected: currentRoute == Routes.paymentsHistory,
-                                      isCollapsed: false,
-                                      isCompact: true,
-                                      onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.paymentsHistory, activeBiz),
-                                    ),
-                                  ],
-                                ),
+                            if (isAdmin) ...[
+                              _SidebarItem(
+                                icon: Icons.account_balance_wallet_rounded,
+                                label: 'Movimientos',
+                                isSelected: currentRoute == Routes.transactions ||
+                                    currentRoute == Routes.addTransaction ||
+                                    currentRoute == Routes.transferFunds,
+                                isCollapsed: isCollapsed,
+                                onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.transactions, activeBiz),
                               ),
+                              const Gap(4),
+
+                              // Grouped Secondary Admin Options ("Equipo y Pagos")
+                              _SidebarItem(
+                                icon: Icons.groups_rounded,
+                                label: 'Equipo y Pagos',
+                                isSelected: DashboardSession.isTeamOrPaymentsRoute(currentRoute) && (isCollapsed || !_teamMenuExpanded),
+                                isCollapsed: isCollapsed,
+                                trailingIcon: isCollapsed
+                                    ? null
+                                    : (_teamMenuExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
+                                onTap: () {
+                                  if (isCollapsed) {
+                                    DashboardSession.navigateToBusinessRoute(context, Routes.userBusinesses, activeBiz);
+                                  } else {
+                                    setState(() => _teamMenuExpanded = !_teamMenuExpanded);
+                                  }
+                                },
+                              ),
+                              if (_teamMenuExpanded && !isCollapsed)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 14, top: 4),
+                                  child: Column(
+                                    children: [
+                                      _SidebarItem(
+                                        icon: Icons.manage_accounts_rounded,
+                                        label: 'Colaboradores',
+                                        isSelected: currentRoute == Routes.userBusinesses,
+                                        isCollapsed: false,
+                                        isCompact: true,
+                                        onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.userBusinesses, activeBiz),
+                                      ),
+                                      const Gap(2),
+                                      _SidebarItem(
+                                        icon: Icons.payments_rounded,
+                                        label: 'Pago de Comisiones',
+                                        isSelected: currentRoute == Routes.commissionPayments,
+                                        isCollapsed: false,
+                                        isCompact: true,
+                                        onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.commissionPayments, activeBiz),
+                                      ),
+                                      const Gap(2),
+                                      _SidebarItem(
+                                        icon: Icons.payment_rounded,
+                                        label: 'Pago a Empleados',
+                                        isSelected: currentRoute == Routes.employeePayments,
+                                        isCollapsed: false,
+                                        isCompact: true,
+                                        onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.employeePayments, activeBiz),
+                                      ),
+                                      const Gap(2),
+                                      _SidebarItem(
+                                        icon: Icons.savings_rounded,
+                                        label: 'Historial de Pagos',
+                                        isSelected: currentRoute == Routes.paymentsHistory,
+                                        isCollapsed: false,
+                                        isCompact: true,
+                                        onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.paymentsHistory, activeBiz),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ] else ...[
+                              _SidebarItem(
+                                icon: Icons.savings_rounded,
+                                label: 'Historial de Pagos',
+                                isSelected: currentRoute == Routes.paymentsHistory,
+                                isCollapsed: isCollapsed,
+                                onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.paymentsHistory, activeBiz),
+                              ),
+                            ],
                           ],
                         ],
                       );
@@ -414,7 +434,8 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                     iconColor: const Color(0xFFFF8A80),
                     onTap: () async {
                       DashboardSession.clear();
-                      await StorageService.clear();
+                      await SecureStorageService.clear();
+                      await IsarCacheService.clearCache();
                       if (!context.mounted) return;
                       NavigationService.replaceUntil(context, Routes.signIn);
                     },

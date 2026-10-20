@@ -4,6 +4,7 @@ import 'dart:io';
 // import 'dart:convert';
 // import 'package:admivida/common/logging/app_logger.dart';
 import 'package:admivida/common/models/object_to_print.dart';
+import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/printer_selection_modal.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +13,6 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum PrinterTransport { usb, bluetooth }
 
@@ -90,8 +90,7 @@ class PrinterService {
   }
 
   Future<void> savePrinter(PrinterChoice printer) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await StorageService.setString(
       _savedPrinterKey,
       jsonEncode({
         'transport': printer.transport.name,
@@ -105,8 +104,7 @@ class PrinterService {
   }
 
   Future<PrinterChoice?> getSavedPrinter() async {
-    final prefs = await SharedPreferences.getInstance();
-    final printerData = prefs.getString(_savedPrinterKey) ?? prefs.getString(_legacySavedPrinterKey);
+    final printerData = StorageService.getString(_savedPrinterKey) ?? StorageService.getString(_legacySavedPrinterKey);
 
     if (printerData == null) return null;
 
@@ -398,9 +396,8 @@ class PrinterService {
 
   // Elimina la impresora de la memoria
   Future<void> clearSavedPrinter() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_savedPrinterKey);
-    await prefs.remove(_legacySavedPrinterKey);
+    await StorageService.remove(_savedPrinterKey);
+    await StorageService.remove(_legacySavedPrinterKey);
   }
 
   // Solo abre el modal para vincular manualmente desde el botón superior

@@ -1,9 +1,57 @@
 import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/products/models/products_list_state.dart';
 import 'package:admivida/business/features/products/products_service.dart';
+import 'package:admivida/common/constants/app_config.dart';
+import 'package:admivida/common/models/user_logged_model.dart' as auth_models;
+import 'package:admivida/common/services/dio_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'products_provider.g.dart';
+
+bool _containsAdminRole(Iterable<String> roles) {
+  return roles.any((role) {
+    final normalized = role.trim().toUpperCase();
+    return normalized == 'ADMIN' ||
+        normalized == 'ADMINISTRADOR' ||
+        normalized == 'OWNER' ||
+        normalized.contains('ADMIN');
+  });
+}
+
+/// Obtiene la lista de roles del usuario actual dentro del negocio [businessId] (ej. `['SELLER']` o `['ADMIN', 'SELLER']`).
+final businessRolesProvider = FutureProvider.autoDispose.family<List<String>, String>((ref, businessId) async {
+  // 1. Verificar en los roles de negocio guardados en SecureStorageService al iniciar sesión
+  final cachedRoles = SecureStorageService.getBusinessRoles(businessId);
+  if (cachedRoles.isNotEmpty) {
+    return cachedRoles;
+  }
+
+  // 2. Respaldo: si aún no estaban en memoria/almacenamiento, consultar /auth/profile y persistirlos
+  try {
+    final profileResult = await DioService.get<auth_models.UserLoggedModel>(
+      AppConfig.profileEndpoint,
+      auth_models.UserLoggedModel.fromJson,
+    );
+    return await profileResult.when(
+      (_) async => const <String>[],
+      (userData) async {
+        await SecureStorageService.saveUserSession(userData);
+        return SecureStorageService.getBusinessRoles(businessId);
+      },
+    );
+  } catch (_) {
+    return const <String>[];
+  }
+});
+
+/// Determina si el usuario actual tiene rol de Administrador en el negocio [businessId].
+/// Si el usuario solo tiene rol de Vendedor (`SELLER`), devuelve `false`.
+final isBusinessAdminProvider = FutureProvider.autoDispose.family<bool, String>((ref, businessId) async {
+  final roles = await ref.watch(businessRolesProvider(businessId).future);
+  return _containsAdminRole(roles);
+});
 
 @riverpod
 class ProductsList extends _$ProductsList {

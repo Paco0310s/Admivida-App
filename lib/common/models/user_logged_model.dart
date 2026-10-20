@@ -124,10 +124,19 @@ class BusinessModel {
 
   String toRawJson() => json.encode(toJson());
 
-  factory BusinessModel.fromJson(Map<String, dynamic> json) => BusinessModel(
-    businessId: json["businessId"] ?? '',
-    businessRoles: json["business_roles"] != null ? List<String>.from(json["business_roles"].map((x) => x.toString())) : [],
-  );
+  factory BusinessModel.fromJson(Map<String, dynamic> json) {
+    final rawRoles = json["business_roles"] ?? json["businessRoles"] ?? json["roles"];
+    final parsedRoles = rawRoles is List
+        ? rawRoles
+            .map((x) => x is Map ? (x['name'] ?? '').toString() : x.toString())
+            .where((r) => r.isNotEmpty)
+            .toList()
+        : <String>[];
+    return BusinessModel(
+      businessId: (json["businessId"] ?? json["business_id"] ?? json["id"] ?? '').toString(),
+      businessRoles: parsedRoles,
+    );
+  }
 
   Map<String, dynamic> toJson() => {"businessId": businessId, "business_roles": List<dynamic>.from(businessRoles.map((x) => x))};
 }

@@ -64,4 +64,5 @@ class AppConfig {
   static const String refreshTokenKey = 'refreshToken';
   static const String rolesKey = 'roles';
   static const String currentPlatformRoleKey = 'currentPlatformRole';
+  static const String userBusinessesRolesKey = 'userBusinessesRoles';
 }

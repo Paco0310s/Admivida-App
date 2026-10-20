@@ -3,18 +3,21 @@ import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/models/user_logged_model.dart';
 import 'package:admivida/common/services/dio_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 
 class SignInService {
   static Future<bool> isSignedIn() async {
-    final String? accessToken = StorageService.getString(AppConfig.accessTokenKey);
-    final String? refreshToken = StorageService.getString(AppConfig.refreshTokenKey);
-    return accessToken != null && refreshToken != null;
+    final String? accessToken = SecureStorageService.getString(AppConfig.accessTokenKey);
+    final String? refreshToken = SecureStorageService.getString(AppConfig.refreshTokenKey);
+    return accessToken != null &&
+        accessToken.isNotEmpty &&
+        refreshToken != null &&
+        refreshToken.isNotEmpty;
   }
 
   static Future<EitherUtil<HttpFailure, UserLoggedModel>> getUserData() async {
-    final refreshToken = StorageService.getString(AppConfig.refreshTokenKey);
+    final refreshToken = SecureStorageService.getString(AppConfig.refreshTokenKey);
     if (refreshToken == null || refreshToken.isEmpty) {
       return EitherUtil.failure(HttpFailure.serverError(401, 'La sesión ha caducado.'));
     }
@@ -28,8 +31,8 @@ class SignInService {
     return await refreshResponse.when<Future<EitherUtil<HttpFailure, UserLoggedModel>>>(
       (failure) async => EitherUtil.failure(failure),
       (tokens) async {
-        await StorageService.setString(AppConfig.accessTokenKey, tokens.accessToken);
-        await StorageService.setString(AppConfig.refreshTokenKey, tokens.refreshToken);
+        await SecureStorageService.setString(AppConfig.accessTokenKey, tokens.accessToken);
+        await SecureStorageService.setString(AppConfig.refreshTokenKey, tokens.refreshToken);
 
         return DioService.get<UserLoggedModel>(
           AppConfig.profileEndpoint,

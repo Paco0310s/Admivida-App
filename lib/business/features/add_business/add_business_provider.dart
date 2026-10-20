@@ -4,6 +4,7 @@ import 'package:admivida/business/features/add_business/models/create_business_d
 import 'package:admivida/business/features/add_business/models/update_business_dto.dart';
 import 'package:admivida/business/features/businesses/businesses_provider.dart';
 import 'package:admivida/business/models/business_model.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'add_business_provider.g.dart';
@@ -27,7 +28,10 @@ class CreateOrUpdateBusiness extends _$CreateOrUpdateBusiness {
       (failure) {
         state = AsyncValue.error(failure, StackTrace.current);
       },
-      (business) {
+      (business) async {
+        if (!isUpdate && business.id.isNotEmpty) {
+          await SecureStorageService.upsertBusinessRoles(business.id, const ['ADMIN', 'SELLER']);
+        }
         state = AsyncValue.data(business);
         ref.invalidate(businessesListProvider);
       },

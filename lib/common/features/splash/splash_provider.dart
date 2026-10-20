@@ -1,3 +1,5 @@
+import 'package:admivida/business/features/businesses/businesses_provider.dart';
+import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/models/user_logged_model.dart';
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/sign_in/sign_in_service.dart';
@@ -5,8 +7,9 @@ import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/connectivity_service.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +31,7 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
         SnackbarUtil.showWarning(context, 'Modo Offline: Operando sin conexión a internet');
 
         // Check if the user has a current role stored in local storage
-        final currentRole = StorageService.getString(AppConfig.currentPlatformRoleKey);
+        final currentRole = SecureStorageService.getString(AppConfig.currentPlatformRoleKey);
         if (currentRole != null && currentRole.isNotEmpty) {
           NavigationService.replaceWith(context, Routes.home);
         } else {
@@ -61,9 +64,14 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
   final EitherUtil<HttpFailure, UserLoggedModel> userDataResponse = await SignInService.getUserData();
 
   userDataResponse.when(
-    (failure) {
-      SnackbarUtil.showError(context, failure.message);
-      if (context.mounted) NavigationService.replaceWith(context, Routes.signIn);
+    (failure) async {
+      await SecureStorageService.clear();
+      await IsarCacheService.clearCache();
+      // Si fue 401, DioService._handleSessionExpired() ya redirigió a signIn y mostró el mensaje
+      if (failure.statusCode != 401 && context.mounted) {
+        SnackbarUtil.showError(context, failure.message);
+        NavigationService.replaceWith(context, Routes.signIn);
+      }
     },
     (userData) async {
       // Validate if the app version is below the minimum required version
@@ -82,13 +90,11 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
         return;
       }
 
-      // If everything is fine, we store the tokens and roles in local storage for future sessions
-      await StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
-      if (userData.refreshToken.isNotEmpty) {
-        await StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
-      }
-      await StorageService.setString(AppConfig.uuidKey, userData.userId);
-      await StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      // If everything is fine, we store the tokens and roles in secure storage for future sessions
+      await SecureStorageService.saveUserSession(userData);
+      ref.invalidate(businessesListProvider);
+      ref.invalidate(businessRolesProvider);
+      ref.invalidate(isBusinessAdminProvider);
       if (!context.mounted) return;
 
       // Finally, we navigate the user to the appropriate screen based on their roles
@@ -96,7 +102,7 @@ Future<void> splashStartupLogic(Ref ref, BuildContext context) async {
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceWith(context, Routes.choosePlatformRole);
       } else if (userData.roles.length == 1) {
-        await StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
         if (!context.mounted) return;
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceWith(context, Routes.home);

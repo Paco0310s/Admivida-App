@@ -1,3 +1,5 @@
+import 'package:admivida/business/features/businesses/businesses_provider.dart';
+import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/models/user_logged_model.dart';
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/sign_up/sign_up_service.dart';
@@ -6,8 +8,9 @@ import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:flutter/services.dart';
@@ -38,10 +41,11 @@ Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel
         return;
       }
 
-      await StorageService.setString(AppConfig.accessTokenKey, userData.accessToken);
-      await StorageService.setString(AppConfig.refreshTokenKey, userData.refreshToken);
-      await StorageService.setString(AppConfig.uuidKey, userData.userId);
-      await StorageService.setString(AppConfig.rolesKey, userData.roles.join(','));
+      await IsarCacheService.clearCache();
+      await SecureStorageService.saveUserSession(userData);
+      ref.invalidate(businessesListProvider);
+      ref.invalidate(businessRolesProvider);
+      ref.invalidate(isBusinessAdminProvider);
       if (!context.mounted) return;
 
       if (userData.roles.length > 1) {
@@ -50,7 +54,7 @@ Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel
         NavigationService.replaceWith(context, Routes.choosePlatformRole);
       } else if (userData.roles.length == 1) {
         // Navigate to the home screen
-        await StorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
+        await SecureStorageService.setString(AppConfig.currentPlatformRoleKey, userData.roles.first);
         if (!context.mounted) return;
         SnackbarUtil.showSuccess(context, 'Bienvenido ${userData.user.firstName}');
         NavigationService.replaceUntil(context, Routes.home);

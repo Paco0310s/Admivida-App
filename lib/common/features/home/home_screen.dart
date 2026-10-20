@@ -4,8 +4,9 @@ import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
@@ -30,7 +31,8 @@ class HomeScreen extends StatelessWidget {
             tooltip: AppTexts.logout,
             onPressed: () async {
               DashboardSession.clear();
-              await StorageService.clear();
+              await SecureStorageService.clear();
+              await IsarCacheService.clearCache();
               if (!context.mounted) return;
               NavigationService.replaceUntil(context, Routes.signIn);
             },

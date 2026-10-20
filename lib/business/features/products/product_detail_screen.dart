@@ -5,6 +5,7 @@ import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -23,6 +24,7 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 💡 Watch the Single Source of Truth (SSOT)
     final productAsync = ref.watch(productDetailProvider(businessId: businessId, productId: productId));
+    final isAdmin = ref.watch(isBusinessAdminProvider(businessId)).value ?? SecureStorageService.isBusinessAdmin(businessId);
 
     return productAsync.when(
       data: (product) {
@@ -33,12 +35,13 @@ class ProductDetailScreen extends ConsumerWidget {
             iconTheme: const IconThemeData(color: AppColors.kNeutral100),
             backgroundColor: AppColors.kPrimaryColor,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: AppColors.kNeutral100),
-                onPressed: () {
-                  NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': product});
-                },
-              ),
+              if (isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.edit, color: AppColors.kNeutral100),
+                  onPressed: () {
+                    NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': product});
+                  },
+                ),
             ],
           ),
           // 💡 Pass IDs down to the view so it can be used for stock adjustments
@@ -202,6 +205,8 @@ class _VariantCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(isBusinessAdminProvider(businessId)).value ?? SecureStorageService.isBusinessAdmin(businessId);
+
     // 💡 Format quantities to show integers if they have no decimal values
     String formatQuantity(double? val) => val == null ? AppTexts.ilimited : (val == val.toInt() ? val.toInt().toString() : val.toString());
 
@@ -255,17 +260,20 @@ class _VariantCard extends ConsumerWidget {
             children: [
               _VariantValue(label: AppTexts.productSkuLabel, value: variant.sku ?? AppTexts.noData),
               _VariantValue(label: 'Código de Barras', value: variant.barcode ?? AppTexts.noData),
-              _VariantValue(
-                label: AppTexts.productPurchasePriceLabel,
-                value: variant.purchasePrice != null ? '\$${variant.purchasePrice!.toStringAsFixed(2)}' : 'No definido',
-              ),
+              if (isAdmin)
+                _VariantValue(
+                  label: AppTexts.productPurchasePriceLabel,
+                  value: variant.purchasePrice != null ? '\$${variant.purchasePrice!.toStringAsFixed(2)}' : 'No definido',
+                ),
               _VariantValue(label: AppTexts.productSalePriceLabel, value: '\$${variant.salePrice.toStringAsFixed(2)}', valueColor: AppColors.kPrimaryColor),
               _VariantValue(label: 'Precio Mayoreo', value: variant.wholesalePrice != null ? '\$${variant.wholesalePrice!.toStringAsFixed(2)}' : 'No aplica'),
               _VariantValue(label: 'Cant. Mayoreo', value: formatQuantity(variant.wholesaleQuantity)),
 
-              // 💡 Interactive Stock Adjuster
+              // 💡 Stock Display / Interactive Stock Adjuster (Admins only)
               if (variant.stockQuantity == null)
                 _VariantValue(label: AppTexts.productStockLabel, value: AppTexts.ilimited)
+              else if (!isAdmin)
+                _VariantValue(label: AppTexts.productStockLabel, value: stock, valueColor: stockColor)
               else
                 SizedBox(
                   width: 120,

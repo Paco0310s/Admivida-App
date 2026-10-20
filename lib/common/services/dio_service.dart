@@ -8,13 +8,104 @@ import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/logging/app_logger.dart';
-import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/connectivity_service.dart';
+import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
 
 class DioService {
+  static bool _isHandlingSessionExpiration = false;
+  static Future<String?>? _refreshingTokenFuture;
+
+  static Future<String?> _refreshAccessToken() {
+    if (_refreshingTokenFuture != null) {
+      return _refreshingTokenFuture!;
+    }
+
+    _refreshingTokenFuture = _performTokenRefresh().whenComplete(() {
+      _refreshingTokenFuture = null;
+    });
+
+    return _refreshingTokenFuture!;
+  }
+
+  static Future<String?> _performTokenRefresh() async {
+    final refreshToken = SecureStorageService.getString(AppConfig.refreshTokenKey);
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return null;
+    }
+
+    try {
+      AppLogger.info('Token expirado (401). Intentando auto-refresh...');
+
+      final refreshDio = Dio(
+        BaseOptions(
+          baseUrl: AppConfig.baseUrl,
+          connectTimeout: AppConfig.connectTimeout,
+          receiveTimeout: AppConfig.receiveTimeout,
+          sendTimeout: AppConfig.sendTimeout,
+        ),
+      );
+
+      final response = await refreshDio.post(
+        AppConfig.refreshTokenEndpoint,
+        data: {'refreshToken': refreshToken},
+      );
+
+      final data = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final newAccessToken = (data['access_token'] ?? data['accessToken']) as String?;
+      final newRefreshToken = (data['refresh_token'] ?? data['refreshToken']) as String?;
+
+      if (newAccessToken == null || newAccessToken.isEmpty) {
+        throw Exception('No se recibió un nuevo access token válido.');
+      }
+
+      await SecureStorageService.setString(AppConfig.accessTokenKey, newAccessToken);
+      if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+        await SecureStorageService.setString(AppConfig.refreshTokenKey, newRefreshToken);
+      }
+
+      return newAccessToken;
+    } catch (e) {
+      AppLogger.error('Falló el refresh token (Probablemente expiraron los 7 días): $e');
+      return null;
+    }
+  }
+
+  static Future<void> _handleSessionExpired() async {
+    if (_isHandlingSessionExpiration) return;
+    _isHandlingSessionExpiration = true;
+
+    try {
+      DashboardSession.clear();
+      await SecureStorageService.clear();
+      await IsarCacheService.clearCache();
+
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        Routes.signIn,
+        (route) => false,
+      );
+
+      scaffoldMessengerKey.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Tu sesión ha expirado por seguridad. Por favor, inicia sesión nuevamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+    } finally {
+      Future.delayed(const Duration(seconds: 2), () {
+        _isHandlingSessionExpiration = false;
+      });
+    }
+  }
+
   static Object? _sanitizeSensitiveData(Object? value) {
     if (value is Map) {
       return value.map((key, item) {
@@ -47,8 +138,8 @@ class DioService {
               final isPublicEndpoint = AppConfig.publicEndpoints.any((endpoint) => options.path.contains(endpoint));
 
               if (!isPublicEndpoint) {
-                final token = StorageService.getString(AppConfig.accessTokenKey);
-                if (token != null) {
+                final token = SecureStorageService.getString(AppConfig.accessTokenKey);
+                if (token != null && token.isNotEmpty) {
                   options.headers['Authorization'] = 'Bearer $token';
                 }
               }
@@ -59,42 +150,45 @@ class DioService {
                 return handler.next(error);
               }
 
-              final refreshToken = StorageService.getString(AppConfig.refreshTokenKey);
+              final requestPath = error.requestOptions.path;
+              final isAuthAttempt = requestPath.contains(AppConfig.loginEndpoint) ||
+                  requestPath.contains(AppConfig.registerEndpoint);
 
-              if (refreshToken != null) {
+              if (isAuthAttempt) {
+                return handler.next(error);
+              }
+
+              final alreadyRetried = error.requestOptions.extra['retried'] == true;
+              final isRefreshRequest = requestPath.contains(AppConfig.refreshTokenEndpoint);
+
+              if (alreadyRetried || isRefreshRequest) {
+                await _handleSessionExpired();
+                return handler.next(error);
+              }
+
+              final newAccessToken = await _refreshAccessToken();
+
+              if (newAccessToken != null && newAccessToken.isNotEmpty) {
                 try {
-                  AppLogger.info('Token expirado (401). Intentando auto-refresh...');
-
-                  final refreshDio = Dio(BaseOptions(baseUrl: AppConfig.baseUrl));
-
-                  final response = await refreshDio.post(AppConfig.refreshTokenEndpoint, data: {'refreshToken': refreshToken});
-
-                  final newAccessToken = response.data['accessToken'];
-                  final newRefreshToken = response.data['refreshToken'];
-
-                  await StorageService.setString(AppConfig.accessTokenKey, newAccessToken);
-                  await StorageService.setString(AppConfig.refreshTokenKey, newRefreshToken);
-
+                  error.requestOptions.extra['retried'] = true;
                   error.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
 
                   AppLogger.info('Token renovado con éxito. Reintentando petición original...');
                   final cloneReq = await _dio.fetch(error.requestOptions);
 
                   return handler.resolve(cloneReq);
-                } catch (e) {
-                  AppLogger.error('Falló el refresh token (Probablemente expiraron los 7 días): $e');
-
-                  await StorageService.clear();
-
-                  navigatorKey.currentState?.pushReplacementNamed(Routes.splash);
-
-                  scaffoldMessengerKey.currentState?.showSnackBar(
-                    const SnackBar(content: Text('Sesión expirada. Por favor, inicia sesión nuevamente.'), backgroundColor: Colors.red),
-                  );
+                } on DioException catch (retryError) {
+                  if (retryError.response?.statusCode == 401) {
+                    await _handleSessionExpired();
+                  }
+                  return handler.next(retryError);
+                } catch (_) {
                   return handler.next(error);
                 }
               }
 
+              // Si falló el refresh o no hay refreshToken, cerrar sesión y enviar al login
+              await _handleSessionExpired();
               return handler.next(error);
             },
           ),
@@ -184,8 +278,20 @@ class DioService {
   // READ METHODS (GET) - Allow requests to attempt, fallback to Cache on fail
   // =========================================================================
 
+  static bool _shouldCacheEndpoint(String url) {
+    final normalized = url.trim().toLowerCase();
+    return !normalized.startsWith('/auth/') && !normalized.contains('/auth/');
+  }
+
+  static String _buildCacheKey(String prefix, String url, Map<String, dynamic>? queryParameters) {
+    final userScope = SecureStorageService.getString(AppConfig.uuidKey) ?? 'anonymous';
+    final queryPart = queryParameters != null ? jsonEncode(queryParameters) : '';
+    return '${userScope}_${prefix}_$url$queryPart';
+  }
+
   static Future<EitherUtil<HttpFailure, T>> get<T>(String url, T Function(Map<String, dynamic>) fromJson, {Map<String, dynamic>? queryParameters}) async {
-    final cacheKey = 'GET_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
+    final canCache = _shouldCacheEndpoint(url);
+    final cacheKey = _buildCacheKey('GET', url, queryParameters);
 
     try {
       AppLogger.info('GET Request: $url ${queryParameters != null ? "with params: ${_sanitizeSensitiveData(queryParameters)}" : ""}');
@@ -195,8 +301,10 @@ class DioService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data as Map<String, dynamic>;
 
-        // Save the successful response to Isar cache for offline fallback
-        await IsarCacheService.saveCache(cacheKey, jsonEncode(data));
+        // Save the successful response to Isar cache for offline fallback (excluding auth endpoints)
+        if (canCache) {
+          await IsarCacheService.saveCache(cacheKey, jsonEncode(data));
+        }
 
         final result = fromJson(data);
         return EitherUtil.success(result);
@@ -204,7 +312,7 @@ class DioService {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
       }
     } on DioException catch (error) {
-      if (_isNetworkError(error)) {
+      if (canCache && _isNetworkError(error)) {
         // Read from Isar cache if network error occurs
         final cachedString = await IsarCacheService.getCache(cacheKey);
         if (cachedString != null) {
@@ -225,7 +333,8 @@ class DioService {
     T Function(Map<String, dynamic>) fromJson, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    final cacheKey = 'GET_LIST_$url${queryParameters != null ? jsonEncode(queryParameters) : ""}';
+    final canCache = _shouldCacheEndpoint(url);
+    final cacheKey = _buildCacheKey('GET_LIST', url, queryParameters);
 
     try {
       AppLogger.info('GET LIST Request: $url ${queryParameters != null ? "with params: ${_sanitizeSensitiveData(queryParameters)}" : ""}');
@@ -235,8 +344,10 @@ class DioService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> rawList = response.data as List<dynamic>;
 
-        // Save the successful response to Isar cache for offline fallback
-        await IsarCacheService.saveCache(cacheKey, jsonEncode(rawList));
+        // Save the successful response to Isar cache for offline fallback (excluding auth endpoints)
+        if (canCache) {
+          await IsarCacheService.saveCache(cacheKey, jsonEncode(rawList));
+        }
 
         final List<T> resultList = rawList.map((jsonItem) => fromJson(jsonItem as Map<String, dynamic>)).toList();
         return EitherUtil.success(resultList);
@@ -244,7 +355,7 @@ class DioService {
         return EitherUtil.failure(HttpFailure.serverError(response.statusCode ?? 0, AppTexts.errorServerResponse));
       }
     } on DioException catch (error) {
-      if (_isNetworkError(error)) {
+      if (canCache && _isNetworkError(error)) {
         // Read from Isar cache if network error occurs
         final cachedString = await IsarCacheService.getCache(cacheKey);
         if (cachedString != null) {
@@ -304,7 +415,7 @@ class DioService {
     }
 
     try {
-      final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
+      final queryLog = queryParameters != null ? ', QueryParams: ${_sanitizeSensitiveData(queryParameters)}' : '';
       AppLogger.info('PUT Request: $url$queryLog, Data: ${_sanitizeSensitiveData(data)}');
 
       final response = await _dio.put(url, data: data, queryParameters: queryParameters);
@@ -337,7 +448,7 @@ class DioService {
     }
 
     try {
-      final queryLog = queryParameters != null ? ', QueryParams: $queryParameters' : '';
+      final queryLog = queryParameters != null ? ', QueryParams: ${_sanitizeSensitiveData(queryParameters)}' : '';
       AppLogger.info('PATCH Request: $url$queryLog, Data: ${_sanitizeSensitiveData(data)}');
 
       final response = await _dio.patch(url, data: data, queryParameters: queryParameters);

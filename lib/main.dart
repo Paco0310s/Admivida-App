@@ -4,6 +4,7 @@ import 'package:admivida/common/logging/app_logger.dart';
 import 'package:admivida/common/routes/app_routes.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/globals.dart';
 import 'package:admivida/firebase_options.dart';
@@ -18,8 +19,9 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize storage service
+  // Initialize storage & cache services
   await StorageService.init();
+  await SecureStorageService.init();
   await IsarCacheService.init();
 
   // Initialize Logger
