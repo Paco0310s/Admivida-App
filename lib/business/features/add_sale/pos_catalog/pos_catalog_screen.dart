@@ -202,6 +202,21 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
             ),
           ),
           const Gap(5),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.kSecondaryColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: IconButton(
+              tooltip: 'Abrir Cajón',
+              icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white),
+              onPressed: () async {
+                await ref.read(printerServiceProvider).openCashDrawerWithFeedback(context);
+              },
+            ),
+          ),
+          const Gap(5),
           hasPrinterAsync.when(
             loading: () => const CircularProgressIndicator(),
             error: (err, stack) => const Icon(Icons.error, color: Colors.red),

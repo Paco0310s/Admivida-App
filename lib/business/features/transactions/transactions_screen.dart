@@ -5,6 +5,8 @@ import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -13,14 +15,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
-class TransactionsScreen extends StatelessWidget {
+class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key, required this.businessId});
 
   final String businessId;
 
+  Future<void> _handlePrinterToggle(BuildContext context, WidgetRef ref, bool hasPrinter) async {
+    if (hasPrinter) {
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Eliminar impresora seleccionada'),
+          content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await ref.read(printerServiceProvider).clearSavedPrinter();
+                ref.invalidate(hasSavedPrinterProvider);
+                if (context.mounted) {
+                  SnackbarUtil.showSuccess(context, 'Impresora desvinculada correctamente.');
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      await ref.read(printerServiceProvider).showPrinterSelectionModal(context);
+      ref.invalidate(hasSavedPrinterProvider);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool isMobile = Responsive.isMobile(context);
+    final hasPrinterAsync = ref.watch(hasSavedPrinterProvider);
 
     return AppScaffold(
       title: 'Movimientos',
@@ -28,6 +61,24 @@ class TransactionsScreen extends StatelessWidget {
         title: const AppText('Movimientos', color: AppColors.kNeutral100),
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
+        actions: [
+          IconButton(
+            tooltip: 'Abrir Cajón',
+            icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white),
+            onPressed: () async {
+              await ref.read(printerServiceProvider).openCashDrawerWithFeedback(context);
+            },
+          ),
+          hasPrinterAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (hasPrinter) => IconButton(
+              tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
+              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white),
+              onPressed: () => _handlePrinterToggle(context, ref, hasPrinter),
+            ),
+          ),
+        ],
       ),
       mobile: TransactionsListView(businessId: businessId),
       tablet: TransactionsListView(businessId: businessId),
@@ -108,13 +159,15 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
           children: [
             // Summary + Filter Header
             if (!isMobile) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 60, child: _buildBalanceCard(transactionsAsync)),
-                  const Gap(14),
-                  Expanded(flex: 40, child: _buildAccountFilterCard(accountsAsync, isMobile: false)),
-                ],
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _buildBalanceCard(transactionsAsync)),
+                    const Gap(14),
+                    Expanded(child: _buildAccountFilterCard(accountsAsync, isMobile: false)),
+                  ],
+                ),
               ),
             ] else ...[
               _buildBalanceCard(transactionsAsync),
@@ -240,6 +293,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const AppText('Balance de la cuenta', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.kNeutral600),
           const Gap(6),
@@ -380,6 +434,68 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                     label: const Text('Movimiento', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
                   ),
                 ),
+                const Gap(8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.kSecondaryColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Abrir Cajón',
+                    icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+                    onPressed: () async {
+                      await ref.read(printerServiceProvider).openCashDrawerWithFeedback(context);
+                    },
+                  ),
+                ),
+                const Gap(8),
+                ref.watch(hasSavedPrinterProvider).when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (hasPrinter) => Container(
+                        decoration: BoxDecoration(
+                          color: hasPrinter ? Colors.red : AppColors.kPrimaryColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
+                          icon: Icon(
+                            hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            if (hasPrinter) {
+                              await showDialog(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('Eliminar impresora seleccionada'),
+                                  content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        Navigator.of(dialogContext).pop();
+                                        await ref.read(printerServiceProvider).clearSavedPrinter();
+                                        ref.invalidate(hasSavedPrinterProvider);
+                                        if (mounted) {
+                                          SnackbarUtil.showSuccess(context, 'Impresora desvinculada correctamente.');
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                                      child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              await ref.read(printerServiceProvider).showPrinterSelectionModal(context);
+                              ref.invalidate(hasSavedPrinterProvider);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
               ],
             ),
           ],

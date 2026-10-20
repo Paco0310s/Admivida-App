@@ -262,45 +262,86 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       ],
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(color: hasPrinter ? Colors.red : AppColors.kPrimaryColor, borderRadius: BorderRadius.circular(10)),
-                    child: IconButton(
-                      constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                      padding: const EdgeInsets.all(8),
-                      tooltip: hasPrinter ? 'Desvincular Impresora' : 'Agregar Impresora',
-                      icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white, size: 20),
-                      onPressed: () async {
-                        if (hasPrinter) {
-                          await showDialog(
-                            context: dialogContext,
-                            builder: (confirmContext) => AlertDialog(
-                              title: const Text('Eliminar impresora seleccionada'),
-                              content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.of(confirmContext).pop(), child: const Text('Cancelar')),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    Navigator.of(confirmContext).pop();
-                                    await ref.read(printerServiceProvider).clearSavedPrinter();
-                                    ref.invalidate(hasSavedPrinterProvider);
-                                    if (dialogContext.mounted) {
-                                      setDialogState(() {
-                                        isPrinterError = true;
-                                        printerFeedbackMessage = 'Impresora desvinculada.';
-                                      });
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
-                                  child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.kSecondaryColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                          padding: const EdgeInsets.all(8),
+                          tooltip: 'Abrir Cajón',
+                          icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+                          onPressed: () async {
+                            final printerService = ref.read(printerServiceProvider);
+                            final savedPrinter = await printerService.getSavedPrinter();
+                            if (savedPrinter == null) {
+                              if (dialogContext.mounted) {
+                                setDialogState(() {
+                                  isPrinterError = true;
+                                  printerFeedbackMessage =
+                                      'Selecciona una impresora primero usando el botón de impresora o "Agregar Impresora".';
+                                });
+                              }
+                              return;
+                            }
+                            final opened = await printerService.openCashDrawerOnly();
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                isPrinterError = !opened;
+                                printerFeedbackMessage = opened
+                                    ? 'Señal enviada para abrir el cajón.'
+                                    : 'No se pudo conectar con la impresora para abrir el cajón.';
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const Gap(6),
+                      Container(
+                        decoration: BoxDecoration(color: hasPrinter ? Colors.red : AppColors.kPrimaryColor, borderRadius: BorderRadius.circular(10)),
+                        child: IconButton(
+                          constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                          padding: const EdgeInsets.all(8),
+                          tooltip: hasPrinter ? 'Desvincular Impresora' : 'Agregar Impresora',
+                          icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white, size: 20),
+                          onPressed: () async {
+                            if (hasPrinter) {
+                              await showDialog(
+                                context: dialogContext,
+                                builder: (confirmContext) => AlertDialog(
+                                  title: const Text('Eliminar impresora seleccionada'),
+                                  content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.of(confirmContext).pop(), child: const Text('Cancelar')),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        Navigator.of(confirmContext).pop();
+                                        await ref.read(printerServiceProvider).clearSavedPrinter();
+                                        ref.invalidate(hasSavedPrinterProvider);
+                                        if (dialogContext.mounted) {
+                                          setDialogState(() {
+                                            isPrinterError = true;
+                                            printerFeedbackMessage = 'Impresora desvinculada.';
+                                          });
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                                      child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        } else {
-                          await openPrinterSelectorFromDialog(dialogContext, setDialogState);
-                        }
-                      },
-                    ),
+                              );
+                            } else {
+                              await openPrinterSelectorFromDialog(dialogContext, setDialogState);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

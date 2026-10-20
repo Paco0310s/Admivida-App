@@ -201,6 +201,34 @@ class PrinterService {
     }
   }
 
+  /// Abre el cajón de dinero manualmente cuando el usuario presiona el botón "Abrir Cajón",
+  /// mostrando aviso si no hay impresora seleccionada o si falla la conexión.
+  Future<bool> openCashDrawerWithFeedback(BuildContext context) async {
+    final savedPrinter = await getSavedPrinter();
+    if (savedPrinter == null) {
+      if (context.mounted) {
+        SnackbarUtil.showWarning(
+          context,
+          'Selecciona una impresora primero desde el botón con el ícono de impresora en la parte superior.',
+        );
+      }
+      return false;
+    }
+
+    final opened = await openCashDrawerOnly();
+    if (context.mounted) {
+      if (opened) {
+        SnackbarUtil.showSuccess(context, 'Señal enviada para abrir el cajón.');
+      } else {
+        SnackbarUtil.showError(
+          context,
+          'No se pudo conectar con la impresora para abrir el cajón.',
+        );
+      }
+    }
+    return opened;
+  }
+
   Future<bool> printDocument(PrinterChoice printer, ObjectToPrint document) async {
     final transport = printer.transport == PrinterTransport.bluetooth ? PrinterType.bluetooth : PrinterType.usb;
     final bluetoothAddress = printer.device.address;
@@ -323,11 +351,7 @@ class PrinterService {
 
       bytes += generator.feed(2);
 
-      // Cajón y corte
-      if (document.openDrawer) {
-        bytes += generator.drawer(pin: PosDrawer.pin2);
-        bytes += generator.drawer(pin: PosDrawer.pin5);
-      }
+      // Corte del ticket (el cajón solo se abre al cobrar mediante openCashDrawerOnly)
       bytes += generator.cut();
 
       // Enviar e imprimir

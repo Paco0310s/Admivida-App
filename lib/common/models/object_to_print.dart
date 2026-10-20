@@ -40,6 +40,6 @@ class ObjectToPrint {
     required this.total,
     required this.amountPaid,
     required this.changeGiven,
-    this.openDrawer = true,
+    this.openDrawer = false,
   });
 }
