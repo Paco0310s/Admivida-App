@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <!-- Requerido para consumir la API y sincronizar los datos de la app. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Permiso para instalar actualizaciones APK de la app en Android -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <!-- La cámara solo se usa al escanear códigos; el dispositivo puede instalarse sin cámara. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />

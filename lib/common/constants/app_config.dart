@@ -19,6 +19,10 @@ class AppConfig {
   static const String windowsInstallerUrl = '$minioPublicUrl/releases/AdmividaSetup.exe';
   static const String windowsUpdateManifestUrl = '$minioPublicUrl/releases/latest.json';
 
+  // Android auto-update (almacenado en MinIO S3)
+  static const String androidApkUrl = '$minioPublicUrl/releases/Admivida.apk';
+  static const String androidUpdateManifestUrl = '$minioPublicUrl/releases/latest-android.json';
+
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
   static const String registerEndpoint = '/auth/register';

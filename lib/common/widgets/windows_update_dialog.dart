@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/services/windows_updater_service.dart';
@@ -176,9 +178,11 @@ class _WindowsUpdateDialogState extends State<WindowsUpdateDialog> {
             if (_step == _UpdateStep.installing) ...[
               const Gap(18),
               _buildBanner(
-                icon: Icons.install_desktop_rounded,
+                icon: Platform.isWindows ? Icons.install_desktop_rounded : Icons.install_mobile_rounded,
                 color: AppColors.kSuccess,
-                text: 'Instalando actualización... La aplicación se cerrará y se abrirá de nuevo automáticamente.',
+                text: Platform.isWindows
+                    ? 'Instalando actualización... La aplicación se cerrará y se abrirá de nuevo automáticamente.'
+                    : 'Abriendo instalador de Android... Confirma la instalación en pantalla para actualizar.',
               ),
             ],
             if (_step == _UpdateStep.error && _errorMessage != null) ...[
@@ -235,3 +239,6 @@ class _WindowsUpdateDialogState extends State<WindowsUpdateDialog> {
   }
 }
 
+
+/// Alias para usar indistintamente en Windows o Android
+typedef AppUpdateDialog = WindowsUpdateDialog;
