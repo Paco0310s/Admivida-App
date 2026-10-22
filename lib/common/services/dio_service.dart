@@ -471,7 +471,11 @@ class DioService {
     }
   }
 
-  static Future<EitherUtil<HttpFailure, bool>> delete(String url) async {
+  static Future<EitherUtil<HttpFailure, bool>> delete(
+    String url, {
+    Map<String, dynamic>? queryParameters,
+    Object? data,
+  }) async {
     if (!await ConnectivityService.hasInternet()) {
       AppLogger.warning('DELETE blocked: No internet connection for $url');
       return EitherUtil.failure(HttpFailure.connectionError());
@@ -480,7 +484,11 @@ class DioService {
     try {
       AppLogger.info('DELETE Request: $url');
 
-      final response = await _dio.delete(url);
+      final response = await _dio.delete(
+        url,
+        queryParameters: queryParameters,
+        data: data,
+      );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return EitherUtil.success(true);

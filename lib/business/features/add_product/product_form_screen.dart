@@ -1,3 +1,8 @@
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
+
+import 'package:admivida/business/features/products/products_service.dart';
+
 import 'package:admivida/business/features/add_product/add_product_provider.dart';
 import 'package:admivida/business/features/add_product/models/update_product_dto.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
@@ -337,12 +342,22 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     final bool isBusy = _isUploadingImage || _isSubmitting;
     final String screenTitle = isEditing ? 'Editar Producto' : AppTexts.addProductButton;
 
+    final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId)).value ?? SecureStorageService.isBusinessAdmin(widget.businessId);
+
     return AppScaffold(
       title: screenTitle,
       appBar: AppBar(
         title: AppText(screenTitle, color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+        actions: [
+          if (isEditing && isAdmin)
+            IconButton(
+              tooltip: 'Eliminar producto',
+              icon: const Icon(Icons.delete_outline, color: AppColors.kNeutral100),
+              onPressed: isBusy ? null : () => _confirmDeleteProduct(context),
+            ),
+        ],
       ),
       mobile: _buildContent(isBusy),
       tablet: _buildContent(isBusy),
@@ -350,6 +365,198 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       marginDesktop: 160,
     );
   }
+
+  
+
+  Future<void> _confirmDeleteProduct(BuildContext context) async {
+
+    final product = widget.product;
+
+    if (product == null) return;
+
+
+
+    final bool? confirmed = await showDialog<bool>(
+
+      context: context,
+
+      builder: (dialogContext) => AlertDialog(
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        title: Row(
+
+          children: [
+
+            Container(
+
+              padding: const EdgeInsets.all(8),
+
+              decoration: BoxDecoration(
+
+                color: Colors.red.shade50,
+
+                shape: BoxShape.circle,
+
+              ),
+
+              child: Icon(Icons.delete_outline, color: Colors.red.shade700, size: 24),
+
+            ),
+
+            const Gap(12),
+
+            const Expanded(
+
+              child: AppText(
+
+                'Eliminar Producto',
+
+                fontWeight: FontWeight.bold,
+
+                fontSize: 18,
+
+                color: AppColors.kNeutral900,
+
+              ),
+
+            ),
+
+          ],
+
+        ),
+
+        content: Column(
+
+          mainAxisSize: MainAxisSize.min,
+
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children: [
+
+            AppText(
+
+              '¿Estás seguro de que deseas eliminar "${product.name}"?',
+
+              fontWeight: FontWeight.w600,
+
+              fontSize: 15,
+
+              color: AppColors.kNeutral800,
+
+            ),
+
+            const Gap(10),
+
+            const AppText(
+
+              'El producto ya no aparecerá en el catálogo ni en las listas de inventario. El historial de ventas pasadas se mantendrá intacto.',
+
+              fontSize: 13,
+
+              color: AppColors.kNeutral600,
+
+            ),
+
+          ],
+
+        ),
+
+        actions: [
+
+          TextButton(
+
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+
+            child: const AppText('Cancelar', color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
+
+          ),
+
+          ElevatedButton(
+
+            style: ElevatedButton.styleFrom(
+
+              backgroundColor: Colors.red.shade600,
+
+              foregroundColor: Colors.white,
+
+              elevation: 0,
+
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+
+            ),
+
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+
+            child: const AppText('Eliminar', color: Colors.white, fontWeight: FontWeight.bold),
+
+          ),
+
+        ],
+
+      ),
+
+    );
+
+
+
+    if (confirmed != true || !context.mounted) return;
+
+
+
+    showDialog(
+
+      context: context,
+
+      barrierDismissible: false,
+
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
+
+    );
+
+
+
+    final result = await ProductsService.deleteProduct(
+
+      businessId: widget.businessId,
+
+      productId: product.id,
+
+    );
+
+
+
+    if (!context.mounted) return;
+
+    Navigator.of(context, rootNavigator: true).pop();
+
+
+
+    result.when(
+
+      (failure) {
+
+        SnackbarUtil.showError(context, failure.message.isNotEmpty ? failure.message : 'Error al eliminar el producto');
+
+      },
+
+      (_) {
+
+        ref.read(productsListProvider(widget.businessId).notifier).removeProductLocal(product.id);
+
+        ref.invalidate(productDetailProvider(businessId: widget.businessId, productId: product.id));
+
+        SnackbarUtil.showSuccess(context, 'Producto eliminado exitosamente');
+
+        Navigator.of(context).popUntil((route) => route.settings.name == Routes.products || route.isFirst);
+
+      },
+
+    );
+
+  }
+
+
 
   Widget _buildHeaderCard() {
     return AppCard(

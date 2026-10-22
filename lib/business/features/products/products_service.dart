@@ -44,4 +44,16 @@ class ProductsService {
 
     return response.when((failure) => EitherUtil.failure(failure), (product) => EitherUtil.success(product));
   }
+
+  static Future<EitherUtil<HttpFailure, bool>> deleteProduct({
+    required String businessId,
+    required String productId,
+  }) async {
+    final response = await DioService.delete(
+      AppConfig.deleteProductEndpoint(productId, businessId),
+      queryParameters: {'businessId': businessId},
+    );
+
+    return response;
+  }
 }

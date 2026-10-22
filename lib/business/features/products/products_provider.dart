@@ -145,6 +145,14 @@ class ProductsList extends _$ProductsList {
     // 4. Update the state of the complete list (this refreshes the UI without losing scroll position)
     state = AsyncValue.data(currentState.copyWith(products: updatedProducts));
   }
+  void removeProductLocal(String productId) {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final updatedProducts = currentState.products.where((p) => p.id != productId).toList();
+    state = AsyncValue.data(currentState.copyWith(products: updatedProducts));
+  }
+
 }
 
 @Riverpod(keepAlive: true)

@@ -46,6 +46,7 @@ class AppConfig {
   static String createProductEndpoint = '/products';
   static String updateProductEndpoint(String productId) => '/products/fromBusiness/$productId';
   static String getProductByIdEndpoint(String productId, String businessId) => '/products/$productId/business/$businessId';
+  static String deleteProductEndpoint(String productId, String businessId) => '/products/$productId/business/$businessId';
   static String getPendingCommissionsEndpoint(String businessId) => '/commission-payments/pending/$businessId';
   static String getBusinessSellersEndpoint(String businessId) => '/users/businesses/$businessId/sellers';
   static String getBusinessClientsEndpoint(String businessId) => '/users/businesses/$businessId/clients';
