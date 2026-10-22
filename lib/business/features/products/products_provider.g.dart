@@ -50,7 +50,7 @@ final class ProductsListProvider
   }
 }
 
-String _$productsListHash() => r'9a646e52f402d8064b37d21ec7d2aad22edf0306';
+String _$productsListHash() => r'e99ab29eb3a985ff360d11a5884f17841ed44429';
 
 final class ProductsListFamily extends $Family
     with
