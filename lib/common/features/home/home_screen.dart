@@ -1,3 +1,7 @@
+import 'package:admivida/common/services/external_link_service.dart';
+
+import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
+
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_config.dart';
@@ -23,10 +27,16 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: AppTexts.home,
+      floatingActionButton: const FloatingWhatsAppButton(heroTag: 'home_whatsapp_fab'),
       appBar: AppBar(
         title: const AppText(AppTexts.home, color: AppColors.kPrimaryColor),
         backgroundColor: Colors.transparent,
         actions: [
+          IconButton(
+            tooltip: 'Descargar app (Windows y Android)',
+            onPressed: () => ExternalLinkService.openAdmividaWeb(),
+            icon: const Icon(Icons.public_rounded, color: AppColors.kPrimaryColor),
+          ),
           IconButton(
             tooltip: AppTexts.logout,
             onPressed: () async {
@@ -232,9 +242,59 @@ class BusinessDetailView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const AppText('Desarrollado por Francisco Sotelo', fontSize: 12, color: AppColors.kNeutral500, fontWeight: FontWeight.w600),
-                const Gap(2),
-                AppText('Versión ${AppConfig.appVersionName} (${AppConfig.appVersionCode})', fontSize: 11, color: AppColors.kNeutral400),
+                // Enlace al portafolio de Francisco Sotelo
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => ExternalLinkService.openPortfolio(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.code_rounded, size: 14, color: AppColors.kPrimaryColor),
+                        Gap(4),
+                        AppText(
+                          'Desarrollado por Francisco Sotelo',
+                          fontSize: 12,
+                          color: AppColors.kPrimaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        Gap(2),
+                        Icon(Icons.arrow_outward_rounded, size: 12, color: AppColors.kPrimaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+                const Gap(6),
+                // Versión actual y enlace a la web de descargas
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => ExternalLinkService.openAdmividaWeb(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.kNeutral100,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.kNeutral200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.download_rounded, size: 13, color: AppColors.kNeutral600),
+                          const Gap(4),
+                          AppText(
+                            'v${AppConfig.appVersionName} • Descargar para Windows o Android',
+                            fontSize: 11,
+                            color: AppColors.kNeutral700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          const Gap(3),
+                          const Icon(Icons.open_in_new_rounded, size: 11, color: AppColors.kNeutral500),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

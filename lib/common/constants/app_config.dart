@@ -23,7 +23,17 @@ class AppConfig {
   static const String androidApkUrl = '$minioPublicUrl/releases/Admivida.apk';
   static const String androidUpdateManifestUrl = '$minioPublicUrl/releases/latest-android.json';
 
-  // API Endpoints
+// Sitios Web y Enlaces Públicos
+  static const String admividaWebUrl = 'https://admivida.pacosotelo.com';
+  static const String personalPortfolioUrl = 'https://pacosotelo.com';
+
+  // Soporte y Contacto Centralizado (WhatsApp)
+  // Cambiar este número aquí lo actualizará automáticamente en toda la aplicación
+  static const String supportPhoneNumber = '+523921224927';
+  static const String supportPhoneClean = '523921224927';
+  static const String supportDefaultMessage = 'Hola, me gustaría recibir soporte con la aplicación Admivida.';
+
+    // API Endpoints
   static const String loginEndpoint = '/auth/login';
   static const String registerEndpoint = '/auth/register';
   static const String profileEndpoint = '/auth/profile';

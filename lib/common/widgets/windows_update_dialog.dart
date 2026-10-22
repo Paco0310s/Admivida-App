@@ -1,3 +1,4 @@
+import 'package:admivida/common/services/external_link_service.dart';
 import 'dart:io';
 
 import 'package:admivida/common/constants/app_colors.dart';
@@ -188,6 +189,17 @@ class _WindowsUpdateDialogState extends State<WindowsUpdateDialog> {
             if (_step == _UpdateStep.error && _errorMessage != null) ...[
               const Gap(18),
               _buildBanner(icon: Icons.error_outline_rounded, color: Colors.red, text: _errorMessage!),
+              const Gap(8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => ExternalLinkService.openAdmividaWeb(),
+                  icon: const Icon(Icons.language_rounded, size: 15, color: AppColors.kPrimaryColor),
+                  label: const Text(
+                    'Descargar instalador desde admivida.pacosotelo.com',
+                    style: TextStyle(color: AppColors.kPrimaryColor, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
             ],
           ],
         ),

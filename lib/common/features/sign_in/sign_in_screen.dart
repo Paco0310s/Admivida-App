@@ -1,3 +1,7 @@
+import 'package:admivida/common/services/external_link_service.dart';
+
+import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
+
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -26,6 +30,7 @@ class SignInScreen extends ConsumerWidget {
       showAppBar: false,
       showDashboardShell: false,
       title: AppTexts.signIn,
+      floatingActionButton: const FloatingWhatsAppButton(heroTag: 'signin_whatsapp_fab'),
       mobile: SignInMobile(context),
       tablet: SignInTablet(context),
       desktop: SignInDesktop(context),
@@ -362,6 +367,42 @@ class _SignInFormState extends ConsumerState<SignInForm> {
               backgroundColor: AppColors.kSecondaryColor,
               fontSize: 15,
               fontWeight: FontWeight.w600,
+            ),
+            const Gap(18),
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  InkWell(
+                    onTap: () => ExternalLinkService.openAdmividaWeb(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.download_rounded, size: 14, color: AppColors.kPrimaryColor),
+                        Gap(4),
+                        AppText(
+                          'Descargar Windows / Android',
+                          fontSize: 12,
+                          color: AppColors.kPrimaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const AppText('•', fontSize: 12, color: AppColors.kNeutral400),
+                  InkWell(
+                    onTap: () => ExternalLinkService.openPortfolio(),
+                    child: const AppText(
+                      'Por Francisco Sotelo',
+                      fontSize: 12,
+                      color: AppColors.kNeutral500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

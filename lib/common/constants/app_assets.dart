@@ -52,4 +52,5 @@ class AppAssets {
   static const String userAddIcon = 'assets/icons/global/user-add.svg';
   static const String userIcon = 'assets/icons/global/user.svg';
   static const String usersAltIcon = 'assets/icons/global/users-alt.svg';
+  static const String whatsappIcon = 'assets/icons/global/whatsapp.svg';
 }

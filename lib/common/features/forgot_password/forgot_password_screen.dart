@@ -1,3 +1,5 @@
+import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
+
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -26,6 +28,7 @@ class ForgotPasswordScreen extends ConsumerWidget {
       showAppBar: false,
       showDashboardShell: false,
       title: AppTexts.forgotPasswordTitle,
+      floatingActionButton: const FloatingWhatsAppButton(heroTag: 'forgot_password_whatsapp_fab'),
       mobile: ForgotPasswordMobile(context),
       tablet: ForgotPasswordTablet(context),
       desktop: ForgotPasswordDesktop(context),

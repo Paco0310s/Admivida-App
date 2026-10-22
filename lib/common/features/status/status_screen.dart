@@ -1,3 +1,7 @@
+import 'package:admivida/common/services/external_link_service.dart';
+
+import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
+
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -45,6 +49,7 @@ class AppStatusScreen extends StatelessWidget {
     return AppScaffold(
       showAppBar: false,
       title: isMaintenance ? AppTexts.maintenance : AppTexts.updateRequired,
+      floatingActionButton: const FloatingWhatsAppButton(heroTag: 'status_whatsapp_fab'),
       mobile: _StatusView(type: type),
       tablet: _StatusView(type: type),
       desktop: _StatusView(type: type),
@@ -155,6 +160,19 @@ class _StatusView extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
+                      if (!isMaintenance) ...[
+                        const SizedBox(height: 14),
+                        TextButton.icon(
+                          onPressed: () => ExternalLinkService.openAdmividaWeb(),
+                          icon: const Icon(Icons.language_rounded, size: 16, color: AppColors.kPrimaryColor),
+                          label: const AppText(
+                            'Descargar instalador desde admivida.pacosotelo.com',
+                            color: AppColors.kPrimaryColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -1,3 +1,5 @@
+import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
+
 import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -27,6 +29,7 @@ class SignUpScreen extends ConsumerWidget {
       showAppBar: false,
       showDashboardShell: false,
       title: AppTexts.signUp,
+      floatingActionButton: const FloatingWhatsAppButton(heroTag: 'signup_whatsapp_fab'),
       mobile: SignUpMobile(context),
       tablet: SignUpTablet(context),
       desktop: SignUpDesktop(context),
