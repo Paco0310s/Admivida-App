@@ -10,7 +10,7 @@
 #    - AdmividaSetup.exe  -> subir a  <servidor>/downloads/AdmividaSetup.exe
 #    - latest.json        -> subir a  <servidor>/downloads/latest.json
 #
-#  Requisitos: Flutter y Inno Setup 6 (https://jrsoftware.org/isdl.php)
+#  Requisitos: Flutter y Inno Setup 6 o 7 (https://jrsoftware.org/isdl.php)
 #  La version se toma de AppConfig.appVersionCode / appVersionName.
 # =============================================================================
 param(
@@ -86,6 +86,19 @@ $setupPath = Join-Path $outDir 'AdmividaSetup.exe'
 
 # --- 6. Generar manifiesto latest.json (UTF-8 sin BOM) ---------------------
 $hash = (Get-FileHash $setupPath -Algorithm SHA256).Hash.ToLower()
+
+$whatsNewFile = Join-Path $root 'releases\whats_new.json'
+$whatsNewList = @()
+$historyList = @()
+if (Test-Path $whatsNewFile) {
+    try {
+        $parsedNotes = [IO.File]::ReadAllText($whatsNewFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+        if ($parsedNotes.whatsNew) { $whatsNewList = $parsedNotes.whatsNew }
+        if ($parsedNotes.history) { $historyList = $parsedNotes.history }
+        if (-not $Notes -and $parsedNotes.releaseNotes) { $Notes = $parsedNotes.releaseNotes }
+    } catch {}
+}
+
 $manifest = [ordered]@{
     versionCode  = [int]$versionCode
     versionName  = $versionNameFull
@@ -93,9 +106,11 @@ $manifest = [ordered]@{
     sha256       = $hash
     mandatory    = [bool]$Mandatory
     releaseNotes = $Notes
+    whatsNew     = $whatsNewList
+    history      = $historyList
     publishedAt  = (Get-Date).ToString('o')
 }
-$json = $manifest | ConvertTo-Json
+$json = $manifest | ConvertTo-Json -Depth 6
 $manifestPath = Join-Path $outDir 'latest.json'
 [System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding $false))
 
@@ -106,19 +121,9 @@ Write-Host "    Manifiesto : $manifestPath"
 Write-Host "    SHA-256    : $hash"
 Write-Host ""
 
-# Si existe el proyecto admivida-server localmente, copiamos automaticamente a su carpeta downloads
-$localServerDir = Join-Path $root '..\..\NestJS\admivida-server'
-if (Test-Path $localServerDir) {
-    $localDownloads = Join-Path $localServerDir 'downloads'
-    if (-not (Test-Path $localDownloads)) { New-Item -ItemType Directory -Path $localDownloads -Force | Out-Null }
-    Copy-Item $setupPath -Destination $localDownloads -Force
-    Copy-Item $manifestPath -Destination $localDownloads -Force
-    Write-Host "==> Archivos copiados al servidor local en: $localDownloads" -ForegroundColor Green
-    Write-Host ""
-}
+
 
 Write-Host "Para produccion, sube AMBOS archivos a MinIO (https://minio.pacosotelo.com):" -ForegroundColor Yellow
 Write-Host "  Bucket : admivida-bucket" -ForegroundColor Cyan
 Write-Host "  Carpeta: releases/" -ForegroundColor Cyan
 Write-Host "  Archivos: AdmividaSetup.exe y latest.json" -ForegroundColor Cyan
-

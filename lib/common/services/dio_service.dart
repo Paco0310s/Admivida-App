@@ -2,18 +2,18 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:admivida/common/enums/app_failure_enum.dart';
 import 'package:admivida/common/routes/routes.dart';
-import 'package:admivida/common/utils/globals.dart';
 import 'package:dio/dio.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/logging/app_logger.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/either.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/connectivity_service.dart';
 import 'package:admivida/common/widgets/dashboard_navigation.dart';
-import 'package:flutter/material.dart';
 
 class DioService {
   static bool _isHandlingSessionExpiration = false;
@@ -86,19 +86,8 @@ class DioService {
       await SecureStorageService.clear();
       await IsarCacheService.clearCache();
 
-      navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        Routes.signIn,
-        (route) => false,
-      );
-
-      scaffoldMessengerKey.currentState
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Tu sesión ha expirado por seguridad. Por favor, inicia sesión nuevamente.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      NavigationService.replaceUntil(null, Routes.signIn);
+      SnackbarUtil.showError(null, 'Tu sesión ha expirado por seguridad. Por favor, inicia sesión nuevamente.');
     } finally {
       Future.delayed(const Duration(seconds: 2), () {
         _isHandlingSessionExpiration = false;

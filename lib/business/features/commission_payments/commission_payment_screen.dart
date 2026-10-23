@@ -6,6 +6,7 @@ import 'package:admivida/business/features/commission_payments/models/create_com
 import 'package:admivida/business/features/commission_payments/models/pending_commission_item.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -175,7 +176,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
       },
       (successResponse) {
         SnackbarUtil.showSuccess(context, 'Pago de comisiones registrado correctamente.');
-        Navigator.of(context).pop(true);
+        NavigationService.pop(context, true);
       },
     );
   }

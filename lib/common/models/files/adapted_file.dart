@@ -1,3 +1,4 @@
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:admivida/common/models/files/asset_file.dart';
@@ -48,7 +49,7 @@ abstract class AdaptedFile {
                 top: 8,
                 right: 8,
                 child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => NavigationService.pop(context),
                   icon: const Icon(Icons.close, color: Colors.white),
                   tooltip: 'Cerrar imagen',
                 ),

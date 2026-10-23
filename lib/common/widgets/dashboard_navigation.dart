@@ -155,8 +155,8 @@ class DashboardSession {
     }
 
     if (targetRoute == Routes.businessDetail) {
-      if (isBusinessModuleRoute(currentRoute) && Navigator.of(context).canPop()) {
-        Navigator.of(context).popUntil((route) => route.settings.name == Routes.businessDetail || route.isFirst);
+      if (isBusinessModuleRoute(currentRoute) && NavigationService.canPop(context)) {
+        NavigationService.popUntil(context, (route) => route.settings.name == Routes.businessDetail || route.isFirst);
         return;
       }
       NavigationService.navigateTo(context, Routes.businessDetail, arguments: arguments);
@@ -615,7 +615,7 @@ class DashboardTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.of(context).canPop();
+    final canPop = NavigationService.canPop(context);
     final isRootDashboardRoute = currentRoute == Routes.home || currentRoute == Routes.businesses;
 
     return Container(
@@ -637,7 +637,7 @@ class DashboardTopBar extends StatelessWidget {
             const Gap(8),
           ] else if (canPop && !isRootDashboardRoute) ...[
             IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
+              onPressed: () => NavigationService.maybePop(context),
               icon: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.kNeutral800),
               tooltip: 'Regresar',
             ),

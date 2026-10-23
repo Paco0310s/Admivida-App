@@ -6,6 +6,8 @@ import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/widgets/app_button.dart';
 import 'package:admivida/common/widgets/app_card.dart';
@@ -142,7 +144,7 @@ class _StatusView extends StatelessWidget {
                         text: isMaintenance ? AppTexts.retry : (WindowsUpdaterService.isSupported ? 'Actualizar ahora' : AppTexts.close),
                         onPressed: () async {
                           if (isMaintenance) {
-                            Navigator.of(context).pushReplacementNamed('/splash');
+                            NavigationService.replaceWith(context, Routes.splash);
                             return;
                           }
                           if (WindowsUpdaterService.isSupported) {

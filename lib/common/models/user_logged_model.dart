@@ -9,6 +9,8 @@ class UserLoggedModel {
   final List<BusinessModel> businesses;
   final int minRequiredVersionCode;
   final bool inMaintenance;
+  final String? releaseNotes;
+  final dynamic whatsNew;
 
   UserLoggedModel({
     required this.userId,
@@ -19,6 +21,8 @@ class UserLoggedModel {
     required this.businesses,
     required this.minRequiredVersionCode,
     required this.inMaintenance,
+    this.releaseNotes,
+    this.whatsNew,
   });
 
   factory UserLoggedModel.fromRawJson(String str) => UserLoggedModel.fromJson(json.decode(str));
@@ -34,6 +38,8 @@ class UserLoggedModel {
     businesses: json["businesses"] != null ? List<BusinessModel>.from(json["businesses"].map((x) => BusinessModel.fromJson(x))) : [],
     minRequiredVersionCode: json["minRequiredVersionCode"] ?? 0,
     inMaintenance: json["inMaintenance"] ?? false,
+    releaseNotes: json["releaseNotes"]?.toString() ?? json["release_notes"]?.toString(),
+    whatsNew: json["whatsNew"] ?? json["whats_new"],
   );
 
   Map<String, dynamic> toJson() => {
@@ -45,6 +51,8 @@ class UserLoggedModel {
     "businesses": List<dynamic>.from(businesses.map((x) => x.toJson())),
     "minRequiredVersionCode": minRequiredVersionCode,
     "inMaintenance": inMaintenance,
+    if (releaseNotes != null) "releaseNotes": releaseNotes,
+    if (whatsNew != null) "whatsNew": whatsNew,
   };
 }
 

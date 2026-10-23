@@ -3,6 +3,7 @@ import 'dart:io';
 
 // import 'dart:convert';
 // import 'package:admivida/common/logging/app_logger.dart';
+import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/models/object_to_print.dart';
 import 'package:admivida/common/services/storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
@@ -278,24 +279,62 @@ class PrinterService {
             styles: const PosStyles(align: PosAlign.right),
           ),
         ]);
+
+        // Si el producto tuvo cambio manual de precio (descuento individual)
+        if (row.hasDiscount) {
+          bytes += generator.text(
+            '  Antes: \$${row.originalPrice!.toStringAsFixed(2)} -> Ahora: \$${row.price.toStringAsFixed(2)} c/u',
+            styles: const PosStyles(fontType: PosFontType.fontB),
+          );
+          bytes += generator.text(
+            '  * Desc. aplicado: -\$${row.totalDiscount.toStringAsFixed(2)}',
+            styles: const PosStyles(fontType: PosFontType.fontB),
+          );
+        }
       }
       bytes += generator.hr();
 
-      // Totales
-      bytes += generator.row([
-        PosColumn(text: 'Subtotal:', width: 6),
-        PosColumn(
-          text: '\$${document.subtotal.toStringAsFixed(2)}',
-          width: 6,
-          styles: const PosStyles(align: PosAlign.right),
-        ),
-      ]);
+      // Totales y Descuentos
+      final hasItemDiscounts = document.itemDiscountsTotal > 0.001;
+      final hasGlobalDiscount = document.discount > 0.001;
 
-      if (document.discount > 0) {
+      if (hasItemDiscounts || hasGlobalDiscount) {
+        // Muestra el precio regular que se tenía que cobrar antes de cualquier descuento
         bytes += generator.row([
-          PosColumn(text: 'Descuento:', width: 6),
+          PosColumn(text: 'Precio regular:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
           PosColumn(
-            text: '-\$${document.discount.toStringAsFixed(2)}',
+            text: '\$${document.regularSubtotal.toStringAsFixed(2)}',
+            width: 5,
+            styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+          ),
+        ]);
+
+        if (hasItemDiscounts) {
+          bytes += generator.row([
+            PosColumn(text: 'Desc. en productos:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
+            PosColumn(
+              text: '-\$${document.itemDiscountsTotal.toStringAsFixed(2)}',
+              width: 5,
+              styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+            ),
+          ]);
+        }
+
+        if (hasGlobalDiscount) {
+          bytes += generator.row([
+            PosColumn(text: 'Descuento global:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
+            PosColumn(
+              text: '-\$${document.discount.toStringAsFixed(2)}',
+              width: 5,
+              styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+            ),
+          ]);
+        }
+      } else {
+        bytes += generator.row([
+          PosColumn(text: 'Subtotal:', width: 6),
+          PosColumn(
+            text: '\$${document.subtotal.toStringAsFixed(2)}',
             width: 6,
             styles: const PosStyles(align: PosAlign.right),
           ),
@@ -304,16 +343,24 @@ class PrinterService {
 
       bytes += generator.row([
         PosColumn(
-          text: 'TOTAL:',
-          width: 6,
+          text: (hasItemDiscounts || hasGlobalDiscount) ? 'TOTAL COBRADO:' : 'TOTAL:',
+          width: 7,
           styles: const PosStyles(bold: true, height: PosTextSize.size2),
         ),
         PosColumn(
           text: '\$${document.total.toStringAsFixed(2)}',
-          width: 6,
+          width: 5,
           styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2),
         ),
       ]);
+
+      if (document.totalSavings > 0.001) {
+        bytes += generator.feed(1);
+        bytes += generator.text(
+          '*** ¡USTED AHORRÓ: \$${document.totalSavings.toStringAsFixed(2)}! ***',
+          styles: const PosStyles(align: PosAlign.center, bold: true),
+        );
+      }
 
       bytes += generator.hr();
       bytes += generator.row([
@@ -343,9 +390,12 @@ class PrinterService {
         'Ticket generado por Admivida POS',
         styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
       );
-
-      // Opcional: Si tienes una página web o contacto
-      // bytes += generator.text('www.tu-pagina.com', styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB));
+      if (AppConfig.admividaWebUrl.isNotEmpty) {
+        bytes += generator.text(
+          AppConfig.admividaWebUrl,
+          styles: const PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
+        );
+      }
 
       bytes += generator.feed(2);
 

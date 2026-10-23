@@ -42,23 +42,41 @@ class ProductDetailScreen extends ConsumerWidget {
               if (isAdmin) ...[
                 IconButton(
                   tooltip: 'Editar producto',
-                  icon: const Icon(Icons.edit, color: AppColors.kNeutral100),
+                  icon: const Icon(Icons.edit, color: AppColors.kPrimaryColor),
                   onPressed: () {
                     NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': product});
                   },
                 ),
                 IconButton(
                   tooltip: 'Eliminar producto',
-                  icon: const Icon(Icons.delete_outline, color: AppColors.kNeutral100),
+                  icon: const Icon(Icons.delete_outline, color: AppColors.kPrimaryColor),
                   onPressed: () => _confirmDeleteProduct(context, ref, product),
                 ),
               ],
             ],
           ),
           // 💡 Pass IDs down to the view so it can be used for stock adjustments
-          mobile: ProductDetailView(product: product, businessId: businessId, productId: productId, isAdmin: isAdmin, onDelete: () => _confirmDeleteProduct(context, ref, product)),
-          tablet: ProductDetailView(product: product, businessId: businessId, productId: productId, isAdmin: isAdmin, onDelete: () => _confirmDeleteProduct(context, ref, product)),
-          desktop: ProductDetailView(product: product, businessId: businessId, productId: productId, isAdmin: isAdmin, onDelete: () => _confirmDeleteProduct(context, ref, product)),
+          mobile: ProductDetailView(
+            product: product,
+            businessId: businessId,
+            productId: productId,
+            isAdmin: isAdmin,
+            onDelete: () => _confirmDeleteProduct(context, ref, product),
+          ),
+          tablet: ProductDetailView(
+            product: product,
+            businessId: businessId,
+            productId: productId,
+            isAdmin: isAdmin,
+            onDelete: () => _confirmDeleteProduct(context, ref, product),
+          ),
+          desktop: ProductDetailView(
+            product: product,
+            businessId: businessId,
+            productId: productId,
+            isAdmin: isAdmin,
+            onDelete: () => _confirmDeleteProduct(context, ref, product),
+          ),
         );
       },
       loading: () => AppScaffold(
@@ -86,109 +104,60 @@ class ProductDetailScreen extends ConsumerWidget {
     );
   }
 
-
   Future<void> _confirmDeleteProduct(BuildContext context, WidgetRef ref, ProductModel product) async {
-
     final bool? confirmed = await showDialog<bool>(
-
       context: context,
 
       builder: (dialogContext) => AlertDialog(
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 
         title: Row(
-
           children: [
-
             Container(
-
               padding: const EdgeInsets.all(8),
 
-              decoration: BoxDecoration(
-
-                color: Colors.red.shade50,
-
-                shape: BoxShape.circle,
-
-              ),
+              decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
 
               child: Icon(Icons.delete_outline, color: Colors.red.shade700, size: 24),
-
             ),
 
             const Gap(12),
 
             const Expanded(
-
-              child: AppText(
-
-                'Eliminar Producto',
-
-                fontWeight: FontWeight.bold,
-
-                fontSize: 18,
-
-                color: AppColors.kNeutral900,
-
-              ),
-
+              child: AppText('Eliminar Producto', fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.kNeutral900),
             ),
-
           ],
-
         ),
 
         content: Column(
-
           mainAxisSize: MainAxisSize.min,
 
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-
-            AppText(
-
-              '¿Estás seguro de que deseas eliminar "${product.name}"?',
-
-              fontWeight: FontWeight.w600,
-
-              fontSize: 15,
-
-              color: AppColors.kNeutral800,
-
-            ),
+            AppText('¿Estás seguro de que deseas eliminar "${product.name}"?', fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.kNeutral800),
 
             const Gap(10),
 
             const AppText(
-
               'El producto ya no aparecerá en el catálogo ni en las listas de inventario. El historial de ventas pasadas se mantendrá intacto.',
 
               fontSize: 13,
 
               color: AppColors.kNeutral600,
-
             ),
-
           ],
-
         ),
 
         actions: [
-
           TextButton(
-
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => NavigationService.pop(dialogContext, false),
 
             child: const AppText('Cancelar', color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
-
           ),
 
           ElevatedButton(
-
             style: ElevatedButton.styleFrom(
-
               backgroundColor: Colors.red.shade600,
 
               foregroundColor: Colors.white,
@@ -196,92 +165,54 @@ class ProductDetailScreen extends ConsumerWidget {
               elevation: 0,
 
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-
             ),
 
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => NavigationService.pop(dialogContext, true),
 
             child: const AppText('Eliminar', color: Colors.white, fontWeight: FontWeight.bold),
-
           ),
-
         ],
-
       ),
-
     );
 
-
-
     if (confirmed != true || !context.mounted) return;
-
-
 
     // Loading overlay
 
     showDialog(
-
       context: context,
 
       barrierDismissible: false,
 
       builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
-
     );
 
-
-
-    final result = await ProductsService.deleteProduct(
-
-      businessId: businessId,
-
-      productId: product.id,
-
-    );
-
-
+    final result = await ProductsService.deleteProduct(businessId: businessId, productId: product.id);
 
     if (!context.mounted) return;
 
-    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
-
-
+    NavigationService.pop(context, null, true); // dismiss loading
 
     result.when(
-
       (failure) {
-
         SnackbarUtil.showError(context, failure.message.isNotEmpty ? failure.message : 'Error al eliminar el producto');
-
       },
 
       (_) {
-
         ref.read(productsListProvider(businessId).notifier).removeProductLocal(product.id);
 
         ref.invalidate(productDetailProvider(businessId: businessId, productId: product.id));
 
         SnackbarUtil.showSuccess(context, 'Producto eliminado exitosamente');
 
-        Navigator.of(context).popUntil((route) => route.settings.name == Routes.products || route.isFirst);
-
+        NavigationService.popUntil(context, (route) => route.settings.name == Routes.products || route.isFirst);
       },
-
     );
-
   }
-
 }
 
 class ProductDetailView extends StatelessWidget {
-  const ProductDetailView({
-    super.key,
-    required this.product,
-    required this.businessId,
-    required this.productId,
-    this.isAdmin = false,
-    this.onDelete,
-  });
+  const ProductDetailView({super.key, required this.product, required this.businessId, required this.productId, this.isAdmin = false, this.onDelete});
 
   final ProductModel product;
   final String businessId;

@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
+import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -33,17 +36,17 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Builder(
-        builder: (context) {
+        builder: (_) {
           if (Platform.isWindows) {
-            return SizedBox(
+            return const SizedBox(
               height: 200,
-              child: const Center(
+              child: Center(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Text(
+                  child: AppText(
                     'Escaneo de código de barras no disponible en Windows. Por favor, utiliza un dispositivo móvil.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
+                    color: Colors.red,
                   ),
                 ),
               ),
@@ -61,7 +64,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                   decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(3)),
                 ),
                 const SizedBox(height: 12),
-                const Text('Escanea código de barras', style: TextStyle(fontWeight: FontWeight.w600)),
+                const AppText('Escanea código de barras', fontWeight: FontWeight.w600),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 280,
@@ -77,16 +80,16 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                         if (code == null) return;
                         _handled = true;
                         widget.onCode(code.trim());
-                        Navigator.of(context).maybePop();
+                        NavigationService.maybePop(context);
                       },
                       errorBuilder: (context, error) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
-                            child: Text(
+                            child: AppText(
                               _scannerErrorMessage(error),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
+                              color: Colors.red,
                             ),
                           ),
                         );
@@ -97,19 +100,17 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
                 const SizedBox(height: 16),
                 TextButton.icon(
                   onPressed: () async {
-                    final messenger = ScaffoldMessenger.maybeOf(context);
-
                     try {
                       await _controller.toggleTorch();
                       if (!mounted) return;
                       setState(() {});
                     } catch (_) {
-                      if (!mounted || messenger == null) return;
-                      messenger.showSnackBar(const SnackBar(content: Text('Flash no disponible en este dispositivo')));
+                      if (!mounted) return;
+                      SnackbarUtil.showWarning(null, 'Flash no disponible en este dispositivo');
                     }
                   },
                   icon: const Icon(Icons.flashlight_on_outlined),
-                  label: const Text('Flash'),
+                  label: const AppText('Flash'),
                 ),
                 const SizedBox(height: 8),
               ],

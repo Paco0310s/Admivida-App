@@ -8,6 +8,7 @@ import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/services/storage_service.dart';
+import 'package:admivida/common/services/whats_new_service.dart';
 import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/utils/globals.dart';
 import 'package:admivida/common/widgets/windows_update_dialog.dart';
@@ -27,6 +28,7 @@ void main() async {
   await StorageService.init();
   await SecureStorageService.init();
   await IsarCacheService.init();
+  WhatsNewService.init();
 
   // Initialize Logger
   AppLogger.initialize();

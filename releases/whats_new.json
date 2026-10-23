@@ -1,0 +1,32 @@
+{
+  "versionCode": 3,
+  "versionName": "0.6.5",
+  "releaseNotes": "Desglose de descuentos en tickets de venta, eliminación de productos del catálogo y mejoras generales.",
+  "whatsNew": [
+    {
+      "title": "Descuentos en Tickets",
+      "description": "Ahora el ticket muestra el precio regular, el descuento por producto o descuento global, y el total ahorrado por el cliente.",
+      "icon": "ticket"
+    },
+    {
+      "title": "Eliminación de Productos",
+      "description": "Ahora puedes eliminar productos del catálogo de tu negocio con confirmación de seguridad.",
+      "icon": "delete"
+    },
+    {
+      "title": "Novedades de la Versión",
+      "description": "Consulta las nuevas funciones y mejoras en cualquier momento desde la campanita en el inicio.",
+      "icon": "bell"
+    }
+  ],
+  "history": [
+    {
+      "versionName": "0.6.0 (Beta)",
+      "releaseNotes": "• Escáner de código de barras en catálogo de productos.\n• Actualizaciones automáticas para Windows y Android.\n• Vendedor activo asignado por defecto en nueva venta."
+    },
+    {
+      "versionName": "0.5.0",
+      "releaseNotes": "• Punto de venta con soporte para múltiples sucursales.\n• Impresión de tickets térmicos USB y Bluetooth."
+    }
+  ]
+}

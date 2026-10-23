@@ -56,6 +56,19 @@ Copy-Item $builtApk -Destination $finalApk -Force
 
 # --- 4. Generar manifiesto latest-android.json (UTF-8 sin BOM) -------------
 $hash = (Get-FileHash $finalApk -Algorithm SHA256).Hash.ToLower()
+
+$whatsNewFile = Join-Path $root 'releases\whats_new.json'
+$whatsNewList = @()
+$historyList = @()
+if (Test-Path $whatsNewFile) {
+    try {
+        $parsedNotes = [IO.File]::ReadAllText($whatsNewFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+        if ($parsedNotes.whatsNew) { $whatsNewList = $parsedNotes.whatsNew }
+        if ($parsedNotes.history) { $historyList = $parsedNotes.history }
+        if (-not $Notes -and $parsedNotes.releaseNotes) { $Notes = $parsedNotes.releaseNotes }
+    } catch {}
+}
+
 $manifest = [ordered]@{
     versionCode  = [int]$versionCode
     versionName  = $versionNameFull
@@ -63,9 +76,11 @@ $manifest = [ordered]@{
     sha256       = $hash
     mandatory    = [bool]$Mandatory
     releaseNotes = $Notes
+    whatsNew     = $whatsNewList
+    history      = $historyList
     publishedAt  = (Get-Date).ToString('o')
 }
-$json = $manifest | ConvertTo-Json
+$json = $manifest | ConvertTo-Json -Depth 6
 $manifestPath = Join-Path $outDir 'latest-android.json'
 [System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding $false))
 
@@ -75,8 +90,10 @@ Write-Host "    APK        : $finalApk"
 Write-Host "    Manifiesto : $manifestPath"
 Write-Host "    SHA-256    : $hash"
 Write-Host ""
+
+
+
 Write-Host "Para produccion, sube AMBOS archivos a MinIO (https://minio.pacosotelo.com):" -ForegroundColor Yellow
 Write-Host "  Bucket   : admivida-bucket" -ForegroundColor Cyan
 Write-Host "  Carpeta  : releases/" -ForegroundColor Cyan
 Write-Host "  Archivos : Admivida.apk y latest-android.json" -ForegroundColor Cyan
-

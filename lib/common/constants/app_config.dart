@@ -12,8 +12,8 @@ class AppConfig {
       : 'http://localhost:9000/admivida-bucket';
 
   // App version code
-  static const int appVersionCode = 2;
-  static const String appVersionName = '0.6.0 (Beta)';
+  static const int appVersionCode = 3;
+  static const String appVersionName = '0.6.5';
 
   // Windows auto-update (almacenado en MinIO S3)
   static const String windowsInstallerUrl = '$minioPublicUrl/releases/AdmividaSetup.exe';
@@ -23,7 +23,17 @@ class AppConfig {
   static const String androidApkUrl = '$minioPublicUrl/releases/Admivida.apk';
   static const String androidUpdateManifestUrl = '$minioPublicUrl/releases/latest-android.json';
 
-// Sitios Web y Enlaces Públicos
+  // Web manifest (novedades y versión)
+  static const String webUpdateManifestUrl = '$minioPublicUrl/releases/latest.json';
+
+  /// URL del manifiesto de actualización y novedades según la plataforma actual
+  static String get currentPlatformManifestUrl {
+    if (kIsWeb) return webUpdateManifestUrl;
+    if (defaultTargetPlatform == TargetPlatform.android) return androidUpdateManifestUrl;
+    return windowsUpdateManifestUrl;
+  }
+
+  // Sitios Web y Enlaces Públicos
   static const String admividaWebUrl = 'https://admivida.pacosotelo.com';
   static const String personalPortfolioUrl = 'https://pacosotelo.com';
 
@@ -33,7 +43,7 @@ class AppConfig {
   static const String supportPhoneClean = '523921224927';
   static const String supportDefaultMessage = 'Hola, me gustaría recibir soporte con la aplicación Admivida.';
 
-    // API Endpoints
+  // API Endpoints
   static const String loginEndpoint = '/auth/login';
   static const String registerEndpoint = '/auth/register';
   static const String profileEndpoint = '/auth/profile';
@@ -89,4 +99,8 @@ class AppConfig {
   static const String rolesKey = 'roles';
   static const String currentPlatformRoleKey = 'currentPlatformRole';
   static const String userBusinessesRolesKey = 'userBusinessesRoles';
+
+  // Novedades de la versión (What's New)
+  static const String lastSeenWhatsNewVersionKey = 'last_seen_whats_new_version_code';
+  static const String cachedWhatsNewJsonKey = 'cached_whats_new_json';
 }

@@ -293,7 +293,7 @@ class _CreateOrUpdateBusinessScreenState extends ConsumerState<CreateOrUpdateBus
           if (businessResult != null) {
             final actionText = isEditing ? 'actualizado' : AppTexts.registeredSuccessfully;
             SnackbarUtil.showSuccess(context, '${businessResult.name} $actionText');
-            NavigationService.pop(context, result: businessResult);
+            NavigationService.pop(context, businessResult);
           }
         },
         error: (error, stackTrace) {

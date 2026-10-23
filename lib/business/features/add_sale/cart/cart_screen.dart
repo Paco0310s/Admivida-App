@@ -112,7 +112,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           _selectedClientId = c.userId; // ¡Enviamos siempre el ID real!
                           _clientNameController.text = fullName;
                         });
-                        Navigator.pop(context);
+                        NavigationService.pop(context);
                       },
                     );
                   },
@@ -154,7 +154,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(onPressed: () => NavigationService.pop(context), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
           ElevatedButton(
             onPressed: () {
               final paid = double.tryParse(dialogAmountController.text);
@@ -164,7 +164,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   _amountPaid = paid;
                 });
                 confirmed = true;
-                Navigator.pop(context);
+                NavigationService.pop(context);
               } else {
                 SnackbarUtil.showWarning(context, 'El monto recibido no puede ser menor al total');
               }
@@ -205,14 +205,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(onPressed: () => NavigationService.pop(context), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
           ElevatedButton(
             onPressed: () {
               final newPrice = double.tryParse(priceController.text);
               if (newPrice != null && newPrice >= 0) {
                 ref.read(cartProvider.notifier).updateUnitPrice(item.id, newPrice);
               }
-              Navigator.pop(context);
+              NavigationService.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
             child: const Text('Guardar', style: TextStyle(color: Colors.white)),
@@ -315,13 +315,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               await showDialog(
                                 context: dialogContext,
                                 builder: (confirmContext) => AlertDialog(
-                                  title: const Text('Eliminar impresora seleccionada'),
-                                  content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                                  title: const AppText('Eliminar impresora seleccionada', fontWeight: FontWeight.bold),
+                                  content: const AppText('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.of(confirmContext).pop(), child: const Text('Cancelar')),
+                                    TextButton(onPressed: () => NavigationService.pop(confirmContext), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
                                     ElevatedButton(
                                       onPressed: () async {
-                                        Navigator.of(confirmContext).pop();
+                                        NavigationService.pop(confirmContext);
                                         await ref.read(printerServiceProvider).clearSavedPrinter();
                                         ref.invalidate(hasSavedPrinterProvider);
                                         if (dialogContext.mounted) {

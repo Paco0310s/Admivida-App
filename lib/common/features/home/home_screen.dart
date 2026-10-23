@@ -1,3 +1,5 @@
+import 'package:admivida/common/services/whats_new_service.dart';
+import 'package:admivida/common/widgets/whats_new_bell_button.dart';
 import 'package:admivida/common/services/external_link_service.dart';
 
 import 'package:admivida/common/widgets/floating_whatsapp_button.dart';
@@ -20,8 +22,22 @@ import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WhatsNewService.checkAndShowOnFirstLaunch(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +48,7 @@ class HomeScreen extends StatelessWidget {
         title: const AppText(AppTexts.home, color: AppColors.kPrimaryColor),
         backgroundColor: Colors.transparent,
         actions: [
+          const WhatsNewBellButton(),
           IconButton(
             tooltip: 'Descargar app (Windows y Android)',
             onPressed: () => ExternalLinkService.openAdmividaWeb(),

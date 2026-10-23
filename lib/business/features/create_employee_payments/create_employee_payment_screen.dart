@@ -5,6 +5,7 @@ import 'package:admivida/business/features/create_employee_payments/create_emplo
 import 'package:admivida/business/features/create_employee_payments/models/create_employee_payment_dto.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -79,7 +80,7 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
       },
       (successResponse) {
         SnackbarUtil.showSuccess(context, 'Pago registrado correctamente.');
-        Navigator.of(context).pop(true);
+        NavigationService.pop(context, true);
       },
     );
   }

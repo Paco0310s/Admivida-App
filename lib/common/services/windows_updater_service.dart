@@ -42,13 +42,28 @@ class AppUpdateInfo {
       resolvedUrl = '${AppConfig.minioPublicUrl}${rawUrl.startsWith('/') ? '' : '/'}$rawUrl';
     }
 
+    final rawNotes = (json['releaseNotes'] as String?)?.trim();
+    String? resolvedNotes = rawNotes;
+    if ((resolvedNotes == null || resolvedNotes.isEmpty) && json['whatsNew'] is List) {
+      resolvedNotes = (json['whatsNew'] as List)
+          .map((item) {
+            if (item is Map) {
+              final title = item['title'] ?? item['name'] ?? '';
+              final desc = item['description'] ?? item['desc'] ?? '';
+              return desc.toString().isNotEmpty ? '• $title: $desc' : '• $title';
+            }
+            return '• $item';
+          })
+          .join('\n');
+    }
+
     return AppUpdateInfo(
       versionCode: (json['versionCode'] as num?)?.toInt() ?? 0,
       versionName: json['versionName']?.toString() ?? '',
       downloadUrl: resolvedUrl,
       sha256: (json['sha256'] as String?)?.trim(),
       mandatory: json['mandatory'] == true,
-      releaseNotes: (json['releaseNotes'] as String?)?.trim(),
+      releaseNotes: resolvedNotes,
     );
   }
 

@@ -91,16 +91,16 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
                     ),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancelar', style: TextStyle(color: AppColors.kNeutral600)),
+                        onPressed: () => NavigationService.pop(ctx, false),
+                        child: const AppText('Cancelar', color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('Sí, vender', style: TextStyle(color: Colors.white)),
+                        onPressed: () => NavigationService.pop(ctx, true),
+                        child: const AppText('Sí, vender', color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -232,13 +232,13 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
                       await showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Eliminar impresora seleccionada'),
-                          content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                          title: const AppText('Eliminar impresora seleccionada', fontWeight: FontWeight.bold),
+                          content: const AppText('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
                           actions: [
-                            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+                            TextButton(onPressed: () => NavigationService.pop(context), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
                             ElevatedButton(
                               onPressed: () async {
-                                Navigator.of(context).pop();
+                                NavigationService.pop(context);
                                 await ref.read(printerServiceProvider).clearSavedPrinter();
                                 // Refrescar el estado de la UI
                                 ref.invalidate(hasSavedPrinterProvider);

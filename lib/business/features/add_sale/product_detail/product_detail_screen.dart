@@ -4,6 +4,7 @@ import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -169,16 +170,16 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancelar', style: TextStyle(color: AppColors.kNeutral600)),
+              onPressed: () => NavigationService.pop(ctx, false),
+              child: const AppText('Cancelar', color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Sí, vender', style: TextStyle(color: Colors.white)),
+              onPressed: () => NavigationService.pop(ctx, true),
+              child: const AppText('Sí, vender', color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -219,7 +220,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     if (mounted) SnackbarUtil.showSuccess(context, 'Agregado al carrito: $nameSnapshot x$_quantity');
 
     // 5. Back
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) NavigationService.pop(context);
   }
 
   @override

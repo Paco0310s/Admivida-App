@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:admivida/common/models/object_to_print.dart';
 import 'package:admivida/common/services/printer_service.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
+import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -98,8 +100,8 @@ class PrinterSelectionModalState extends State<PrinterSelectionModal> {
                   final printer = _devices[index];
                   return ListTile(
                     leading: const Icon(Icons.print),
-                    title: Text(printer.device.name),
-                    subtitle: Text(
+                    title: AppText(printer.device.name, fontWeight: FontWeight.w600),
+                    subtitle: AppText(
                       [if (printer.transport == PrinterTransport.bluetooth) 'Bluetooth' else 'USB', if (printer.details != null) printer.details!].join(' · '),
                     ),
                     onTap: () async {
@@ -107,7 +109,7 @@ class PrinterSelectionModalState extends State<PrinterSelectionModal> {
                       await widget.printerService.savePrinter(printer);
 
                       // 2. Cerrar el modal
-                      if (context.mounted) Navigator.pop(context);
+                      NavigationService.pop();
 
                       // 3. Imprimir SOLO si hay un documento
                       if (widget.document != null) {

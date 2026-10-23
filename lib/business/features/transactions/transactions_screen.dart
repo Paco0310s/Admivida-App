@@ -25,13 +25,13 @@ class TransactionsScreen extends ConsumerWidget {
       await showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Eliminar impresora seleccionada'),
-          content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+          title: const AppText('Eliminar impresora seleccionada', fontWeight: FontWeight.bold),
+          content: const AppText('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+            TextButton(onPressed: () => NavigationService.pop(dialogContext), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(dialogContext).pop();
+                NavigationService.pop(dialogContext);
                 await ref.read(printerServiceProvider).clearSavedPrinter();
                 ref.invalidate(hasSavedPrinterProvider);
                 if (context.mounted) {
@@ -469,13 +469,13 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                               await showDialog(
                                 context: context,
                                 builder: (dialogContext) => AlertDialog(
-                                  title: const Text('Eliminar impresora seleccionada'),
-                                  content: const Text('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
+                                  title: const AppText('Eliminar impresora seleccionada', fontWeight: FontWeight.bold),
+                                  content: const AppText('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancelar')),
+                                    TextButton(onPressed: () => NavigationService.pop(dialogContext), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
                                     ElevatedButton(
                                       onPressed: () async {
-                                        Navigator.of(dialogContext).pop();
+                                        NavigationService.pop(dialogContext);
                                         await ref.read(printerServiceProvider).clearSavedPrinter();
                                         ref.invalidate(hasSavedPrinterProvider);
                                         if (mounted) {

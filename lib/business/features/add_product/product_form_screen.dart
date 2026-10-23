@@ -1,4 +1,5 @@
-import 'package:admivida/common/routes/routes.dart';
+import 'package:admivida/common/routes/routes.dart';
+
 import 'package:admivida/common/services/secure_storage_service.dart';
 
 import 'package:admivida/business/features/products/products_service.dart';
@@ -153,19 +154,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.camera_alt, color: AppColors.kPrimaryColor),
-                  title: const Text('Tomar Foto con Cámara'),
-                  subtitle: const Text('Rápido para inventario en tienda'),
+                  title: const AppText('Tomar Foto con Cámara', fontWeight: FontWeight.w600),
+                  subtitle: const AppText('Rápido para inventario en tienda', fontSize: 12, color: AppColors.kNeutral600),
                   onTap: () {
-                    Navigator.pop(ctx);
+                    NavigationService.pop(ctx);
                     _pickVariantImage(field, ImageSource.camera);
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library, color: AppColors.kPrimaryColor),
-                  title: const Text('Seleccionar de la Galería'),
-                  subtitle: const Text('Elige una imagen editada o diseñada'),
+                  title: const AppText('Seleccionar de la Galería', fontWeight: FontWeight.w600),
+                  subtitle: const AppText('Elige una imagen editada o diseñada', fontSize: 12, color: AppColors.kNeutral600),
                   onTap: () {
-                    Navigator.pop(ctx);
+                    NavigationService.pop(ctx);
                     _pickVariantImage(field, ImageSource.gallery);
                   },
                 ),
@@ -354,7 +355,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           if (isEditing && isAdmin)
             IconButton(
               tooltip: 'Eliminar producto',
-              icon: const Icon(Icons.delete_outline, color: AppColors.kNeutral100),
+              icon: const Icon(Icons.delete_outline, color: AppColors.kPrimaryColor),
               onPressed: isBusy ? null : () => _confirmDeleteProduct(context),
             ),
         ],
@@ -366,116 +367,64 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
   }
 
-  
-
   Future<void> _confirmDeleteProduct(BuildContext context) async {
-
     final product = widget.product;
 
     if (product == null) return;
 
-
-
     final bool? confirmed = await showDialog<bool>(
-
       context: context,
 
       builder: (dialogContext) => AlertDialog(
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 
         title: Row(
-
           children: [
-
             Container(
-
               padding: const EdgeInsets.all(8),
 
-              decoration: BoxDecoration(
-
-                color: Colors.red.shade50,
-
-                shape: BoxShape.circle,
-
-              ),
+              decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
 
               child: Icon(Icons.delete_outline, color: Colors.red.shade700, size: 24),
-
             ),
 
             const Gap(12),
 
             const Expanded(
-
-              child: AppText(
-
-                'Eliminar Producto',
-
-                fontWeight: FontWeight.bold,
-
-                fontSize: 18,
-
-                color: AppColors.kNeutral900,
-
-              ),
-
+              child: AppText('Eliminar Producto', fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.kNeutral900),
             ),
-
           ],
-
         ),
 
         content: Column(
-
           mainAxisSize: MainAxisSize.min,
 
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-
-            AppText(
-
-              '¿Estás seguro de que deseas eliminar "${product.name}"?',
-
-              fontWeight: FontWeight.w600,
-
-              fontSize: 15,
-
-              color: AppColors.kNeutral800,
-
-            ),
+            AppText('¿Estás seguro de que deseas eliminar "${product.name}"?', fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.kNeutral800),
 
             const Gap(10),
 
             const AppText(
-
               'El producto ya no aparecerá en el catálogo ni en las listas de inventario. El historial de ventas pasadas se mantendrá intacto.',
 
               fontSize: 13,
 
               color: AppColors.kNeutral600,
-
             ),
-
           ],
-
         ),
 
         actions: [
-
           TextButton(
-
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => NavigationService.pop(dialogContext, false),
 
             child: const AppText('Cancelar', color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
-
           ),
 
           ElevatedButton(
-
             style: ElevatedButton.styleFrom(
-
               backgroundColor: Colors.red.shade600,
 
               foregroundColor: Colors.white,
@@ -483,80 +432,48 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               elevation: 0,
 
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-
             ),
 
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => NavigationService.pop(dialogContext, true),
 
             child: const AppText('Eliminar', color: Colors.white, fontWeight: FontWeight.bold),
-
           ),
-
         ],
-
       ),
-
     );
-
-
 
     if (confirmed != true || !context.mounted) return;
 
-
-
     showDialog(
-
       context: context,
 
       barrierDismissible: false,
 
       builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
-
     );
 
-
-
-    final result = await ProductsService.deleteProduct(
-
-      businessId: widget.businessId,
-
-      productId: product.id,
-
-    );
-
-
+    final result = await ProductsService.deleteProduct(businessId: widget.businessId, productId: product.id);
 
     if (!context.mounted) return;
 
-    Navigator.of(context, rootNavigator: true).pop();
-
-
+    NavigationService.pop(context, null, true);
 
     result.when(
-
       (failure) {
-
         SnackbarUtil.showError(context, failure.message.isNotEmpty ? failure.message : 'Error al eliminar el producto');
-
       },
 
       (_) {
-
         ref.read(productsListProvider(widget.businessId).notifier).removeProductLocal(product.id);
 
         ref.invalidate(productDetailProvider(businessId: widget.businessId, productId: product.id));
 
         SnackbarUtil.showSuccess(context, 'Producto eliminado exitosamente');
 
-        Navigator.of(context).popUntil((route) => route.settings.name == Routes.products || route.isFirst);
-
+        NavigationService.popUntil(context, (route) => route.settings.name == Routes.products || route.isFirst);
       },
-
     );
-
   }
-
-
 
   Widget _buildHeaderCard() {
     return AppCard(

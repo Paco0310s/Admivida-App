@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_config.dart';
+import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/windows_updater_service.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:dio/dio.dart';
@@ -95,7 +96,7 @@ class _WindowsUpdateDialogState extends State<WindowsUpdateDialog> {
 
   void _postpone() {
     WindowsUpdaterService.dismiss(_info);
-    Navigator.of(context).pop();
+    NavigationService.pop(context);
   }
 
   @override
