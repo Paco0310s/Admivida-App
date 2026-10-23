@@ -631,14 +631,14 @@ class DashboardTopBar extends StatelessWidget {
         children: [
           if (originalAppBar?.leading != null) ...[
             IconTheme(
-              data: const IconThemeData(color: AppColors.kNeutral800),
+              data: const IconThemeData(color: AppColors.kPrimaryColor),
               child: originalAppBar!.leading!,
             ),
             const Gap(8),
           ] else if (canPop && !isRootDashboardRoute) ...[
             IconButton(
               onPressed: () => NavigationService.maybePop(context),
-              icon: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.kNeutral800),
+              icon: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.kPrimaryColor),
               tooltip: 'Regresar',
             ),
             const Gap(8),
@@ -689,7 +689,7 @@ class DashboardTopBar extends StatelessWidget {
           ),
           if (originalAppBar?.actions != null)
             IconTheme(
-              data: const IconThemeData(color: AppColors.kNeutral800),
+              data: const IconThemeData(color: AppColors.kPrimaryColor),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: originalAppBar!.actions!,

@@ -40,7 +40,7 @@ class SaleDetailScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Reimprimir ticket',
             onPressed: () => _reprintSale(context, ref),
-            icon: const Icon(Icons.print_rounded, color: AppColors.kNeutral100),
+            icon: const Icon(Icons.print_rounded),
           ),
         ],
       ),

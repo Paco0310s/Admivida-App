@@ -59,12 +59,13 @@ class TransactionsScreen extends ConsumerWidget {
       title: 'Movimientos',
       appBar: AppBar(
         title: const AppText('Movimientos', color: AppColors.kNeutral100),
-        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: AppColors.kPrimaryColor,
         actions: [
           IconButton(
             tooltip: 'Abrir Cajón',
-            icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white),
+            icon: const Icon(Icons.point_of_sale_rounded),
             onPressed: () async {
               await ref.read(printerServiceProvider).openCashDrawerWithFeedback(context);
             },
@@ -74,7 +75,7 @@ class TransactionsScreen extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
             data: (hasPrinter) => IconButton(
               tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
-              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white),
+              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded),
               onPressed: () => _handlePrinterToggle(context, ref, hasPrinter),
             ),
           ),

@@ -61,7 +61,8 @@ class SalesScreen extends ConsumerWidget {
       title: AppTexts.businessSales,
       appBar: AppBar(
         title: const AppText(AppTexts.businessSales, color: AppColors.kNeutral100),
-        iconTheme: const IconThemeData(color: AppColors.kNeutral100),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: AppColors.kPrimaryColor,
         actions: [
           hasPrinterAsync.when(
@@ -69,7 +70,7 @@ class SalesScreen extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
             data: (hasPrinter) => IconButton(
               tooltip: hasPrinter ? 'Desvincular Impresora' : 'Seleccionar Impresora',
-              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded, color: Colors.white),
+              icon: Icon(hasPrinter ? Icons.print_disabled_rounded : Icons.print_rounded),
               onPressed: () => _handlePrinterToggle(context, ref, hasPrinter),
             ),
           ),

@@ -95,16 +95,57 @@ class AppScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.kBackgroundColor,
       appBar: showAppBar
-          ? appBar ??
-              AppBar(
-                title: AppText(title, color: AppColors.kBackgroundColor),
-                backgroundColor: AppColors.kPrimaryColor,
-                iconTheme: const IconThemeData(color: Colors.white),
-              )
+          ? (appBar != null
+              ? _ensureMobileAppBarTheme(appBar!)
+              : AppBar(
+                  title: AppText(title, color: AppColors.kBackgroundColor),
+                  backgroundColor: AppColors.kPrimaryColor,
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  actionsIconTheme: const IconThemeData(color: Colors.white),
+                ))
           : null,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
       body: SafeArea(child: responsiveBody),
+    );
+  }
+
+  AppBar _ensureMobileAppBarTheme(AppBar bar) {
+    if (bar.backgroundColor == Colors.transparent) {
+      return bar;
+    }
+
+    return AppBar(
+      key: bar.key,
+      leading: bar.leading,
+      automaticallyImplyLeading: bar.automaticallyImplyLeading,
+      title: bar.title,
+      actions: bar.actions,
+      flexibleSpace: bar.flexibleSpace,
+      bottom: bar.bottom,
+      elevation: bar.elevation,
+      scrolledUnderElevation: bar.scrolledUnderElevation,
+      notificationPredicate: bar.notificationPredicate,
+      shadowColor: bar.shadowColor,
+      surfaceTintColor: bar.surfaceTintColor,
+      shape: bar.shape,
+      backgroundColor: bar.backgroundColor ?? AppColors.kPrimaryColor,
+      foregroundColor: bar.foregroundColor ?? Colors.white,
+      iconTheme: bar.iconTheme ?? const IconThemeData(color: Colors.white),
+      actionsIconTheme: const IconThemeData(color: Colors.white),
+      primary: bar.primary,
+      centerTitle: bar.centerTitle,
+      excludeHeaderSemantics: bar.excludeHeaderSemantics,
+      titleSpacing: bar.titleSpacing,
+      toolbarOpacity: bar.toolbarOpacity,
+      bottomOpacity: bar.bottomOpacity,
+      toolbarHeight: bar.toolbarHeight,
+      leadingWidth: bar.leadingWidth,
+      toolbarTextStyle: bar.toolbarTextStyle,
+      titleTextStyle: bar.titleTextStyle,
+      systemOverlayStyle: bar.systemOverlayStyle,
+      forceMaterialTransparency: bar.forceMaterialTransparency,
+      clipBehavior: bar.clipBehavior,
     );
   }
 }

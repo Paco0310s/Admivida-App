@@ -42,14 +42,14 @@ class ProductDetailScreen extends ConsumerWidget {
               if (isAdmin) ...[
                 IconButton(
                   tooltip: 'Editar producto',
-                  icon: const Icon(Icons.edit, color: AppColors.kPrimaryColor),
+                  icon: const Icon(Icons.edit),
                   onPressed: () {
                     NavigationService.navigateTo(context, Routes.createOrUpdateProduct, arguments: {'businessId': businessId, 'product': product});
                   },
                 ),
                 IconButton(
                   tooltip: 'Eliminar producto',
-                  icon: const Icon(Icons.delete_outline, color: AppColors.kPrimaryColor),
+                  icon: const Icon(Icons.delete_outline),
                   onPressed: () => _confirmDeleteProduct(context, ref, product),
                 ),
               ],

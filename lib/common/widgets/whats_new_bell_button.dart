@@ -15,7 +15,7 @@ class WhatsNewBellButton extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: WhatsNewService.hasUnreadNotes,
       builder: (context, hasUnread, _) {
-        final iconColor = color ?? AppColors.kPrimaryColor;
+        final iconColor = color ?? IconTheme.of(context).color ?? AppColors.kPrimaryColor;
 
         return IconButton(
           tooltip: 'Novedades de la versión',

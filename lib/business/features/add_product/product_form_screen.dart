@@ -355,7 +355,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           if (isEditing && isAdmin)
             IconButton(
               tooltip: 'Eliminar producto',
-              icon: const Icon(Icons.delete_outline, color: AppColors.kPrimaryColor),
+              icon: const Icon(Icons.delete_outline),
               onPressed: isBusy ? null : () => _confirmDeleteProduct(context),
             ),
         ],
