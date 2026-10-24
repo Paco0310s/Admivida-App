@@ -13,6 +13,11 @@ class ConnectivityService {
 
     if (connectivityResult.contains(ConnectivityResult.none)) return false;
 
+    // En navegadores web, window.navigator.onLine (manejado por connectivity_plus)
+    // ya determina la conectividad de red. Peticiones HTTP arbitrarias a dominios externos
+    // (como google.com) son bloqueadas por el navegador debido a políticas de CORS.
+    if (kIsWeb) return true;
+
     final bool internetConnection = await checkInternetConnection();
 
     return internetConnection;
@@ -21,8 +26,7 @@ class ConnectivityService {
   static Future<bool> checkInternetConnection() async {
     try {
       if (kIsWeb) {
-        final response = await get(Uri.parse('google.com'));
-        return response.statusCode == 200;
+        return true;
       } else {
         // For mobile and desktop, we can use InternetAddress to check connectivity
         final result = await InternetAddress.lookup('google.com');
@@ -35,7 +39,7 @@ class ConnectivityService {
 
   static Future<bool> isServerLive() async {
     try {
-      final response = await get(Uri.parse('${AppConfig.baseUrl}/health'));
+      final response = await get(Uri.parse('${AppConfig.baseUrl}/health')).timeout(const Duration(seconds: 7));
       return response.statusCode == 200;
     } catch (e) {
       return false;
