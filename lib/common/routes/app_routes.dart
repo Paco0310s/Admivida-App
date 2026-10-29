@@ -28,6 +28,9 @@ import 'package:admivida/common/features/choose_platform_role/choose_platform_ro
 import 'package:admivida/common/features/home/home_screen.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/personal/features/add_transaction/personal_add_transaction_screen.dart';
+import 'package:admivida/personal/features/add_transaction/personal_transfer_funds_screen.dart';
+import 'package:admivida/personal/features/transactions/personal_transactions_screen.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:admivida/common/features/forgot_password/forgot_password_screen.dart';
@@ -108,10 +111,7 @@ class AppRoutes {
         return ProductDetailScreen(businessId: args['businessId'], productId: args['productId']);
       },
       Routes.createOrUpdateProduct: (context) {
-        // 1. Get the arguments from the route settings
         final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-
-        // 2. Extract the businessId and product from the arguments
         final String businessId = args['businessId'] as String;
         final ProductModel? product = args['product'] as ProductModel?;
 
@@ -221,6 +221,12 @@ class AppRoutes {
         final isAdmin = arguments?['isAdmin'] as bool? ?? false;
         return CommissionPaymentHistoryScreen(businessId: businessId, isAdmin: isAdmin);
       },
+      Routes.personalDashboard: (context) => const PersonalTransactionsScreen(),
+      Routes.personalAddTransaction: (context) {
+        final initialAccountId = ModalRoute.of(context)?.settings.arguments as String?;
+        return PersonalAddTransactionScreen(initialAccountId: initialAccountId);
+      },
+      Routes.personalTransferFunds: (context) => const PersonalTransferFundsScreen(),
     };
   }
 }

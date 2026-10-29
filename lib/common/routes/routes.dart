@@ -31,4 +31,9 @@ class Routes {
   static final String cart = '/cart';
   static final String employeePayments = '/employee_payments';
   static final String userBusinesses = '/user_businesses';
+
+  // Módulo de Finanzas Personales
+  static final String personalDashboard = '/personal_dashboard';
+  static final String personalAddTransaction = '/personal_add_transaction';
+  static final String personalTransferFunds = '/personal_transfer_funds';
 }

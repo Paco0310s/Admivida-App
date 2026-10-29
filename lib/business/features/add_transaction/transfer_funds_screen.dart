@@ -9,6 +9,7 @@ import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
+import 'package:admivida/common/widgets/create_account_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -85,7 +86,6 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
   }
 
   Widget _buildContent(bool isLoading) {
-    // Usamos el mismo provider para obtener todas las cuentas disponibles
     final accountsAsync = ref.watch(accountsBusinessProvider(businessId: widget.businessId));
 
     return SingleChildScrollView(
@@ -140,47 +140,105 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
                       child: Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     data: (accounts) {
+                      final validSource = accounts.any((a) => a.id == _sourceAccountId) ? _sourceAccountId : null;
+                      final validDest = accounts.any((a) => a.id == _destinationAccountId) ? _destinationAccountId : null;
+
                       return Column(
                         children: [
-                          // CUENTA DE ORIGEN
-                          DropdownButtonFormField<String>(
-                            initialValue: _sourceAccountId,
-                            decoration: InputDecoration(
-                              labelText: 'Cuenta de origen (Retirar de) *',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              prefixIcon: const Icon(Icons.arrow_upward, color: Colors.red),
-                            ),
-                            items: accounts.map((acc) {
-                              return DropdownMenuItem<String>(value: acc.id, child: Text(acc.name));
-                            }).toList(),
-                            validator: (val) => val == null ? 'Selecciona una cuenta de origen' : null,
-                            onChanged: (value) => setState(() => _sourceAccountId = value),
+                          // CUENTA DE ORIGEN + BOTÓN NUEVA CUENTA
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  key: ValueKey('src_$validSource'),
+                                  initialValue: validSource,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: 'Cuenta de origen (Retirar de) *',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    prefixIcon: const Icon(Icons.arrow_upward, color: Colors.red),
+                                  ),
+                                  items: accounts.map((acc) {
+                                    return DropdownMenuItem<String>(
+                                      value: acc.id,
+                                      child: Text(
+                                        '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  validator: (val) => val == null ? 'Selecciona una cuenta de origen' : null,
+                                  onChanged: (value) => setState(() => _sourceAccountId = value),
+                                ),
+                              ),
+                              const Gap(8),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: CreateAccountSideButton(
+                                  businessId: widget.businessId,
+                                  tooltip: 'Agregar nueva cuenta de negocio',
+                                  onAccountCreated: (created) {
+                                    setState(() {
+                                      if (_sourceAccountId == null) {
+                                        _sourceAccountId = created.id;
+                                      } else {
+                                        _destinationAccountId = created.id;
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
-                          // CUENTA DE DESTINO
-                          DropdownButtonFormField<String>(
-                            initialValue: _destinationAccountId,
-                            decoration: InputDecoration(
-                              labelText: 'Cuenta de destino (Depositar a) *',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              prefixIcon: const Icon(Icons.arrow_downward, color: Colors.green),
-                            ),
-                            items: accounts.map((acc) {
-                              // Deshabilita la opción si es la misma que la cuenta de origen
-                              final isSameAsSource = acc.id == _sourceAccountId;
-                              return DropdownMenuItem<String>(
-                                value: acc.id,
-                                enabled: !isSameAsSource,
-                                child: Text(acc.name, style: TextStyle(color: isSameAsSource ? Colors.grey : null)),
-                              );
-                            }).toList(),
-                            validator: (val) {
-                              if (val == null) return 'Selecciona una cuenta de destino';
-                              if (val == _sourceAccountId) return 'No puedes transferir a la misma cuenta';
-                              return null;
-                            },
-                            onChanged: (value) => setState(() => _destinationAccountId = value),
+                          // CUENTA DE DESTINO + BOTÓN NUEVA CUENTA
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  key: ValueKey('dst_$validDest'),
+                                  initialValue: validDest,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    labelText: 'Cuenta de destino (Depositar a) *',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    prefixIcon: const Icon(Icons.arrow_downward, color: Colors.green),
+                                  ),
+                                  items: accounts.map((acc) {
+                                    final isSameAsSource = acc.id == _sourceAccountId;
+                                    return DropdownMenuItem<String>(
+                                      value: acc.id,
+                                      enabled: !isSameAsSource,
+                                      child: Text(
+                                        '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                        style: TextStyle(color: isSameAsSource ? Colors.grey : null),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  validator: (val) {
+                                    if (val == null) return 'Selecciona una cuenta de destino';
+                                    if (val == _sourceAccountId) return 'No puedes transferir a la misma cuenta';
+                                    return null;
+                                  },
+                                  onChanged: (value) => setState(() => _destinationAccountId = value),
+                                ),
+                              ),
+                              const Gap(8),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: CreateAccountSideButton(
+                                  businessId: widget.businessId,
+                                  tooltip: 'Agregar nueva cuenta de negocio',
+                                  onAccountCreated: (created) {
+                                    setState(() => _destinationAccountId = created.id);
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );
@@ -217,7 +275,6 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escucha el estado del provider (necesitarás crear transferFundsProvider)
     final transferState = ref.watch(transferFundsProvider);
     final isLoading = transferState.isLoading;
 
@@ -226,7 +283,8 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
         data: (result) {
           if (result != null) {
             SnackbarUtil.showSuccess(context, 'Transferencia completada correctamente');
-            ref.invalidate(transactionsListProvider(widget.businessId, null));
+            ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
+            ref.invalidate(transactionsListProvider);
             NavigationService.pop(context);
           }
         },

@@ -58,6 +58,9 @@ class AppConfig {
   static String productCategoriesEndpoint(String businessId) => '/product-categories/$businessId';
   static String salesTenantEndpoint(String businessId) => '/sales/business/$businessId';
   static String transactionsTenantEndpoint = '/transactions/business';
+  static const String transactionsPersonalEndpoint = '/transactions/personal';
+  static const String createAccountEndpoint = '/accounts';
+  static const String accountsPersonalEndpoint = '/accounts/personal';
   static String accountsBusinessEndpoint(String? businessId) => '/accounts/business/$businessId';
   static String accountsUserEndpoint(String? userId) => '/accounts/user/$userId';
   static const String paymentMethodsEndpoint = '/payment-methods';

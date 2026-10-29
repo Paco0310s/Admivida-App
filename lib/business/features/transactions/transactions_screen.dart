@@ -10,6 +10,7 @@ import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
+import 'package:admivida/common/widgets/create_account_dialog.dart';
 import 'package:admivida/common/widgets/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -152,7 +153,10 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
     final bool isMobile = Responsive.isMobile(context);
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(transactionsListProvider(widget.businessId, _selectedAccountId).notifier).refresh(),
+      onRefresh: () async {
+        ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
+        await ref.read(transactionsListProvider(widget.businessId, _selectedAccountId).notifier).refresh();
+      },
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
@@ -175,7 +179,9 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
               const Gap(10),
               _buildAccountFilterCard(accountsAsync, isMobile: true),
             ],
-            const Gap(14),
+            const Gap(12),
+            _buildAccountsBalancesStrip(accountsAsync),
+            const Gap(12),
             Expanded(
               child: transactionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -372,30 +378,54 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
             ),
             error: (error, stack) => const Text('Error al cargar cuentas', style: TextStyle(color: Colors.red)),
             data: (accounts) {
-              return DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId ?? '',
-                decoration: InputDecoration(
-                  labelText: 'Filtrar por cuenta',
-                  filled: true,
-                  fillColor: AppColors.kNeutral50,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: '',
-                    child: Text('Todas las cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
+              return Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedAccountId ?? '',
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Filtrar por cuenta',
+                        filled: true,
+                        fillColor: AppColors.kNeutral50,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('Todas las cuentas', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        ...accounts.map<DropdownMenuItem<String>>(
+                          (acc) => DropdownMenuItem<String>(
+                            value: acc.id,
+                            child: Text(
+                              '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAccountId = (value == null || value.isEmpty) ? null : value;
+                          ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
+                        });
+                      },
+                    ),
                   ),
-                  ...accounts.map<DropdownMenuItem<String>>(
-                    (acc) => DropdownMenuItem<String>(value: acc.id, child: Text(acc.name)),
+                  const Gap(8),
+                  CreateAccountSideButton(
+                    businessId: widget.businessId,
+                    tooltip: 'Agregar nueva cuenta de negocio',
+                    onAccountCreated: (created) {
+                      setState(() {
+                        _selectedAccountId = created.id;
+                        ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
+                      });
+                    },
                   ),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAccountId = (value == null || value.isEmpty) ? null : value;
-                    ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
-                  });
-                },
               );
             },
           ),
@@ -502,6 +532,109 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildAccountsBalancesStrip(AsyncValue accountsAsync) {
+    return accountsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (accounts) {
+        if (accounts.isEmpty) return const SizedBox.shrink();
+
+        return SizedBox(
+          height: 78,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: accounts.length,
+            separatorBuilder: (_, _) => const Gap(10),
+            itemBuilder: (context, index) {
+              final acc = accounts[index];
+              final isSelected = _selectedAccountId == acc.id;
+              final bool isDebit = acc.isDebitOrBank == true;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  setState(() {
+                    _selectedAccountId = isSelected ? null : acc.id;
+                    ref.invalidate(transactionsListProvider(widget.businessId, _selectedAccountId));
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 210,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.kPrimaryColor : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected ? AppColors.kPrimaryColor : AppColors.kNeutral200,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : (isDebit
+                                  ? AppColors.kSecondaryColor.withValues(alpha: 0.12)
+                                  : AppColors.kPrimaryColor.withValues(alpha: 0.1)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          isDebit ? Icons.credit_card_rounded : Icons.payments_outlined,
+                          size: 20,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDebit ? AppColors.kSecondaryColor : AppColors.kPrimaryColor),
+                        ),
+                      ),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AppText(
+                              acc.name,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? Colors.white.withValues(alpha: 0.9) : AppColors.kNeutral700,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Gap(2),
+                            AppText(
+                              '\$${acc.balance.toStringAsFixed(2)}',
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : AppColors.kPrimaryColor,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

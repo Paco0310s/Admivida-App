@@ -28,9 +28,63 @@ class TransactionsService {
     return response.when((failure) => EitherUtil.failure(failure), (pageResponse) => EitherUtil.success(pageResponse));
   }
 
+  static Future<EitherUtil<HttpFailure, PaginatedTransactionsResponse>> getPersonalTransactions({
+    required int page,
+    required int limit,
+    String? accountId,
+    String category = 'REAL',
+  }) async {
+    final Map<String, dynamic> queryParams = {
+      'page': page,
+      'limit': limit,
+      'category': category,
+      if (accountId != null && accountId.isNotEmpty) 'accountId': accountId,
+    };
+
+    final response = await DioService.get<PaginatedTransactionsResponse>(
+      AppConfig.transactionsPersonalEndpoint,
+      (json) => PaginatedTransactionsResponse.fromJson(json),
+      queryParameters: queryParams,
+    );
+
+    return response.when((failure) => EitherUtil.failure(failure), (pageResponse) => EitherUtil.success(pageResponse));
+  }
+
   static Future<EitherUtil<HttpFailure, List<AccountModel>>> getAccountsBusiness({String? businessId}) async {
     final response = await DioService.getList<AccountModel>(AppConfig.accountsBusinessEndpoint(businessId), AccountModel.fromJson);
 
     return response.when((failure) => EitherUtil.failure(failure), (accounts) => EitherUtil.success(accounts));
+  }
+
+  static Future<EitherUtil<HttpFailure, List<AccountModel>>> getPersonalAccounts() async {
+    final response = await DioService.getList<AccountModel>(AppConfig.accountsPersonalEndpoint, AccountModel.fromJson);
+
+    return response.when((failure) => EitherUtil.failure(failure), (accounts) => EitherUtil.success(accounts));
+  }
+
+  static Future<EitherUtil<HttpFailure, AccountModel>> createAccount({
+    required String name,
+    String accountTypeCode = 'CASH',
+    String? description,
+    String? businessId,
+    double? creditLimit,
+    double? initialBalance,
+  }) async {
+    final Map<String, dynamic> body = {
+      'name': name.trim(),
+      'accountTypeCode': accountTypeCode,
+      if (description != null && description.trim().isNotEmpty) 'description': description.trim(),
+      if (businessId != null && businessId.trim().isNotEmpty) 'businessId': businessId.trim(),
+      if (creditLimit != null && creditLimit > 0) 'creditLimit': creditLimit,
+      if (initialBalance != null && initialBalance > 0) 'initialBalance': initialBalance,
+    };
+
+    final response = await DioService.post<AccountModel>(
+      AppConfig.createAccountEndpoint,
+      body,
+      (json) => AccountModel.fromJson(json),
+    );
+
+    return response.when((failure) => EitherUtil.failure(failure), (account) => EitherUtil.success(account));
   }
 }

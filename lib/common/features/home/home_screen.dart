@@ -93,11 +93,11 @@ class BusinessDetailView extends StatelessWidget {
       },
       {
         'title': 'Control Personal',
-        'subtitle': 'Gastos compartidos y billetera personal',
+        'subtitle': 'Efectivo, tarjetas de débito y billetera personal',
         'icon': Icons.account_balance_wallet_rounded,
         'color': AppColors.kSecondaryColor,
-        'isEnabled': false,
-        'route': '/personal_dashboard',
+        'isEnabled': true,
+        'route': Routes.personalDashboard,
       },
       {
         'title': 'Portal Clientes',

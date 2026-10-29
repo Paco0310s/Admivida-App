@@ -3,13 +3,13 @@ import 'package:admivida/business/features/add_transaction/models/create_transac
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/errors/http_failure.dart';
-// import 'package:admivida/common/constants/app_texts.dart'; // Si tienes textos definidos agrégalos aquí
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
+import 'package:admivida/common/widgets/create_account_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -28,7 +28,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  String _selectedType = 'INCOME'; // Default to 'INCOME', can be toggled to 'EXPENSE'
+  String _selectedType = 'INCOME';
   String? _selectedAccountId;
   String? _selectedPaymentMethodId;
 
@@ -40,10 +40,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _submitForm() {
-    // 1. Validate the form fields
     if (!_formKey.currentState!.validate()) return;
 
-    // 2. Check if account and payment method are selected
     if (_selectedAccountId == null) {
       SnackbarUtil.showWarning(context, 'Por favor selecciona una cuenta');
       return;
@@ -54,9 +52,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    // 3. Create the DTO
     final dto = CreateTransactionDto(
-      type: _selectedType, // 'INCOME' or 'EXPENSE'
+      type: _selectedType,
       amount: double.parse(_amountController.text.trim()),
       description: _descriptionController.text.trim(),
       paymentMethodId: _selectedPaymentMethodId!,
@@ -65,7 +62,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       saleId: null,
     );
 
-    // 4. Call the provider to submit the transaction
     ref.read(addTransactionProvider.notifier).submit(dto);
   }
 
@@ -104,7 +100,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- TIPO DE Movimiento (Dropdown) ---
+                  // --- TIPO DE Movimiento ---
                   DropdownButtonFormField<String>(
                     initialValue: _selectedType,
                     decoration: InputDecoration(
@@ -165,7 +161,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // --- CUENTA (Dropdown Mock) ---
+                  // --- CUENTA + BOTÓN NUEVA CUENTA ---
                   accountsAsync.when(
                     loading: () => const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -176,24 +172,51 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       child: Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     data: (accounts) {
-                      return DropdownButtonFormField<String>(
-                        initialValue: _selectedAccountId,
-                        decoration: InputDecoration(
-                          labelText: 'Cuenta de origen/destino *',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.kPrimaryColor),
-                        ),
-                        items: accounts.map((acc) {
-                          return DropdownMenuItem<String>(value: acc.id, child: Text(acc.name));
-                        }).toList(),
-                        validator: (val) => val == null ? 'Selecciona una cuenta' : null,
-                        onChanged: (value) => setState(() => _selectedAccountId = value),
+                      final validSelectedId = accounts.any((a) => a.id == _selectedAccountId) ? _selectedAccountId : null;
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              key: ValueKey(validSelectedId),
+                              initialValue: validSelectedId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: 'Cuenta de origen/destino *',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.kPrimaryColor),
+                              ),
+                              items: accounts.map((acc) {
+                                return DropdownMenuItem<String>(
+                                  value: acc.id,
+                                  child: Text(
+                                    '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              validator: (val) => val == null ? 'Selecciona una cuenta' : null,
+                              onChanged: (value) => setState(() => _selectedAccountId = value),
+                            ),
+                          ),
+                          const Gap(8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: CreateAccountSideButton(
+                              businessId: widget.businessId,
+                              tooltip: 'Agregar nueva cuenta de negocio',
+                              onAccountCreated: (created) {
+                                setState(() => _selectedAccountId = created.id);
+                              },
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // --- MÉTODO DE PAGO (Dropdown Mock) ---
+                  // --- MÉTODO DE PAGO ---
                   paymentMethodsAsync.when(
                     loading: () => const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -247,19 +270,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to the state of the addTransactionProvider to show loading, success, or error messages
     final addTransactionState = ref.watch(addTransactionProvider);
     final isLoading = addTransactionState.isLoading;
 
-    // Update the _isSubmitting state based on the provider's state
     ref.listen(addTransactionProvider, (previous, next) {
       next.whenOrNull(
         data: (transaction) {
           if (transaction != null) {
             SnackbarUtil.showSuccess(context, 'Movimiento registrado correctamente');
-
-            ref.invalidate(transactionsListProvider(widget.businessId, null)); // Refresh the transactions list for the current business
-
+            ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
+            ref.invalidate(transactionsListProvider);
             NavigationService.pop(context);
           }
         },

@@ -105,11 +105,14 @@ class DashboardSession {
         routeName == Routes.updateRequired;
   }
 
-  /// True when the user is currently on a global route (Home or Businesses list), not inside a specific business.
+  /// True when the user is currently on a global route (Home, Businesses list, or Personal Finance), not inside a specific business.
   static bool isGlobalRoute(String? routeName) {
     return routeName == Routes.home ||
         routeName == Routes.businesses ||
-        routeName == Routes.createOrUpdateBusinessScreen;
+        routeName == Routes.createOrUpdateBusinessScreen ||
+        routeName == Routes.personalDashboard ||
+        routeName == Routes.personalAddTransaction ||
+        routeName == Routes.personalTransferFunds;
   }
 
   /// True if the route belongs to the Team & Payments sub-group.
@@ -275,6 +278,20 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                             onTap: () {
                               if (currentRoute != Routes.businesses) {
                                 NavigationService.navigateTo(context, Routes.businesses);
+                              }
+                            },
+                          ),
+                          const Gap(4),
+                          _SidebarItem(
+                            icon: Icons.account_balance_wallet_rounded,
+                            label: 'Control Personal',
+                            isSelected: currentRoute == Routes.personalDashboard ||
+                                currentRoute == Routes.personalAddTransaction ||
+                                currentRoute == Routes.personalTransferFunds,
+                            isCollapsed: isCollapsed,
+                            onTap: () {
+                              if (currentRoute != Routes.personalDashboard) {
+                                NavigationService.navigateTo(context, Routes.personalDashboard);
                               }
                             },
                           ),
