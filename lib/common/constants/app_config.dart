@@ -11,9 +11,10 @@ class AppConfig {
       ? 'https://minio.pacosotelo.com/admivida-bucket'
       : 'http://localhost:9000/admivida-bucket';
 
-  // App version code
-  static const int appVersionCode = 3;
-  static const String appVersionName = '0.6.5';
+  // App version code & codename
+  static const int appVersionCode = 4;
+  static const String appVersionName = '0.7.0';
+  static const String appVersionCodename = 'Beta';
 
   // Windows auto-update (almacenado en MinIO S3)
   static const String windowsInstallerUrl = '$minioPublicUrl/releases/AdmividaSetup.exe';

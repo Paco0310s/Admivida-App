@@ -2,14 +2,18 @@ import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
 import 'package:admivida/business/features/add_sale/cart/cart_service.dart';
 import 'package:admivida/business/features/add_sale/cart/models/create_sale_dto.dart';
 import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
+import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/add_transaction/add_transactions_provider.dart';
+import 'package:admivida/business/features/clients/clients_provider.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_provider.dart';
+import 'package:admivida/business/features/products/products_provider.dart' show productsListProvider;
 import 'package:admivida/business/features/sales/models/sale_model.dart';
 import 'package:admivida/business/features/sales/sales_provider.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
+import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/services/secure_storage_service.dart';
@@ -531,12 +535,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     setState(() {
                       _selectedSellerId = null;
                       _clientNameController.text = 'Público General';
+                      _selectedClientId = null;
                       _notesController.clear();
                       _discountController.clear();
                       _amountPaidController.clear();
                     });
 
+                    // Invalidate caches to keep entire POS, accounts and inventory synchronized
                     ref.invalidate(salesListProvider(widget.businessId));
+                    ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
+                    ref.invalidate(transactionsListProvider);
+                    ref.invalidate(posCatalogProvider(widget.businessId));
+                    ref.invalidate(productsListProvider(widget.businessId));
+                    ref.invalidate(clientsDebtListProvider(widget.businessId));
+
+                    // On mobile/tablet where CartScreen was pushed as a separate page, pop back to POS catalog
+                    if (ModalRoute.of(context)?.settings.name == Routes.cart) {
+                      NavigationService.pop(context);
+                    }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
                   child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
@@ -553,6 +569,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Future<void> _processSale(double finalTotal, List<CreateSaleDetailInnerDto> cartItems) async {
     if (_selectedAccountId == null || _selectedPaymentMethodId == null || _selectedSellerId == null) {
       SnackbarUtil.showWarning(context, 'Selecciona vendedor, método de pago y cuenta destino');
+      return;
+    }
+
+    final clientNameLower = _clientNameController.text.trim().toLowerCase();
+    final isGeneralPublic = clientNameLower.isEmpty ||
+        clientNameLower == 'público general' ||
+        clientNameLower == 'publico general';
+
+    if ((_selectedSaleStatus == 'CREDIT' || _selectedSaleStatus == 'LAYAWAY') &&
+        (_selectedClientId == null || _selectedClientId!.isEmpty || isGeneralPublic)) {
+      SnackbarUtil.showWarning(
+        context,
+        'Para ventas a crédito o apartado, debes seleccionar un cliente registrado (no Público General).',
+      );
       return;
     }
 
@@ -721,10 +751,35 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             child: _buildTextField(controller: _clientNameController, label: 'Cliente (Snapshot / Nombre)', icon: Icons.person_outline),
                           ),
                           const Gap(8),
-                          IconButton(
-                            icon: const Icon(Icons.search, color: AppColors.kPrimaryColor),
-                            tooltip: 'Seleccionar de lista',
-                            onPressed: () => _openClientSelectorModal(clients),
+                          Builder(
+                            builder: (context) {
+                              final nameLower = _clientNameController.text.trim().toLowerCase();
+                              final isCustomClient = nameLower.isNotEmpty &&
+                                  nameLower != 'público general' &&
+                                  nameLower != 'publico general';
+
+                              return IconButton(
+                                icon: Icon(
+                                  isCustomClient ? Icons.close : Icons.search,
+                                  color: isCustomClient ? Colors.red : AppColors.kPrimaryColor,
+                                ),
+                                tooltip: isCustomClient ? 'Volver a Público General' : 'Seleccionar de lista',
+                                onPressed: () {
+                                  if (isCustomClient) {
+                                    setState(() {
+                                      _clientNameController.text = 'Público General';
+                                      final generalPublic = clients.where((c) {
+                                        final fullName = '${c.firstName} ${c.lastName}'.toLowerCase();
+                                        return fullName.contains('publico general') || fullName.contains('público general');
+                                      }).firstOrNull;
+                                      _selectedClientId = generalPublic?.userId;
+                                    });
+                                  } else {
+                                    _openClientSelectorModal(clients);
+                                  }
+                                },
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -784,7 +839,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   Expanded(
                     child: accountsAsync.when(
                       data: (accounts) {
-                        final isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+                        final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId));
                         final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
                         final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
 
@@ -840,20 +895,62 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               // Change calculation display
               if (_amountPaid > 0) ...[
                 const Gap(16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: changeGiven > 0 ? AppColors.kSuccess.withValues(alpha: 0.1) : AppColors.kWarning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: changeGiven > 0 ? AppColors.kSuccess : AppColors.kWarning),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      AppText('Cambio a devolver:', fontWeight: FontWeight.bold),
-                      AppText('\$${changeGiven.toStringAsFixed(2)}', fontWeight: FontWeight.bold, fontSize: 18),
-                    ],
-                  ),
+                Builder(
+                  builder: (context) {
+                    final isComplete = _selectedSaleStatus == 'COMPLETED';
+                    final hasChange = _amountPaid >= finalTotal;
+                    final difference = (_amountPaid - finalTotal).abs();
+
+                    Color boxColor;
+                    Color borderColor;
+                    String title;
+                    String amountText;
+
+                    if (hasChange) {
+                      boxColor = AppColors.kSuccess.withValues(alpha: 0.1);
+                      borderColor = AppColors.kSuccess;
+                      title = 'Cambio a devolver:';
+                      amountText = '\$${changeGiven.toStringAsFixed(2)}';
+                    } else if (isComplete) {
+                      boxColor = AppColors.kWarning.withValues(alpha: 0.12);
+                      borderColor = AppColors.kWarning;
+                      title = 'Falta por pagar:';
+                      amountText = '\$${difference.toStringAsFixed(2)}';
+                    } else {
+                      // Fiado o Apartado con abono parcial
+                      boxColor = Colors.purple.withValues(alpha: 0.08);
+                      borderColor = Colors.purple.shade300;
+                      title = 'Anticipo: \$${_amountPaid.toStringAsFixed(2)} · Restante:';
+                      amountText = '\$${difference.toStringAsFixed(2)}';
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: boxColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: AppText(
+                              title,
+                              fontWeight: FontWeight.bold,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          AppText(
+                            amountText,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: hasChange ? AppColors.kSuccess : (isComplete ? Colors.orange.shade800 : Colors.purple.shade700),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
               const Gap(8),

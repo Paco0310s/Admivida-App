@@ -140,8 +140,11 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
                       child: Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     data: (accounts) {
-                      final validSource = accounts.any((a) => a.id == _sourceAccountId) ? _sourceAccountId : null;
-                      final validDest = accounts.any((a) => a.id == _destinationAccountId) ? _destinationAccountId : null;
+                      final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+                      final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+
+                      final validSource = selectableAccounts.any((a) => a.id == _sourceAccountId) ? _sourceAccountId : null;
+                      final validDest = selectableAccounts.any((a) => a.id == _destinationAccountId) ? _destinationAccountId : null;
 
                       return Column(
                         children: [
@@ -159,11 +162,11 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     prefixIcon: const Icon(Icons.arrow_upward, color: Colors.red),
                                   ),
-                                  items: accounts.map((acc) {
+                                  items: selectableAccounts.map((acc) {
                                     return DropdownMenuItem<String>(
                                       value: acc.id,
                                       child: Text(
-                                        '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                        '${acc.isDefault ? "★ " : ""}${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     );
@@ -207,13 +210,13 @@ class _TransferFundsScreenState extends ConsumerState<TransferFundsScreen> {
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     prefixIcon: const Icon(Icons.arrow_downward, color: Colors.green),
                                   ),
-                                  items: accounts.map((acc) {
+                                  items: selectableAccounts.map((acc) {
                                     final isSameAsSource = acc.id == _sourceAccountId;
                                     return DropdownMenuItem<String>(
                                       value: acc.id,
                                       enabled: !isSameAsSource,
                                       child: Text(
-                                        '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                        '${acc.isDefault ? "★ " : ""}${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
                                         style: TextStyle(color: isSameAsSource ? Colors.grey : null),
                                         overflow: TextOverflow.ellipsis,
                                       ),

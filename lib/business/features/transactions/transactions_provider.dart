@@ -2,6 +2,7 @@ import 'package:admivida/business/features/transactions/models/account_model.dar
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
 import 'package:admivida/business/features/transactions/models/transactions_list_state.dart';
 import 'package:admivida/business/features/transactions/transactions_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'transactions_provider.g.dart';
@@ -64,8 +65,56 @@ class TransactionsList extends _$TransactionsList {
 }
 
 @riverpod
-Future<List<AccountModel>> accountsBusiness(Ref ref, {String? businessId}) async {
-  final result = await TransactionsService.getAccountsBusiness(businessId: businessId);
+class AccountsBusiness extends _$AccountsBusiness {
+  @override
+  Future<List<AccountModel>> build({String? businessId}) async {
+    final result = await TransactionsService.getAccountsBusiness(businessId: businessId);
+    return result.when((failure) => throw failure, (accounts) => accounts);
+  }
 
-  return result.when((failure) => throw failure, (accounts) => accounts);
+  /// Sets an operational business account as the default cash register with Optimistic UI update.
+  Future<void> setDefaultAccount(String accountId) async {
+    if (businessId == null || businessId!.isEmpty) return;
+
+    final currentAccounts = state.value;
+
+    // 1. Optimistic UI update: switch isDefault in memory immediately
+    if (currentAccounts != null) {
+      final updatedList = currentAccounts.map((a) {
+        if (a.id == accountId) {
+          return a.copyWith(isDefault: true);
+        } else if (a.isDefault) {
+          return a.copyWith(isDefault: false);
+        }
+        return a;
+      }).toList();
+
+      state = AsyncValue.data(updatedList);
+    }
+
+    // 2. Call backend
+    final result = await TransactionsService.setDefaultBusinessAccount(
+      accountId: accountId,
+      businessId: businessId!,
+    );
+
+    result.when(
+      (failure) {
+        // Rollback on failure
+        if (currentAccounts != null) {
+          state = AsyncValue.data(currentAccounts);
+        }
+        throw failure;
+      },
+      (updatedAccount) {
+        // Invalidate self to guarantee consistency with backend
+        ref.invalidateSelf();
+      },
+    );
+  }
+}
+
+@riverpod
+bool isBusinessAdmin(Ref ref, String businessId) {
+  return SecureStorageService.isBusinessAdmin(businessId);
 }

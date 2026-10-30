@@ -54,7 +54,7 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
     }
 
     if (_sourceAccountId == null || _destinationAccountId == null || _paymentMethodId == null) {
-      SnackbarUtil.showError(context, 'Complete la configuración financiera (Cuentas y Método de Pago).');
+      SnackbarUtil.showError(context, 'Complete la configuraciÃ³n financiera (Cuentas y MÃ©todo de Pago).');
       return;
     }
 
@@ -95,7 +95,7 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
     return AppScaffold(
       title: 'Registro de Pagos a Empleados',
       appBar: AppBar(
-        title: const AppText('Nuevo Pago / Nómina', color: AppColors.kNeutral100),
+        title: const AppText('Nuevo Pago / NÃ³mina', color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
       ),
@@ -176,15 +176,30 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
             loading: () => const LinearProgressIndicator(),
             error: (e, s) => Text('Error al cargar cuentas: $e'),
             data: (accounts) {
+              final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+              final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+
+              if (_sourceAccountId == null && selectableAccounts.isNotEmpty) {
+                final defaultAcc = selectableAccounts.firstWhere(
+                  (a) => a.isDefault,
+                  orElse: () => selectableAccounts.first,
+                );
+                _sourceAccountId = defaultAcc.id;
+              }
+
               return DropdownButtonFormField<String>(
+                key: ValueKey('emp_src_$_sourceAccountId'),
                 decoration: InputDecoration(
                   labelText: 'Cuenta de Origen (Retiro del Negocio)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 hint: const Text('Seleccionar cuenta...'),
                 initialValue: _sourceAccountId,
-                items: accounts.map<DropdownMenuItem<String>>((account) {
-                  return DropdownMenuItem<String>(value: account.id, child: Text(account.name));
+                items: selectableAccounts.map<DropdownMenuItem<String>>((account) {
+                  return DropdownMenuItem<String>(
+                    value: account.id,
+                    child: Text('${account.isDefault ? "★ " : ""}${account.name} (\$${account.balance.toStringAsFixed(2)})'),
+                  );
                 }).toList(),
                 onChanged: (val) => setState(() => _sourceAccountId = val),
               );
@@ -216,14 +231,14 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
           // Payment Method
           paymentMethodsAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Error al cargar métodos: $e'),
+            error: (e, s) => Text('Error al cargar mÃ©todos: $e'),
             data: (methods) {
               return DropdownButtonFormField<String>(
                 decoration: InputDecoration(
-                  labelText: 'Método de Operación',
+                  labelText: 'MÃ©todo de OperaciÃ³n',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                hint: const Text('Seleccionar método...'),
+                hint: const Text('Seleccionar mÃ©todo...'),
                 initialValue: _paymentMethodId,
                 items: methods.map<DropdownMenuItem<String>>((method) {
                   return DropdownMenuItem<String>(value: method.id, child: Text(method.name));
@@ -253,7 +268,7 @@ class _CreateEmployeePaymentScreenState extends ConsumerState<CreateEmployeePaym
             prefixIcon: const Icon(Icons.attach_money),
           ),
           const Gap(12),
-          AppTextField(text: 'Observaciones / Notas', hintText: 'Ej. Anticipo de nómina o pago quincenal', controller: _notesController),
+          AppTextField(text: 'Observaciones / Notas', hintText: 'Ej. Anticipo de nÃ³mina o pago quincenal', controller: _notesController),
           const Gap(24),
           SizedBox(
             width: double.infinity,

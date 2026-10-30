@@ -25,6 +25,34 @@ class AccountModel {
     this.availableCredit,
   });
 
+  AccountModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? accountTypeId,
+    String? accountTypeName,
+    String? accountTypeCode,
+    bool? isDefault,
+    double? balance,
+    double? creditLimit,
+    double? debt,
+    double? availableCredit,
+  }) {
+    return AccountModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      accountTypeId: accountTypeId ?? this.accountTypeId,
+      accountTypeName: accountTypeName ?? this.accountTypeName,
+      accountTypeCode: accountTypeCode ?? this.accountTypeCode,
+      isDefault: isDefault ?? this.isDefault,
+      balance: balance ?? this.balance,
+      creditLimit: creditLimit ?? this.creditLimit,
+      debt: debt ?? this.debt,
+      availableCredit: availableCredit ?? this.availableCredit,
+    );
+  }
+
   bool get isCreditOrLoan => accountTypeCode == 'BANK_CREDIT';
 
   bool get isDebitOrBank =>

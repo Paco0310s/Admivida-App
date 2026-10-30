@@ -4,7 +4,6 @@ import 'package:admivida/business/features/transactions/transactions_provider.da
 import 'package:admivida/business/features/transactions/transactions_service.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
@@ -428,7 +427,7 @@ class CreateAccountSideButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Si la cuenta pertenece a un negocio, SOLO el ADMIN del negocio puede crear cuentas
     if (businessId != null && businessId!.isNotEmpty) {
-      final isAdmin = SecureStorageService.isBusinessAdmin(businessId!);
+      final isAdmin = ref.watch(isBusinessAdminProvider(businessId!));
       if (!isAdmin) {
         return const SizedBox.shrink();
       }

@@ -296,7 +296,7 @@ class BusinessDetailView extends StatelessWidget {
                           const Icon(Icons.download_rounded, size: 13, color: AppColors.kNeutral600),
                           const Gap(4),
                           AppText(
-                            'v${AppConfig.appVersionName} • Descargar para Windows o Android',
+                            'v${AppConfig.appVersionName} "${AppConfig.appVersionCodename}" • Descargar para Windows o Android',
                             fontSize: 11,
                             color: AppColors.kNeutral700,
                             fontWeight: FontWeight.w500,

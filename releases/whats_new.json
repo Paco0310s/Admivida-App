@@ -1,25 +1,34 @@
 {
-  "versionCode": 3,
-  "versionName": "0.6.5",
-  "releaseNotes": "Desglose de descuentos en tickets de venta, eliminación de productos del catálogo y mejoras generales.",
+  "versionCode": 4,
+  "versionName": "0.7.0 (Beta)",
+  "releaseNotes": "Cajas operativas predeterminadas con control de permisos, gestión de finanzas personales, sesiones multi-dispositivo y punto de venta adaptativo optimizado.",
   "whatsNew": [
     {
-      "title": "Descuentos en Tickets",
-      "description": "Ahora el ticket muestra el precio regular, el descuento por producto o descuento global, y el total ahorrado por el cliente.",
-      "icon": "ticket"
+      "title": "Caja Predeterminada del Negocio",
+      "description": "Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos. Solo administradores pueden transferir fondos o crear cuentas.",
+      "icon": "shield"
     },
     {
-      "title": "Eliminación de Productos",
-      "description": "Ahora puedes eliminar productos del catálogo de tu negocio con confirmación de seguridad.",
-      "icon": "delete"
+      "title": "Finanzas Personales",
+      "description": "Gestiona tu dinero propio (efectivo, débito y tarjetas de crédito o préstamos) de forma 100% independiente de tus negocios.",
+      "icon": "wallet"
     },
     {
-      "title": "Novedades de la Versión",
-      "description": "Consulta las nuevas funciones y mejoras en cualquier momento desde la campanita en el inicio.",
-      "icon": "bell"
+      "title": "Sesiones Multi-Dispositivo",
+      "description": "Inicia sesión simultáneamente en tu computadora, tablet y celular con sincronización y seguridad mejorada.",
+      "icon": "devices"
+    },
+    {
+      "title": "Punto de Venta Optimizado",
+      "description": "Cobro ultra rápido con inventario sincronizado al instante y navegación adaptada a móvil y escritorio.",
+      "icon": "speed"
     }
   ],
   "history": [
+    {
+      "versionName": "0.6.5",
+      "releaseNotes": "• Desglose de descuentos en tickets de venta.\n• Eliminación de productos del catálogo con confirmación de seguridad.\n• Consulta de novedades desde el inicio."
+    },
     {
       "versionName": "0.6.0 (Beta)",
       "releaseNotes": "• Escáner de código de barras en catálogo de productos.\n• Actualizaciones automáticas para Windows y Android.\n• Vendedor activo asignado por defecto en nueva venta."

@@ -127,7 +127,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     final selectedDetails = _pendingItems.where((item) => _selectedCheckboxes[item.saleDetailId] == true).toList();
 
     if (selectedDetails.isEmpty) {
-      SnackbarUtil.showError(context, 'Seleccione al menos una comisión para efectuar el pago.');
+      SnackbarUtil.showError(context, 'Seleccione al menos una comisiÃ³n para efectuar el pago.');
       return;
     }
 
@@ -143,7 +143,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     }
 
     if (_sourceAccountId == null || _destinationAccountId == null || _paymentMethodId == null) {
-      SnackbarUtil.showError(context, 'Complete la configuración financiera (Cuentas y Método de Pago).');
+      SnackbarUtil.showError(context, 'Complete la configuraciÃ³n financiera (Cuentas y MÃ©todo de Pago).');
       return;
     }
 
@@ -199,7 +199,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
     }
 
     return AppScaffold(
-      title: 'Dispersión de Comisiones',
+      title: 'DispersiÃ³n de Comisiones',
       appBar: AppBar(
         title: const AppText('Pago de Comisiones', color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
@@ -379,15 +379,30 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
             loading: () => const LinearProgressIndicator(),
             error: (e, s) => Text('Error al cargar cuentas: $e'),
             data: (accounts) {
+              final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+              final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+
+              if (_sourceAccountId == null && selectableAccounts.isNotEmpty) {
+                final defaultAcc = selectableAccounts.firstWhere(
+                  (a) => a.isDefault,
+                  orElse: () => selectableAccounts.first,
+                );
+                _sourceAccountId = defaultAcc.id;
+              }
+
               return DropdownButtonFormField<String>(
+                key: ValueKey('comm_src_$_sourceAccountId'),
                 decoration: InputDecoration(
                   labelText: 'Cuenta de Origen (Retiro del Negocio)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 hint: const Text('Seleccionar cuenta...'),
                 initialValue: _sourceAccountId,
-                items: accounts.map<DropdownMenuItem<String>>((account) {
-                  return DropdownMenuItem<String>(value: account.id, child: Text(account.name));
+                items: selectableAccounts.map<DropdownMenuItem<String>>((account) {
+                  return DropdownMenuItem<String>(
+                    value: account.id,
+                    child: Text('${account.isDefault ? "★ " : ""}${account.name} (\$${account.balance.toStringAsFixed(2)})'),
+                  );
                 }).toList(),
                 onChanged: (val) => setState(() => _sourceAccountId = val),
               );
@@ -419,14 +434,14 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
           // Payment Method
           paymentMethodsAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (e, s) => Text('Error al cargar métodos: $e'),
+            error: (e, s) => Text('Error al cargar mÃ©todos: $e'),
             data: (methods) {
               return DropdownButtonFormField<String>(
                 decoration: InputDecoration(
-                  labelText: 'Método de Operación',
+                  labelText: 'MÃ©todo de OperaciÃ³n',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                hint: const Text('Seleccionar método...'),
+                hint: const Text('Seleccionar mÃ©todo...'),
                 initialValue: _paymentMethodId,
                 items: methods.map<DropdownMenuItem<String>>((method) {
                   return DropdownMenuItem<String>(value: method.id, child: Text(method.name));
@@ -452,8 +467,8 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
           const AppText('Resumen y Desglose Financiero', fontWeight: FontWeight.bold, fontSize: 16),
           const Gap(12),
           AppTextField(
-            text: 'Observaciones de la Transacción',
-            hintText: 'Ej. Liquidación de comisiones correspondientes al periodo',
+            text: 'Observaciones de la TransacciÃ³n',
+            hintText: 'Ej. LiquidaciÃ³n de comisiones correspondientes al periodo',
             controller: _notesController,
           ),
           const Gap(12),
@@ -479,7 +494,7 @@ class _CommissionPaymentScreenState extends ConsumerState<CommissionPaymentScree
               children: [
                 _buildSummaryRow('Suma de Comisiones:', '\$ ${_calculatedPureTotal.toStringAsFixed(2)}'),
                 const Divider(height: 16),
-                _buildSummaryRow('Monto que se pagará:', '\$ ${userTypedTotal.toStringAsFixed(2)}', isBold: true),
+                _buildSummaryRow('Monto que se pagarÃ¡:', '\$ ${userTypedTotal.toStringAsFixed(2)}', isBold: true),
                 const Divider(height: 16),
                 _buildSummaryRow(
                   'Diferencia (Ajuste):',

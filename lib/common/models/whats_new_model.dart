@@ -80,8 +80,26 @@ class WhatsNewItem {
     if (key.contains('bell') || key.contains('campan') || key.contains('notif') || key.contains('novedad')) {
       return Icons.notifications_active_outlined;
     }
-    if (key.contains('security') || key.contains('seguridad') || key.contains('candado')) {
-      return Icons.security_rounded;
+    if (key.contains('security') ||
+        key.contains('seguridad') ||
+        key.contains('candado') ||
+        key.contains('shield') ||
+        key.contains('bóveda') ||
+        key.contains('boveda') ||
+        key.contains('caja')) {
+      return Icons.shield_rounded;
+    }
+    if (key.contains('wallet') ||
+        key.contains('personal') ||
+        key.contains('cartera') ||
+        key.contains('finanzas')) {
+      return Icons.account_balance_wallet_rounded;
+    }
+    if (key.contains('device') ||
+        key.contains('dispositivo') ||
+        key.contains('sesion') ||
+        key.contains('sesión')) {
+      return Icons.devices_rounded;
     }
     return Icons.auto_awesome_rounded;
   }
@@ -199,27 +217,34 @@ class WhatsNewModel {
 
   /// Novedades empaquetadas por defecto para la versión actual en caso de no haber conexión
   static WhatsNewModel fallback() => const WhatsNewModel(
-        versionCode: 3,
-        versionName: '0.6.5',
-        releaseNotes: 'Desglose de descuentos en tickets de venta, eliminación de productos y mejoras generales.',
+        versionCode: 4,
+        versionName: '0.7.0 "Beta"',
+        releaseNotes:
+            'Cajas Predeterminadas, Finanzas Personales, Sesiones Multi-Dispositivo y Punto de Venta optimizado.',
         items: [
           WhatsNewItem(
-            title: 'Descuentos en Tickets',
+            title: 'Caja Predeterminada del Negocio',
             description:
-                'Ahora el ticket muestra el precio regular, el descuento por producto o descuento global, y el total ahorrado por el cliente.',
-            iconName: 'ticket',
+                'Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos. Solo administradores pueden transferir fondos o crear cuentas.',
+            iconName: 'caja',
           ),
           WhatsNewItem(
-            title: 'Eliminación de Productos',
+            title: 'Finanzas Personales',
             description:
-                'Ahora puedes eliminar productos del catálogo de tu negocio con confirmación de seguridad.',
-            iconName: 'delete',
+                'Gestiona tu dinero propio (efectivo, débito y tarjetas de crédito o préstamos) de forma 100% independiente de tus negocios.',
+            iconName: 'wallet',
           ),
           WhatsNewItem(
-            title: 'Novedades de la Versión',
+            title: 'Sesiones Multi-Dispositivo',
             description:
-                'Consulta las nuevas funciones y mejoras en cualquier momento desde la campanita en el inicio.',
-            iconName: 'bell',
+                'Inicia sesión simultáneamente en tu computadora, tablet y celular con sincronización y seguridad mejorada.',
+            iconName: 'device',
+          ),
+          WhatsNewItem(
+            title: 'Punto de Venta Optimizado',
+            description:
+                'Cobro ultra rápido con inventario sincronizado al instante y navegación adaptada a móvil y escritorio.',
+            iconName: 'speed',
           ),
         ],
       );

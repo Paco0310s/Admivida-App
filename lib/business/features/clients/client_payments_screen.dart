@@ -6,7 +6,6 @@ import 'package:admivida/business/features/transactions/transactions_provider.da
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -233,7 +232,7 @@ class _ClientPaymentsScreenState extends ConsumerState<ClientPaymentsScreen> {
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (err, stack) => Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                         data: (accounts) {
-                          final isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+                          final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId));
                           final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
                           final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
 

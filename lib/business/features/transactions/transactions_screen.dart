@@ -2,13 +2,12 @@ import 'package:admivida/business/features/transactions/models/account_model.dar
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
 import 'package:admivida/business/features/transactions/models/transactions_list_state.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
-import 'package:admivida/business/features/transactions/transactions_service.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
-import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -136,23 +135,22 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
     if (_isSettingDefault || account.isDefault || account.isCreditOrLoan) return;
 
     setState(() => _isSettingDefault = true);
-    final result = await TransactionsService.setDefaultBusinessAccount(
-      accountId: account.id,
-      businessId: widget.businessId,
-    );
-    if (!mounted) return;
-    setState(() => _isSettingDefault = false);
-
-    result.when(
-      (failure) => SnackbarUtil.showError(context, failure.message),
-      (updated) {
-        ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
-        SnackbarUtil.showSuccess(
-          context,
-          '"${updated.name}" ahora es la cuenta predeterminada para cobros.',
-        );
-      },
-    );
+    try {
+      await ref
+          .read(accountsBusinessProvider(businessId: widget.businessId).notifier)
+          .setDefaultAccount(account.id);
+      if (!mounted) return;
+      SnackbarUtil.showSuccess(
+        context,
+        '"${account.name}" ahora es la cuenta predeterminada para cobros.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is HttpFailure ? e.message : 'Error al cambiar cuenta predeterminada';
+      SnackbarUtil.showError(context, msg);
+    } finally {
+      if (mounted) setState(() => _isSettingDefault = false);
+    }
   }
 
   @override
@@ -563,7 +561,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   }
 
   Widget _buildAccountsBalancesStrip(AsyncValue accountsAsync) {
-    final bool isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+    final bool isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId));
 
     return accountsAsync.when(
       loading: () => const SizedBox.shrink(),
