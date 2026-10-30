@@ -69,6 +69,7 @@ class TransactionsService {
     String? businessId,
     double? creditLimit,
     double? initialBalance,
+    bool? isDefault,
   }) async {
     final Map<String, dynamic> body = {
       'name': name.trim(),
@@ -77,11 +78,25 @@ class TransactionsService {
       if (businessId != null && businessId.trim().isNotEmpty) 'businessId': businessId.trim(),
       if (creditLimit != null && creditLimit > 0) 'creditLimit': creditLimit,
       if (initialBalance != null && initialBalance > 0) 'initialBalance': initialBalance,
+      'isDefault': ?isDefault,
     };
 
     final response = await DioService.post<AccountModel>(
       AppConfig.createAccountEndpoint,
       body,
+      (json) => AccountModel.fromJson(json),
+    );
+
+    return response.when((failure) => EitherUtil.failure(failure), (account) => EitherUtil.success(account));
+  }
+
+  static Future<EitherUtil<HttpFailure, AccountModel>> setDefaultBusinessAccount({
+    required String accountId,
+    required String businessId,
+  }) async {
+    final response = await DioService.patch<AccountModel>(
+      AppConfig.setDefaultBusinessAccountEndpoint(accountId, businessId),
+      {},
       (json) => AccountModel.fromJson(json),
     );
 

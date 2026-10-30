@@ -167,6 +167,11 @@ class DioService {
                   error.requestOptions.extra['retried'] = true;
                   error.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
 
+                  // Si la petición enviaba FormData (ej. subida de fotos), clonamos el stream para retransmitirlo
+                  if (error.requestOptions.data is FormData) {
+                    error.requestOptions.data = (error.requestOptions.data as FormData).clone();
+                  }
+
                   AppLogger.info('Token renovado con éxito. Reintentando petición original...');
                   final cloneReq = await _dio.fetch(error.requestOptions);
 

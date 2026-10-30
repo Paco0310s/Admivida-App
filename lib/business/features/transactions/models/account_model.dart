@@ -5,6 +5,7 @@ class AccountModel {
   final String accountTypeId;
   final String accountTypeName;
   final String? accountTypeCode;
+  final bool isDefault;
   final double balance;
   final double? creditLimit;
   final double debt;
@@ -17,6 +18,7 @@ class AccountModel {
     required this.accountTypeId,
     required this.accountTypeName,
     this.accountTypeCode,
+    this.isDefault = false,
     this.balance = 0.0,
     this.creditLimit,
     this.debt = 0.0,
@@ -81,6 +83,7 @@ class AccountModel {
       accountTypeId: (json['accountTypeId'] as String?) ?? '',
       accountTypeName: (json['accountTypeName'] as String?) ?? 'Efectivo',
       accountTypeCode: json['accountTypeCode'] as String?,
+      isDefault: json['isDefault'] == true || json['is_default'] == true || json['isDefault'] == 1,
       balance: _parseDouble(json['balance']),
       creditLimit: _parseNullableDouble(json['creditLimit']),
       debt: _parseDouble(json['debt']),
@@ -96,6 +99,7 @@ class AccountModel {
       'accountTypeId': accountTypeId,
       'accountTypeName': accountTypeName,
       if (accountTypeCode != null) 'accountTypeCode': accountTypeCode,
+      'isDefault': isDefault,
       'balance': balance,
       if (creditLimit != null) 'creditLimit': creditLimit,
       'debt': debt,

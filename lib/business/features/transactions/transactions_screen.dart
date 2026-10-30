@@ -1,11 +1,14 @@
+import 'package:admivida/business/features/transactions/models/account_model.dart';
 import 'package:admivida/business/features/transactions/models/paginated_transactions_model.dart';
 import 'package:admivida/business/features/transactions/models/transactions_list_state.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
+import 'package:admivida/business/features/transactions/transactions_service.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -127,6 +130,30 @@ class TransactionsListView extends ConsumerStatefulWidget {
 class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   final ScrollController _scrollController = ScrollController();
   String? _selectedAccountId;
+  bool _isSettingDefault = false;
+
+  Future<void> _handleSetDefaultAccount(AccountModel account) async {
+    if (_isSettingDefault || account.isDefault || account.isCreditOrLoan) return;
+
+    setState(() => _isSettingDefault = true);
+    final result = await TransactionsService.setDefaultBusinessAccount(
+      accountId: account.id,
+      businessId: widget.businessId,
+    );
+    if (!mounted) return;
+    setState(() => _isSettingDefault = false);
+
+    result.when(
+      (failure) => SnackbarUtil.showError(context, failure.message),
+      (updated) {
+        ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
+        SnackbarUtil.showSuccess(
+          context,
+          '"${updated.name}" ahora es la cuenta predeterminada para cobros.',
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -400,7 +427,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                           (acc) => DropdownMenuItem<String>(
                             value: acc.id,
                             child: Text(
-                              '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                              '${acc.isDefault ? "★ " : ""}${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -536,6 +563,8 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   }
 
   Widget _buildAccountsBalancesStrip(AsyncValue accountsAsync) {
+    final bool isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+
     return accountsAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
@@ -549,9 +578,10 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
             itemCount: accounts.length,
             separatorBuilder: (_, _) => const Gap(10),
             itemBuilder: (context, index) {
-              final acc = accounts[index];
+              final AccountModel acc = accounts[index];
               final isSelected = _selectedAccountId == acc.id;
               final bool isDebit = acc.isDebitOrBank == true;
+              final bool canBeDefault = !acc.isCreditOrLoan;
 
               return InkWell(
                 borderRadius: BorderRadius.circular(14),
@@ -563,14 +593,16 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  width: 210,
+                  width: 235,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.kPrimaryColor : Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isSelected ? AppColors.kPrimaryColor : AppColors.kNeutral200,
-                      width: isSelected ? 1.5 : 1,
+                      color: isSelected
+                          ? AppColors.kPrimaryColor
+                          : (acc.isDefault ? Colors.amber.shade600 : AppColors.kNeutral200),
+                      width: (isSelected || acc.isDefault) ? 1.5 : 1,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -627,6 +659,31 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                           ],
                         ),
                       ),
+                      if (acc.isDefault)
+                        Tooltip(
+                          message: 'Cuenta predeterminada para cobros',
+                          child: Icon(
+                            Icons.star_rounded,
+                            color: isSelected ? Colors.amberAccent : Colors.amber.shade700,
+                            size: 22,
+                          ),
+                        )
+                      else if (isAdmin && canBeDefault)
+                        Tooltip(
+                          message: 'Establecer como predeterminada para cobros',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: _isSettingDefault ? null : () => _handleSetDefaultAccount(acc),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.star_border_rounded,
+                                color: isSelected ? Colors.white70 : AppColors.kNeutral400,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

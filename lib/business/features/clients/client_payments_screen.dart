@@ -2,10 +2,11 @@ import 'dart:math';
 
 import 'package:admivida/business/features/add_transaction/add_transactions_provider.dart';
 import 'package:admivida/business/features/clients/clients_provider.dart';
-import 'package:admivida/business/features/transactions/transactions_provider.dart'; // Asumiendo que aquí están accountsBusinessProvider y paymentMethodsProvider
+import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/errors/http_failure.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -232,16 +233,50 @@ class _ClientPaymentsScreenState extends ConsumerState<ClientPaymentsScreen> {
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (err, stack) => Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                         data: (accounts) {
+                          final isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+                          final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+                          final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+
+                          if (selectableAccounts.isNotEmpty) {
+                            final defaultAcc = selectableAccounts.firstWhere(
+                              (a) => a.isDefault,
+                              orElse: () => selectableAccounts.firstWhere(
+                                (a) => a.name.toLowerCase().startsWith('caja general'),
+                                orElse: () => selectableAccounts.first,
+                              ),
+                            );
+                            if (_selectedAccountId == null || !isAdmin || !selectableAccounts.any((a) => a.id == _selectedAccountId)) {
+                              _selectedAccountId = defaultAcc.id;
+                            }
+                          }
+
                           return DropdownButtonFormField<String>(
+                            key: ValueKey('client-payment-acc-$_selectedAccountId-$isAdmin'),
                             initialValue: _selectedAccountId,
+                            isExpanded: true,
                             decoration: InputDecoration(
-                              labelText: 'Ingresar a Cuenta *',
+                              labelText: isAdmin ? 'Ingresar a Cuenta *' : 'Ingresar a Cuenta (Fija)',
+                              filled: !isAdmin,
+                              fillColor: !isAdmin ? AppColors.kNeutral50 : null,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.kPrimaryColor),
+                              prefixIcon: Icon(
+                                isAdmin ? Icons.account_balance_wallet : Icons.lock_outline,
+                                color: isAdmin ? AppColors.kPrimaryColor : AppColors.kNeutral500,
+                              ),
                             ),
-                            items: accounts.map((acc) => DropdownMenuItem<String>(value: acc.id, child: Text(acc.name))).toList(),
+                            items: selectableAccounts
+                                .map(
+                                  (acc) => DropdownMenuItem<String>(
+                                    value: acc.id,
+                                    child: Text(
+                                      acc.isDefault ? '${acc.name} ★' : acc.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                             validator: (val) => val == null ? 'Selecciona una cuenta' : null,
-                            onChanged: (value) => setState(() => _selectedAccountId = value),
+                            onChanged: isAdmin ? (value) => setState(() => _selectedAccountId = value) : null,
                           );
                         },
                       ),
@@ -252,8 +287,17 @@ class _ClientPaymentsScreenState extends ConsumerState<ClientPaymentsScreen> {
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (err, stack) => Text('Error al cargar métodos: $err', style: const TextStyle(color: Colors.red)),
                         data: (methods) {
+                          if (_selectedPaymentMethodId == null && methods.isNotEmpty) {
+                            final cashMethod = methods.firstWhere(
+                              (m) => m.name.toLowerCase().contains('efectivo') || m.name.toLowerCase().contains('cash'),
+                              orElse: () => methods.first,
+                            );
+                            _selectedPaymentMethodId = cashMethod.id;
+                          }
                           return DropdownButtonFormField<String>(
+                            key: ValueKey('client-payment-method-$_selectedPaymentMethodId'),
                             initialValue: _selectedPaymentMethodId,
+                            isExpanded: true,
                             decoration: InputDecoration(
                               labelText: 'Método de Pago *',
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -425,6 +469,7 @@ class _ClientPaymentsScreenState extends ConsumerState<ClientPaymentsScreen> {
             // Invalidamos las listas para que al regresar se vean los saldos actualizados
             ref.invalidate(pendingSalesProvider(businessId: widget.businessId, clientId: widget.clientId));
             ref.invalidate(clientsDebtListProvider(widget.businessId));
+            ref.invalidate(accountsBusinessProvider(businessId: widget.businessId));
 
             NavigationService.pop(context);
           }

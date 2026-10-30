@@ -172,6 +172,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       child: Text('Error al cargar cuentas: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     data: (accounts) {
+                      if (_selectedAccountId == null && accounts.isNotEmpty) {
+                        final defaultAcc = accounts.firstWhere(
+                          (a) => a.isDefault,
+                          orElse: () => accounts.first,
+                        );
+                        _selectedAccountId = defaultAcc.id;
+                      }
                       final validSelectedId = accounts.any((a) => a.id == _selectedAccountId) ? _selectedAccountId : null;
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +197,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 return DropdownMenuItem<String>(
                                   value: acc.id,
                                   child: Text(
-                                    '${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
+                                    '${acc.isDefault ? "★ " : ""}${acc.name} (\$${acc.balance.toStringAsFixed(2)})',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 );

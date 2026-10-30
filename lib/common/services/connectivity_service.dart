@@ -7,20 +7,33 @@ import 'package:http/http.dart';
 
 class ConnectivityService {
   static Future<bool> hasInternet() async {
-    final List<ConnectivityResult> connectivityResult = await Connectivity().checkConnectivity();
+    bool hasActiveAdapter = false;
+    try {
+      final List<ConnectivityResult> connectivityResult = await Connectivity().checkConnectivity();
+      hasActiveAdapter = connectivityResult.any(
+        (result) => result != ConnectivityResult.none,
+      );
+    } catch (_) {
+      hasActiveAdapter = false;
+    }
 
-    if (connectivityResult.isEmpty) return false;
+    if (kIsWeb) {
+      if (hasActiveAdapter) return true;
+      return await isServerLive();
+    }
 
-    if (connectivityResult.contains(ConnectivityResult.none)) return false;
+    // En desarrollo local (Debug) con adaptador activo, operar directamente
+    if (hasActiveAdapter && !kReleaseMode) {
+      return true;
+    }
 
-    // En navegadores web, window.navigator.onLine (manejado por connectivity_plus)
-    // ya determina la conectividad de red. Peticiones HTTP arbitrarias a dominios externos
-    // (como google.com) son bloqueadas por el navegador debido a políticas de CORS.
-    if (kIsWeb) return true;
+    // 1. Verificación rápida de internet general
+    if (await checkInternetConnection()) {
+      return true;
+    }
 
-    final bool internetConnection = await checkInternetConnection();
-
-    return internetConnection;
+    // 2. Respaldo definitivo: si nuestro propio servidor responde, sí hay conexión
+    return await isServerLive();
   }
 
   static Future<bool> checkInternetConnection() async {
@@ -28,8 +41,7 @@ class ConnectivityService {
       if (kIsWeb) {
         return true;
       } else {
-        // For mobile and desktop, we can use InternetAddress to check connectivity
-        final result = await InternetAddress.lookup('google.com');
+        final result = await InternetAddress.lookup('google.com').timeout(const Duration(seconds: 3));
         return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       }
     } catch (e) {
@@ -39,7 +51,7 @@ class ConnectivityService {
 
   static Future<bool> isServerLive() async {
     try {
-      final response = await get(Uri.parse('${AppConfig.baseUrl}/health')).timeout(const Duration(seconds: 7));
+      final response = await get(Uri.parse('${AppConfig.baseUrl}/health')).timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (e) {
       return false;

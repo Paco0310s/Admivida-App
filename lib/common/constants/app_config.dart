@@ -62,6 +62,8 @@ class AppConfig {
   static const String createAccountEndpoint = '/accounts';
   static const String accountsPersonalEndpoint = '/accounts/personal';
   static String accountsBusinessEndpoint(String? businessId) => '/accounts/business/$businessId';
+  static String setDefaultBusinessAccountEndpoint(String accountId, String businessId) =>
+      '/accounts/$accountId/business/$businessId/default';
   static String accountsUserEndpoint(String? userId) => '/accounts/user/$userId';
   static const String paymentMethodsEndpoint = '/payment-methods';
   static String transactionsEndpoint = '/transactions';

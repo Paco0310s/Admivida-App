@@ -20,9 +20,9 @@ class Transaction {
   final String id;
   final String accountId;
   final String? accountName;
-  final String paymentMethodId;
+  final String? paymentMethodId;
   final String? paymentMethodName;
-  final String businessId;
+  final String? businessId;
   final String? saleId;
   final double amount;
   final TransactionType type;
@@ -33,9 +33,9 @@ class Transaction {
     required this.id,
     required this.accountId,
     this.accountName,
-    required this.paymentMethodId,
+    this.paymentMethodId,
     this.paymentMethodName,
-    required this.businessId,
+    this.businessId,
     this.saleId,
     required this.amount,
     required this.type,
@@ -48,13 +48,13 @@ class Transaction {
       id: json['id'] as String,
       accountId: json['accountId'] as String,
       accountName: json['accountName'] as String?,
-      paymentMethodId: json['paymentMethodId'] as String,
+      paymentMethodId: json['paymentMethodId'] as String?,
       paymentMethodName: json['paymentMethodName'] as String?,
-      businessId: json['businessId'] as String,
+      businessId: json['businessId'] as String?,
       saleId: json['saleId'] as String?,
       // Convert to double using .toDouble() in case the API sends an int (e.g., 500 instead of 500.0)
       amount: (json['amount'] as num).toDouble(),
-      type: _transactionTypeFromString(json['type'] as String),
+      type: _transactionTypeFromString(json['type']?.toString() ?? 'expense'),
       description: json['description'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     );

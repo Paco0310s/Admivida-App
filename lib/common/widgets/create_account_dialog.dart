@@ -4,6 +4,7 @@ import 'package:admivida/business/features/transactions/transactions_provider.da
 import 'package:admivida/business/features/transactions/transactions_service.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
@@ -53,6 +54,7 @@ class _CreateAccountDialogState extends State<_CreateAccountDialog> {
 
   late String _selectedTypeCode;
   bool _hasFixedCreditLimit = true; // true = Tarjeta / Línea con límite; false = Préstamo / Deuda abierta
+  bool _isDefault = false;
   bool _isSubmitting = false;
 
   bool get _isBusiness => widget.businessId != null && widget.businessId!.trim().isNotEmpty;
@@ -91,6 +93,7 @@ class _CreateAccountDialogState extends State<_CreateAccountDialog> {
       businessId: _isBusiness ? widget.businessId : null,
       creditLimit: creditLimit,
       initialBalance: initialBalance,
+      isDefault: (_isBusiness && !_isCredit) ? _isDefault : null,
     );
 
     if (!mounted) return;
@@ -287,6 +290,36 @@ class _CreateAccountDialogState extends State<_CreateAccountDialog> {
                     return null;
                   },
                 ),
+                if (_isBusiness && !_isCredit) ...[
+                  const Gap(14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _isDefault ? AppColors.kPrimaryColor.withValues(alpha: 0.08) : AppColors.kNeutral50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _isDefault ? AppColors.kPrimaryColor : AppColors.kNeutral300,
+                      ),
+                    ),
+                    child: SwitchListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      activeThumbColor: AppColors.kPrimaryColor,
+                      title: const AppText(
+                        'Cuenta predeterminada para cobros',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.kNeutral800,
+                      ),
+                      subtitle: const AppText(
+                        'Las ventas de tus vendedores se depositarán automáticamente en esta cuenta.',
+                        fontSize: 11,
+                        color: AppColors.kNeutral600,
+                      ),
+                      value: _isDefault,
+                      onChanged: (val) => setState(() => _isDefault = val),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -393,6 +426,14 @@ class CreateAccountSideButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Si la cuenta pertenece a un negocio, SOLO el ADMIN del negocio puede crear cuentas
+    if (businessId != null && businessId!.isNotEmpty) {
+      final isAdmin = SecureStorageService.isBusinessAdmin(businessId!);
+      if (!isAdmin) {
+        return const SizedBox.shrink();
+      }
+    }
+
     return Tooltip(
       message: tooltip,
       child: Material(

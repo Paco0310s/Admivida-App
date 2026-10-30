@@ -784,17 +784,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   Expanded(
                     child: accountsAsync.when(
                       data: (accounts) {
-                        if (_selectedAccountId == null && accounts.isNotEmpty) {
-                          final defaultAcc = accounts.firstWhere((a) => a.name.toLowerCase().startsWith('caja general'), orElse: () => accounts.first);
-                          _selectedAccountId = defaultAcc.id;
+                        final isAdmin = SecureStorageService.isBusinessAdmin(widget.businessId);
+                        final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+                        final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+
+                        if (selectableAccounts.isNotEmpty) {
+                          final defaultAcc = selectableAccounts.firstWhere(
+                            (a) => a.isDefault,
+                            orElse: () => selectableAccounts.firstWhere(
+                              (a) => a.name.toLowerCase().startsWith('caja general'),
+                              orElse: () => selectableAccounts.first,
+                            ),
+                          );
+                          if (_selectedAccountId == null || !isAdmin) {
+                            _selectedAccountId = defaultAcc.id;
+                          }
                         }
-                        final itemsMap = {for (var a in accounts) a.id: a.name};
+
+                        final itemsMap = {
+                          for (var a in selectableAccounts) a.id: a.isDefault ? '${a.name} ★' : a.name,
+                        };
                         return _buildDropdown(
-                          label: 'Cuenta Destino',
-                          icon: Icons.account_balance_wallet_outlined,
+                          label: isAdmin ? 'Cuenta Destino' : 'Cuenta Destino (Fija)',
+                          icon: isAdmin ? Icons.account_balance_wallet_outlined : Icons.lock_outline,
                           value: _selectedAccountId,
                           items: itemsMap,
-                          onChanged: (val) => setState(() => _selectedAccountId = val),
+                          onChanged: isAdmin ? (val) => setState(() => _selectedAccountId = val) : null,
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -1066,7 +1081,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     required IconData icon,
     required String? value,
     required Map<String, String> items,
-    required void Function(String?) onChanged,
+    required void Function(String?)? onChanged,
   }) {
     return DropdownButtonFormField<String>(
       key: ValueKey('$label-$value'),
