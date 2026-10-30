@@ -8,6 +8,9 @@ class CreateUserDto {
   final String password;
   final DateTime? birthdate;
   final Map<String, dynamic> metadata;
+  final String? fcmToken;
+  final String? deviceInfo;
+  final String? appVersion;
 
   CreateUserDto({
     required this.firstName,
@@ -17,6 +20,9 @@ class CreateUserDto {
     required this.password,
     this.birthdate, // Quitamos el 'required' para que sea opcional
     required this.metadata,
+    this.fcmToken,
+    this.deviceInfo,
+    this.appVersion,
   });
 
   factory CreateUserDto.fromRawJson(String str) => CreateUserDto.fromJson(json.decode(str));
@@ -24,25 +30,31 @@ class CreateUserDto {
   String toRawJson() => json.encode(toJson());
 
   factory CreateUserDto.fromJson(Map<String, dynamic> json) => CreateUserDto(
-    firstName: json["firstName"],
-    lastName: json["lastName"],
-    email: json["email"],
-    phone: json["phone"],
-    password: json["password"],
-    // Validación: Si viene nulo, asignamos null directamente
-    birthdate: json["birthdate"] != null ? DateTime.parse(json["birthdate"]).toLocal() : null,
-    metadata: json["metadata"] ?? {},
-  );
+        firstName: json["firstName"],
+        lastName: json["lastName"],
+        email: json["email"],
+        phone: json["phone"],
+        password: json["password"],
+        // Validación: Si viene nulo, asignamos null directamente
+        birthdate: json["birthdate"] != null ? DateTime.parse(json["birthdate"]).toLocal() : null,
+        metadata: json["metadata"] ?? {},
+        fcmToken: json["fcmToken"],
+        deviceInfo: json["deviceInfo"],
+        appVersion: json["appVersion"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "firstName": firstName,
-    "lastName": lastName,
-    "email": email,
-    "phone": phone,
-    "password": password,
-    "birthdate": birthdate != null
-        ? "${birthdate!.year.toString().padLeft(4, '0')}-${birthdate!.month.toString().padLeft(2, '0')}-${birthdate!.day.toString().padLeft(2, '0')}"
-        : null,
-    "metadata": metadata,
-  };
+        "firstName": firstName,
+        "lastName": lastName,
+        "email": email,
+        "phone": phone,
+        "password": password,
+        "birthdate": birthdate != null
+            ? "${birthdate!.year.toString().padLeft(4, '0')}-${birthdate!.month.toString().padLeft(2, '0')}-${birthdate!.day.toString().padLeft(2, '0')}"
+            : null,
+        "metadata": metadata,
+        if (fcmToken != null && fcmToken!.isNotEmpty) "fcmToken": fcmToken,
+        if (deviceInfo != null && deviceInfo!.isNotEmpty) "deviceInfo": deviceInfo,
+        if (appVersion != null && appVersion!.isNotEmpty) "appVersion": appVersion,
+      };
 }

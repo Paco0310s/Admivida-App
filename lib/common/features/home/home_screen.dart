@@ -8,17 +8,15 @@ import 'package:admivida/common/constants/app_assets.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_config.dart';
 import 'package:admivida/common/constants/app_texts.dart';
+import 'package:admivida/common/features/sign_in/sign_in_service.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
-import 'package:admivida/common/services/isar_cache_service.dart';
 import 'package:admivida/common/services/navigation_service.dart';
-import 'package:admivida/common/services/secure_storage_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_image.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
-import 'package:admivida/common/widgets/dashboard_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -57,9 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: AppTexts.logout,
             onPressed: () async {
-              DashboardSession.clear();
-              await SecureStorageService.clear();
-              await IsarCacheService.clearCache();
+              await SignInService.signOut();
               if (!context.mounted) return;
               NavigationService.replaceUntil(context, Routes.signIn);
             },

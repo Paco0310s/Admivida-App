@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:admivida/common/enums/app_failure_enum.dart';
+import 'package:admivida/common/features/sign_in/sign_in_service.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:dio/dio.dart';
 import 'package:admivida/common/constants/app_config.dart';
@@ -19,7 +20,7 @@ class DioService {
   static bool _isHandlingSessionExpiration = false;
   static Future<String?>? _refreshingTokenFuture;
 
-  static Future<String?> _refreshAccessToken() {
+  static Future<String?> refreshAccessToken() {
     if (_refreshingTokenFuture != null) {
       return _refreshingTokenFuture!;
     }
@@ -38,7 +39,7 @@ class DioService {
     }
 
     try {
-      AppLogger.info('Token expirado (401). Intentando auto-refresh...');
+      AppLogger.info('Renovando sesión con refresh token...');
 
       final refreshDio = Dio(
         BaseOptions(
@@ -51,7 +52,10 @@ class DioService {
 
       final response = await refreshDio.post(
         AppConfig.refreshTokenEndpoint,
-        data: {'refreshToken': refreshToken},
+        data: {
+          'refreshToken': refreshToken,
+          ...SignInService.buildDeviceSessionMeta(),
+        },
       );
 
       final data = response.data is Map<String, dynamic>
@@ -141,7 +145,8 @@ class DioService {
 
               final requestPath = error.requestOptions.path;
               final isAuthAttempt = requestPath.contains(AppConfig.loginEndpoint) ||
-                  requestPath.contains(AppConfig.registerEndpoint);
+                  requestPath.contains(AppConfig.registerEndpoint) ||
+                  requestPath.contains(AppConfig.logoutEndpoint);
 
               if (isAuthAttempt) {
                 return handler.next(error);
@@ -155,7 +160,7 @@ class DioService {
                 return handler.next(error);
               }
 
-              final newAccessToken = await _refreshAccessToken();
+              final newAccessToken = await refreshAccessToken();
 
               if (newAccessToken != null && newAccessToken.isNotEmpty) {
                 try {
