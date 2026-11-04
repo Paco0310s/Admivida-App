@@ -20,6 +20,11 @@ class DioService {
   static bool _isHandlingSessionExpiration = false;
   static Future<String?>? _refreshingTokenFuture;
 
+  /// `true` cuando el último intento de refresh falló porque la sesión ya no es válida
+  /// (refresh token vencido, revocado o sesión eliminada en el servidor).
+  /// `false` cuando falló por red/timeout/error 5xx (fallo transitorio: NO debe cerrar la sesión).
+  static bool lastRefreshRejectedByServer = false;
+
   static Future<String?> refreshAccessToken() {
     if (_refreshingTokenFuture != null) {
       return _refreshingTokenFuture!;
@@ -33,8 +38,10 @@ class DioService {
   }
 
   static Future<String?> _performTokenRefresh() async {
+    lastRefreshRejectedByServer = false;
     final refreshToken = SecureStorageService.getString(AppConfig.refreshTokenKey);
     if (refreshToken == null || refreshToken.isEmpty) {
+      lastRefreshRejectedByServer = true;
       return null;
     }
 
@@ -76,7 +83,11 @@ class DioService {
 
       return newAccessToken;
     } catch (e) {
-      AppLogger.error('Falló el refresh token (Probablemente expiraron los 7 días): $e');
+      final status = e is DioException ? e.response?.statusCode : null;
+      // 401/403 = el servidor rechazó el refresh token (venció o la sesión fue eliminada).
+      // Cualquier otra cosa (timeout, sin red, 5xx) es transitoria.
+      lastRefreshRejectedByServer = status == 401 || status == 403;
+      AppLogger.error('Falló el refresh token (rechazado por el servidor: $lastRefreshRejectedByServer): $e');
       return null;
     }
   }
@@ -91,7 +102,7 @@ class DioService {
       await IsarCacheService.clearCache();
 
       NavigationService.replaceUntil(null, Routes.signIn);
-      SnackbarUtil.showError(null, 'Tu sesión ha expirado por seguridad. Por favor, inicia sesión nuevamente.');
+      SnackbarUtil.showError(null, 'Tu sesión ha expirado, inicia sesión nuevamente.');
     } finally {
       Future.delayed(const Duration(seconds: 2), () {
         _isHandlingSessionExpiration = false;
@@ -186,7 +197,11 @@ class DioService {
                 }
               }
 
-              // Si falló el refresh o no hay refreshToken, cerrar sesión y enviar al login
+              // El refresh falló. Solo cerramos sesión si el servidor rechazó el refresh token
+              // (sesión vencida o eliminada). Si fue un fallo de red/servidor, conservamos la sesión.
+              if (!lastRefreshRejectedByServer) {
+                return handler.next(error);
+              }
               await _handleSessionExpired();
               return handler.next(error);
             },

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:admivida/common/constants/app_config.dart';
@@ -50,11 +51,40 @@ class ConnectivityService {
   }
 
   static Future<bool> isServerLive() async {
+    return (await fetchServerStatus()) != null;
+  }
+
+  /// Consulta `/health` y devuelve el estado del servidor (mantenimiento y versión mínima).
+  /// Devuelve `null` si el servidor no responde (caído o inalcanzable).
+  static Future<ServerStatus?> fetchServerStatus() async {
     try {
       final response = await get(Uri.parse('${AppConfig.baseUrl}/health')).timeout(const Duration(seconds: 5));
-      return response.statusCode == 200;
+      if (response.statusCode != 200) return null;
+
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return ServerStatus(
+            minRequiredVersionCode: (body['minRequiredVersionCode'] as num?)?.toInt() ?? 1,
+            inMaintenance: body['inMaintenance'] == true,
+          );
+        }
+      } catch (_) {
+        // Servidor viejo o respuesta sin detalles: está vivo, sin restricciones.
+      }
+      return const ServerStatus(minRequiredVersionCode: 1, inMaintenance: false);
     } catch (e) {
-      return false;
+      return null;
     }
   }
+}
+
+/// Estado público del servidor consultado antes de iniciar sesión.
+class ServerStatus {
+  final int minRequiredVersionCode;
+  final bool inMaintenance;
+
+  const ServerStatus({required this.minRequiredVersionCode, required this.inMaintenance});
+
+  bool get requiresUpdate => minRequiredVersionCode > AppConfig.appVersionCode;
 }

@@ -101,6 +101,17 @@ class WhatsNewItem {
         key.contains('sesión')) {
       return Icons.devices_rounded;
     }
+    if (key.contains('analytics') ||
+        key.contains('reporte') ||
+        key.contains('report') ||
+        key.contains('grafica') ||
+        key.contains('gráfica') ||
+        key.contains('métrica') ||
+        key.contains('metrica') ||
+        key.contains('kpi') ||
+        key.contains('rentab')) {
+      return Icons.analytics_rounded;
+    }
     return Icons.auto_awesome_rounded;
   }
 }
@@ -217,34 +228,34 @@ class WhatsNewModel {
 
   /// Novedades empaquetadas por defecto para la versión actual en caso de no haber conexión
   static WhatsNewModel fallback() => const WhatsNewModel(
-        versionCode: 4,
-        versionName: '0.7.0 "Beta"',
+        versionCode: 5,
+        versionName: '0.7.5 "Beta"',
         releaseNotes:
-            'Cajas Predeterminadas, Finanzas Personales, Sesiones Multi-Dispositivo y Punto de Venta optimizado.',
+            'Reportes Financieros, Rentabilidad Real, Valorización de Inventario, Cajas Predeterminadas y Gráficas Interactivas.',
         items: [
+          WhatsNewItem(
+            title: 'Reportes y Rentabilidad Real',
+            description:
+                'Conoce tus ventas totales, costo de mercancía y ganancia neta realizada con gráficas interactivas y desglose de métodos de pago.',
+            iconName: 'analytics',
+          ),
+          WhatsNewItem(
+            title: 'Valor de Inventario y Ganancia Esperada',
+            description:
+                'Consulta en tiempo real la inversión total en estantes, valor proyectado de venta y la ganancia que obtendrás al vender todo tu stock.',
+            iconName: 'inventory',
+          ),
           WhatsNewItem(
             title: 'Caja Predeterminada del Negocio',
             description:
-                'Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos. Solo administradores pueden transferir fondos o crear cuentas.',
+                'Caja operativa principal protegida para cobros y abonos con roles de seguridad para vendedores y administradores.',
             iconName: 'caja',
           ),
           WhatsNewItem(
-            title: 'Finanzas Personales',
+            title: 'Finanzas Personales y Multi-Dispositivo',
             description:
-                'Gestiona tu dinero propio (efectivo, débito y tarjetas de crédito o préstamos) de forma 100% independiente de tus negocios.',
+                'Gestión independiente de tu dinero propio y sincronización segura entre móvil, tablet y PC.',
             iconName: 'wallet',
-          ),
-          WhatsNewItem(
-            title: 'Sesiones Multi-Dispositivo',
-            description:
-                'Inicia sesión simultáneamente en tu computadora, tablet y celular con sincronización y seguridad mejorada.',
-            iconName: 'device',
-          ),
-          WhatsNewItem(
-            title: 'Punto de Venta Optimizado',
-            description:
-                'Cobro ultra rápido con inventario sincronizado al instante y navegación adaptada a móvil y escritorio.',
-            iconName: 'speed',
           ),
         ],
       );

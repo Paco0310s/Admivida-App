@@ -17,6 +17,7 @@ import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_tap_text.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -272,8 +273,18 @@ class _SignInFormState extends ConsumerState<SignInForm> {
       final LoginUserDto loginUserDto = LoginUserDto(emailOrPhone: finalEmailOrPhone, password: password);
 
       ref.read(signInLoadingProvider.notifier).setLoading(true);
-      await ref.read(signInProvider(context, loginUserDto).future);
-      ref.read(signInLoadingProvider.notifier).setLoading(false);
+      try {
+        await ref.read(signInProvider(context, loginUserDto).future);
+      } catch (e) {
+        if (mounted) {
+          SnackbarUtil.showError(context, 'No se pudo iniciar sesión. Intenta nuevamente.');
+        }
+      } finally {
+        // La pantalla pudo ser reemplazada tras un login exitoso; evitamos usar `ref` si ya no está montada.
+        if (mounted) {
+          ref.read(signInLoadingProvider.notifier).setLoading(false);
+        }
+      }
     }
   }
 

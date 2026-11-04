@@ -1,30 +1,34 @@
 {
-  "versionCode": 4,
-  "versionName": "0.7.0 (Beta)",
-  "releaseNotes": "Cajas operativas predeterminadas con control de permisos, gestión de finanzas personales, sesiones multi-dispositivo y punto de venta adaptativo optimizado.",
+  "versionCode": 5,
+  "versionName": "0.7.5 (Beta)",
+  "releaseNotes": "Reportes financieros completos, rentabilidad real de ventas, valorización de inventario con ganancia proyectada y gráficas interactivas.",
   "whatsNew": [
     {
+      "title": "Reportes y Rentabilidad Real",
+      "description": "Conoce tus ventas totales, costo de mercancía y ganancia neta realizada con gráficas interactivas y desglose de métodos de pago.",
+      "icon": "analytics"
+    },
+    {
+      "title": "Valor de Inventario y Ganancia Esperada",
+      "description": "Consulta en tiempo real la inversión total en estantes, valor proyectado de venta y la ganancia que obtendrás al vender todo tu stock.",
+      "icon": "inventory"
+    },
+    {
       "title": "Caja Predeterminada del Negocio",
-      "description": "Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos. Solo administradores pueden transferir fondos o crear cuentas.",
+      "description": "Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos con control de permisos para administradores.",
       "icon": "shield"
     },
     {
-      "title": "Finanzas Personales",
-      "description": "Gestiona tu dinero propio (efectivo, débito y tarjetas de crédito o préstamos) de forma 100% independiente de tus negocios.",
+      "title": "Finanzas Personales y Multi-Dispositivo",
+      "description": "Gestiona tu dinero propio de forma 100% independiente y sincroniza tus sesiones en tiempo real en todos tus dispositivos.",
       "icon": "wallet"
-    },
-    {
-      "title": "Sesiones Multi-Dispositivo",
-      "description": "Inicia sesión simultáneamente en tu computadora, tablet y celular con sincronización y seguridad mejorada.",
-      "icon": "devices"
-    },
-    {
-      "title": "Punto de Venta Optimizado",
-      "description": "Cobro ultra rápido con inventario sincronizado al instante y navegación adaptada a móvil y escritorio.",
-      "icon": "speed"
     }
   ],
   "history": [
+    {
+      "versionName": "0.7.0 (Beta)",
+      "releaseNotes": "• Bóveda y caja operativa predeterminada.\n• Finanzas personales independientes.\n• Sesiones multi-dispositivo simultáneas."
+    },
     {
       "versionName": "0.6.5",
       "releaseNotes": "• Desglose de descuentos en tickets de venta.\n• Eliminación de productos del catálogo con confirmación de seguridad.\n• Consulta de novedades desde el inicio."

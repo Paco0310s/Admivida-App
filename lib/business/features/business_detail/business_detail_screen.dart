@@ -83,6 +83,15 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
         'role': ['SELLER', 'ADMIN'],
       },
       {
+        'title': 'Reportes y Analíticas',
+        'subtitle': 'Ventas, rentabilidad real, valor de inventario y gráficas.',
+        'icon': Icons.analytics_rounded,
+        'color': const Color(0xFF6366F1),
+        'isEnabled': true,
+        'route': Routes.businessReports,
+        'role': ['ADMIN'],
+      },
+      {
         'title': 'Movimientos',
         'subtitle': 'Consulta todos los ingresos, egresos y balances de cuentas.',
         'icon': Icons.account_balance_wallet_rounded,

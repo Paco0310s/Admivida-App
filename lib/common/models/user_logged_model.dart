@@ -19,8 +19,8 @@ class UserLoggedModel {
     required this.refreshToken,
     required this.roles,
     required this.businesses,
-    required this.minRequiredVersionCode,
-    required this.inMaintenance,
+    this.minRequiredVersionCode = 0,
+    this.inMaintenance = false,
     this.releaseNotes,
     this.whatsNew,
   });

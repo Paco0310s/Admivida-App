@@ -15,6 +15,7 @@ import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:admivida/common/widgets/app_text_field.dart';
 import 'package:admivida/common/widgets/responsive.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -303,8 +304,17 @@ class _SignUpFormState extends ConsumerState<SignUpForm> {
       );
 
       ref.read(signUpLoadingProvider.notifier).setLoading(true);
-      await ref.read(signUpProvider(context, createBossDto).future);
-      ref.read(signUpLoadingProvider.notifier).setLoading(false);
+      try {
+        await ref.read(signUpProvider(context, createBossDto).future);
+      } catch (e) {
+        if (mounted) {
+          SnackbarUtil.showError(context, 'No se pudo completar el registro. Intenta nuevamente.');
+        }
+      } finally {
+        if (mounted) {
+          ref.read(signUpLoadingProvider.notifier).setLoading(false);
+        }
+      }
     }
   }
 

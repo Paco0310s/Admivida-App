@@ -31,20 +31,6 @@ Future<void> signUp(Ref ref, BuildContext context, CreateUserDto userCreateModel
         }
       },
       (userData) async {
-        if (userData.minRequiredVersionCode > AppConfig.appVersionCode) {
-          if (context.mounted) {
-            NavigationService.replaceWith(context, Routes.updateRequired);
-          }
-          return;
-        }
-
-        if (userData.inMaintenance) {
-          if (context.mounted) {
-            NavigationService.replaceWith(context, Routes.maintenance);
-          }
-          return;
-        }
-
         await IsarCacheService.clearCache();
         await SecureStorageService.saveUserSession(userData);
         if (ref.mounted) {

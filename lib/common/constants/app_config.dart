@@ -12,8 +12,8 @@ class AppConfig {
       : 'http://localhost:9000/admivida-bucket';
 
   // App version code & codename
-  static const int appVersionCode = 4;
-  static const String appVersionName = '0.7.0';
+  static const int appVersionCode = 5;
+  static const String appVersionName = '0.7.5';
   static const String appVersionCodename = 'Beta';
 
   // Windows auto-update (almacenado en MinIO S3)
@@ -58,6 +58,7 @@ class AppConfig {
   static const String productTypesEndpoint = '/product-types';
   static String productCategoriesEndpoint(String businessId) => '/product-categories/$businessId';
   static String salesTenantEndpoint(String businessId) => '/sales/business/$businessId';
+  static String businessReportsEndpoint(String businessId) => '/reports/business/$businessId/overview';
   static String transactionsTenantEndpoint = '/transactions/business';
   static const String transactionsPersonalEndpoint = '/transactions/personal';
   static const String createAccountEndpoint = '/accounts';

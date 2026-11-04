@@ -54,7 +54,11 @@ class SignInService {
   static Future<EitherUtil<HttpFailure, UserLoggedModel>> getUserData() async {
     final newAccessToken = await DioService.refreshAccessToken();
     if (newAccessToken == null || newAccessToken.isEmpty) {
-      return EitherUtil.failure(HttpFailure.serverError(401, 'La sesión ha caducado.'));
+      // 401 = sesión vencida/eliminada (ir al login). 503 = fallo transitorio de red/servidor.
+      if (DioService.lastRefreshRejectedByServer) {
+        return EitherUtil.failure(HttpFailure.serverError(401, 'La sesión ha caducado.'));
+      }
+      return EitherUtil.failure(HttpFailure.serverError(503, 'No se pudo contactar al servidor.'));
     }
 
     return DioService.get<UserLoggedModel>(

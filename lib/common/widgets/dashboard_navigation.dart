@@ -130,6 +130,7 @@ class DashboardSession {
         routeName == Routes.products ||
         routeName == Routes.clients ||
         routeName == Routes.transactions ||
+        routeName == Routes.businessReports ||
         routeName == Routes.paymentsHistory ||
         routeName == Routes.commissionPayments ||
         routeName == Routes.employeePayments ||
@@ -144,7 +145,7 @@ class DashboardSession {
     if (currentRoute == targetRoute) return;
 
     Object? arguments;
-    if (targetRoute == Routes.businessDetail) {
+    if (targetRoute == Routes.businessDetail || targetRoute == Routes.businessReports) {
       arguments = business;
     } else if (targetRoute == Routes.sales || targetRoute == Routes.addSale) {
       arguments = {'businessId': business.id, 'businessName': business.name};
@@ -354,6 +355,14 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                             ),
                             const Gap(4),
                             if (isAdmin) ...[
+                              _SidebarItem(
+                                icon: Icons.analytics_rounded,
+                                label: 'Reportes y Métricas',
+                                isSelected: currentRoute == Routes.businessReports,
+                                isCollapsed: isCollapsed,
+                                onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.businessReports, activeBiz),
+                              ),
+                              const Gap(4),
                               _SidebarItem(
                                 icon: Icons.account_balance_wallet_rounded,
                                 label: 'Movimientos',
