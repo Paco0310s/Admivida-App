@@ -148,7 +148,7 @@ class DashboardSession {
     Object? arguments;
     if (targetRoute == Routes.businessDetail || targetRoute == Routes.businessReports) {
       arguments = business;
-    } else if (targetRoute == Routes.sales || targetRoute == Routes.addSale) {
+    } else if (targetRoute == Routes.sales || targetRoute == Routes.addSale || targetRoute == Routes.cashShifts) {
       arguments = {'businessId': business.id, 'businessName': business.name};
     } else if (targetRoute == Routes.paymentsHistory) {
       arguments = {

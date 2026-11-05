@@ -31,6 +31,9 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -849,40 +852,112 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
     final state = ref.watch(cashShiftsProvider(widget.businessId));
 
     return AppScaffold(
-      title: 'Cortes de Caja - ${widget.businessName}',
+      title: 'Cortes de Caja',
       isLoading: state.isLoading && state.activeShift == null && state.history.isEmpty,
       appBar: AppBar(
-        title: AppText('Cortes de Caja • ${widget.businessName}', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        title: const AppText('Cortes de Caja', color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             tooltip: 'Actualizar',
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.read(cashShiftsProvider(widget.businessId).notifier).loadAll(),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.point_of_sale_rounded), text: 'Turno Actual'),
-            Tab(icon: Icon(Icons.history_rounded), text: 'Historial'),
-          ],
-        ),
       ),
-      mobile: _buildBody(state),
-      tablet: _buildBody(state),
-      desktop: Center(
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 960), child: _buildBody(state)),
-      ),
+      mobile: _buildBody(state, isDesktop: false),
+      tablet: _buildBody(state, isDesktop: true),
+      desktop: _buildBody(state, isDesktop: true),
     );
   }
 
-  Widget _buildBody(CashShiftsState state) {
-    return TabBarView(controller: _tabController, children: [_buildActiveShiftTab(state), _buildHistoryTab(state)]);
+  Widget _buildBody(CashShiftsState state, {required bool isDesktop}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(isDesktop ? 24 : 16, isDesktop ? 20 : 14, isDesktop ? 24 : 16, 4),
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.kNeutral200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTabPill(
+                    index: 0,
+                    icon: Icons.point_of_sale_rounded,
+                    label: 'Turno Actual',
+                  ),
+                ),
+                const Gap(6),
+                Expanded(
+                  child: _buildTabPill(
+                    index: 1,
+                    icon: Icons.history_rounded,
+                    label: 'Historial de Cortes',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildActiveShiftTab(state),
+              _buildHistoryTab(state),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabPill({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = _tabController.index == index;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => _tabController.animateTo(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.kPrimaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : AppColors.kNeutral600,
+            ),
+            const Gap(8),
+            Flexible(
+              child: AppText(
+                label,
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.kNeutral700,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildActiveShiftTab(CashShiftsState state) {
@@ -1001,15 +1076,22 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
                 else
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [AppColors.kPrimaryColor, AppColors.kPrimaryColor.withValues(alpha: 0.85)]),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF163542),
+                          AppColors.kPrimaryColor,
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const AppText('Efectivo Esperado en Caja (Vista Administrador)', color: Colors.white70, fontSize: 13),
+                        const AppText('Efectivo Esperado en Caja (Vista Administrador)', color: AppColors.kPrimary100, fontSize: 12, fontWeight: FontWeight.w600),
                         const Gap(4),
                         AppText(_currency.format(shift.expectedCash ?? 0), color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
                         const Gap(4),

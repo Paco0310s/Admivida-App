@@ -9,7 +9,8 @@ enum ReportPeriodFilter {
   today('Hoy'),
   thisWeek('Esta semana'),
   thisMonth('Este mes'),
-  custom('Personalizado');
+  lastMonth('Mes pasado'),
+  custom('Elegir fechas');
 
   final String label;
   const ReportPeriodFilter(this.label);
@@ -103,6 +104,13 @@ DateRangeStrings _calculateDates(ReportFilterState filterState) {
       // Primer día del mes a las 00:00:00
       localStart = DateTime(now.year, now.month, 1, 0, 0, 0);
       localEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      break;
+
+    case ReportPeriodFilter.lastMonth:
+      final firstDayThisMonth = DateTime(now.year, now.month, 1);
+      final lastDayPrevMonth = firstDayThisMonth.subtract(const Duration(days: 1));
+      localStart = DateTime(lastDayPrevMonth.year, lastDayPrevMonth.month, 1, 0, 0, 0);
+      localEnd = DateTime(lastDayPrevMonth.year, lastDayPrevMonth.month, lastDayPrevMonth.day, 23, 59, 59);
       break;
 
     case ReportPeriodFilter.custom:

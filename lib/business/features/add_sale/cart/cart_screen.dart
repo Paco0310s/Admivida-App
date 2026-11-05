@@ -160,7 +160,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => NavigationService.pop(context), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
+          TextButton(
+            onPressed: () => NavigationService.pop(context),
+            child: const AppText('Cancelar', color: AppColors.kNeutral600),
+          ),
           ElevatedButton(
             onPressed: () {
               final paid = double.tryParse(dialogAmountController.text);
@@ -211,7 +214,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => NavigationService.pop(context), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
+          TextButton(
+            onPressed: () => NavigationService.pop(context),
+            child: const AppText('Cancelar', color: AppColors.kNeutral600),
+          ),
           ElevatedButton(
             onPressed: () {
               final newPrice = double.tryParse(priceController.text);
@@ -274,10 +280,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.kSecondaryColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        decoration: BoxDecoration(color: AppColors.kSecondaryColor, borderRadius: BorderRadius.circular(10)),
                         child: IconButton(
                           constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                           padding: const EdgeInsets.all(8),
@@ -290,8 +293,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               if (dialogContext.mounted) {
                                 setDialogState(() {
                                   isPrinterError = true;
-                                  printerFeedbackMessage =
-                                      'Selecciona una impresora primero usando el botón de impresora o "Agregar Impresora".';
+                                  printerFeedbackMessage = 'Selecciona una impresora primero usando el botón de impresora o "Agregar Impresora".';
                                 });
                               }
                               return;
@@ -324,7 +326,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   title: const AppText('Eliminar impresora seleccionada', fontWeight: FontWeight.bold),
                                   content: const AppText('¿Estás seguro de que deseas eliminar la impresora seleccionada?'),
                                   actions: [
-                                    TextButton(onPressed: () => NavigationService.pop(confirmContext), child: const AppText('Cancelar', color: AppColors.kNeutral600)),
+                                    TextButton(
+                                      onPressed: () => NavigationService.pop(confirmContext),
+                                      child: const AppText('Cancelar', color: AppColors.kNeutral600),
+                                    ),
                                     ElevatedButton(
                                       onPressed: () async {
                                         NavigationService.pop(confirmContext);
@@ -578,9 +583,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => Consumer(
         builder: (ctx, dialogRef, _) {
-          final accountsAsync = dialogRef.watch(
-            accountsBusinessProvider(businessId: widget.businessId),
-          );
+          final accountsAsync = dialogRef.watch(accountsBusinessProvider(businessId: widget.businessId));
           return StatefulBuilder(
             builder: (ctx, setDialogState) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -588,13 +591,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 children: [
                   Icon(Icons.lock_open_rounded, color: AppColors.kPrimaryColor),
                   Gap(10),
-                  Expanded(
-                    child: AppText(
-                      'Abre tu Turno de Caja',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
+                  Expanded(child: AppText('Abre tu Turno de Caja', fontWeight: FontWeight.bold, fontSize: 18)),
                 ],
               ),
               content: Column(
@@ -612,10 +609,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
                       final selectable = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
                       if (selectedAccountId == null && selectable.isNotEmpty) {
-                        final defaultAcc = selectable.firstWhere(
-                          (a) => a.isDefault,
-                          orElse: () => selectable.first,
-                        );
+                        final defaultAcc = selectable.firstWhere((a) => a.isDefault, orElse: () => selectable.first);
                         selectedAccountId = defaultAcc.id;
                       }
                       if (selectable.isEmpty) return const SizedBox.shrink();
@@ -633,10 +627,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               .map(
                                 (a) => DropdownMenuItem<String>(
                                   value: a.id,
-                                  child: Text(
-                                    a.isDefault ? '${a.name} (Principal)' : a.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  child: Text(a.isDefault ? '${a.name} (Principal)' : a.name, overflow: TextOverflow.ellipsis),
                                 ),
                               )
                               .toList(),
@@ -646,10 +637,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ),
                       );
                     },
-                    loading: () => const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: LinearProgressIndicator(),
-                    ),
+                    loading: () => const Padding(padding: EdgeInsets.only(bottom: 12), child: LinearProgressIndicator()),
                     error: (_, _) => const SizedBox.shrink(),
                   ),
                   TextField(
@@ -674,19 +662,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   onPressed: () async {
                     final parsed = double.tryParse(amountCtrl.text.trim());
                     if (parsed == null || parsed < 0) {
-                      SnackbarUtil.showWarning(
-                        context,
-                        'Ingresa un monto inicial válido mayor o igual a 0.',
-                      );
+                      SnackbarUtil.showWarning(context, 'Ingresa un monto inicial válido mayor o igual a 0.');
                       return;
                     }
                     NavigationService.pop(dialogContext);
-                    final error = await ref
-                        .read(cashShiftsProvider(widget.businessId).notifier)
-                        .openShift(
-                          openingAmount: parsed,
-                          accountId: selectedAccountId,
-                        );
+                    final error = await ref.read(cashShiftsProvider(widget.businessId).notifier).openShift(openingAmount: parsed, accountId: selectedAccountId);
                     if (!mounted) return;
                     if (error != null) {
                       SnackbarUtil.showError(context, error);
@@ -695,10 +675,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         _selectedAccountId = selectedAccountId;
                       }
                       opened = true;
-                      SnackbarUtil.showSuccess(
-                        context,
-                        'Turno de caja abierto. Procesando venta...',
-                      );
+                      SnackbarUtil.showSuccess(context, 'Turno de caja abierto. Procesando venta...');
                     }
                   },
                   child: const Text(
@@ -724,16 +701,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
 
     final clientNameLower = _clientNameController.text.trim().toLowerCase();
-    final isGeneralPublic = clientNameLower.isEmpty ||
-        clientNameLower == 'público general' ||
-        clientNameLower == 'publico general';
+    final isGeneralPublic = clientNameLower.isEmpty || clientNameLower == 'público general' || clientNameLower == 'publico general';
 
-    if ((_selectedSaleStatus == 'CREDIT' || _selectedSaleStatus == 'LAYAWAY') &&
-        (_selectedClientId == null || _selectedClientId!.isEmpty || isGeneralPublic)) {
-      SnackbarUtil.showWarning(
-        context,
-        'Para ventas a crédito o apartado, debes seleccionar un cliente registrado (no Público General).',
-      );
+    if ((_selectedSaleStatus == 'CREDIT' || _selectedSaleStatus == 'LAYAWAY') && (_selectedClientId == null || _selectedClientId!.isEmpty || isGeneralPublic)) {
+      SnackbarUtil.showWarning(context, 'Para ventas a crédito o apartado, debes seleccionar un cliente registrado (no Público General).');
       return;
     }
 
@@ -778,8 +749,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       saleResult.when(
         (failure) async {
           if (!mounted) return;
-          if (failure.type == AppFailure.cashShiftRequiredForSale.toCode() ||
-              failure.message == AppFailure.cashShiftRequiredForSale.message) {
+          if (failure.type == AppFailure.cashShiftRequiredForSale.toCode() || failure.message == AppFailure.cashShiftRequiredForSale.message) {
             final opened = await _showQuickOpenShiftDialog();
             if (opened && mounted) {
               await _processSale(finalTotal, cartItems);
@@ -867,24 +837,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               sellersAsync.when(
                 data: (sellers) {
                   final currentUserId = SecureStorageService.getString(AppConfig.uuidKey);
-                  final currentUserAsSeller = currentUserId != null
-                      ? sellers.where((s) => s.userId == currentUserId).firstOrNull
-                      : null;
-                  final isCurrentUserAdmin = isAdmin ||
-                      (currentUserAsSeller?.roles.any(
-                            (r) => r.name.toUpperCase() == 'ADMIN',
-                          ) ??
-                          false);
+                  final currentUserAsSeller = currentUserId != null ? sellers.where((s) => s.userId == currentUserId).firstOrNull : null;
+                  final isCurrentUserAdmin = isAdmin || (currentUserAsSeller?.roles.any((r) => r.name.toUpperCase() == 'ADMIN') ?? false);
 
                   if (!isCurrentUserAdmin) {
-                    _selectedSellerId = currentUserId ??
-                        currentUserAsSeller?.userId ??
-                        (sellers.isNotEmpty ? sellers.first.userId : null);
+                    _selectedSellerId = currentUserId ?? currentUserAsSeller?.userId ?? (sellers.isNotEmpty ? sellers.first.userId : null);
                     return const SizedBox.shrink();
                   }
 
-                  if ((_selectedSellerId == null || !sellers.any((s) => s.userId == _selectedSellerId)) &&
-                      sellers.isNotEmpty) {
+                  if ((_selectedSellerId == null || !sellers.any((s) => s.userId == _selectedSellerId)) && sellers.isNotEmpty) {
                     _selectedSellerId = currentUserAsSeller?.userId ?? sellers.first.userId;
                   }
                   final itemsMap = {for (var s in sellers) s.userId: '${s.firstName} ${s.lastName}'};
@@ -932,15 +893,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           Builder(
                             builder: (context) {
                               final nameLower = _clientNameController.text.trim().toLowerCase();
-                              final isCustomClient = nameLower.isNotEmpty &&
-                                  nameLower != 'público general' &&
-                                  nameLower != 'publico general';
+                              final isCustomClient = nameLower.isNotEmpty && nameLower != 'público general' && nameLower != 'publico general';
 
                               return IconButton(
-                                icon: Icon(
-                                  isCustomClient ? Icons.close : Icons.search,
-                                  color: isCustomClient ? Colors.red : AppColors.kPrimaryColor,
-                                ),
+                                icon: Icon(isCustomClient ? Icons.close : Icons.search, color: isCustomClient ? Colors.red : AppColors.kPrimaryColor),
                                 tooltip: isCustomClient ? 'Volver a Público General' : 'Seleccionar de lista',
                                 onPressed: () {
                                   if (isCustomClient) {
@@ -997,14 +953,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   if (selectableAccounts.isNotEmpty) {
                     final defaultAcc = selectableAccounts.firstWhere(
                       (a) => a.isDefault,
-                      orElse: () => selectableAccounts.firstWhere(
-                        (a) => a.name.toLowerCase().startsWith('caja general'),
-                        orElse: () => selectableAccounts.first,
-                      ),
+                      orElse: () =>
+                          selectableAccounts.firstWhere((a) => a.name.toLowerCase().startsWith('caja general'), orElse: () => selectableAccounts.first),
                     );
                     if (!isAdmin) {
-                      if (shiftAccountId != null &&
-                          selectableAccounts.any((a) => a.id == shiftAccountId)) {
+                      if (shiftAccountId != null && selectableAccounts.any((a) => a.id == shiftAccountId)) {
                         _selectedAccountId = shiftAccountId;
                       } else {
                         _selectedAccountId ??= defaultAcc.id;
@@ -1041,9 +994,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     return paymentMethodWidget;
                   }
 
-                  final itemsMap = {
-                    for (var a in selectableAccounts) a.id: a.isDefault ? '${a.name} ★' : a.name,
-                  };
+                  final itemsMap = {for (var a in selectableAccounts) a.id: a.isDefault ? '${a.name} ★' : a.name};
                   return Row(
                     children: [
                       Expanded(child: paymentMethodWidget),
@@ -1125,11 +1076,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Flexible(
-                            child: AppText(
-                              title,
-                              fontWeight: FontWeight.bold,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: AppText(title, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis),
                           ),
                           AppText(
                             amountText,
