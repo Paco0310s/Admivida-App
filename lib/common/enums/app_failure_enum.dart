@@ -346,6 +346,18 @@ enum AppFailure {
   productNotFound('No se encontró el producto en este negocio.'),
   productMigrationInvalidResponse('El proveedor de migración de productos respondió con un formato inválido.'),
   salesMigrationInvalidResponse('El proveedor de migración de ventas respondió con un formato inválido.'),
+  cashShiftAlreadyOpen('Ya tienes un corte de caja abierto en este negocio.'),
+  cashShiftNotFound('No se encontró el corte de caja.'),
+  cashShiftAlreadyClosed('Este corte de caja ya se encuentra cerrado.'),
+  cashShiftOpeningAmountInvalid('El fondo inicial debe ser un número mayor o igual a cero.'),
+  cashShiftActualCashInvalid('El efectivo contado debe ser un número mayor o igual a cero.'),
+  cashMovementTypeInvalid('El tipo de movimiento debe ser IN o OUT.'),
+  cashMovementAmountInvalid('El monto del movimiento debe ser mayor a cero.'),
+  cashMovementConceptRequired('El concepto del movimiento es obligatorio.'),
+  cashMovementConceptTooLong('El concepto del movimiento no puede exceder los 255 caracteres.'),
+  cashShiftRequiredForSale('Debes abrir tu turno de caja antes de poder registrar una venta.'),
+  cashShiftForbiddenNotOwner('Solo el cajero titular del turno o un administrador puede operar este corte de caja.'),
+  cashShiftAccountMismatch('El vendedor seleccionado tiene un turno de caja abierto en otra cuenta. Debes usar la cuenta de su turno.'),
 
   // ===========================================================================
   // 🌐 SERVER FALLBACKS

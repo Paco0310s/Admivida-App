@@ -65,6 +65,15 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
         'role': ['SELLER', 'ADMIN'],
       },
       {
+        'title': 'Cortes de Caja',
+        'subtitle': 'Abre y cierra turno, registra entradas/retiros y arqueo de efectivo.',
+        'icon': Icons.lock_clock_rounded,
+        'color': const Color(0xFF0D9488),
+        'isEnabled': true,
+        'route': Routes.cashShifts,
+        'role': ['SELLER', 'ADMIN'],
+      },
+      {
         'title': AppTexts.businessProducts,
         'subtitle': AppTexts.businessProductsDescription,
         'icon': Icons.inventory_2_rounded,

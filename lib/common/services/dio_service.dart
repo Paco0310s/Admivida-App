@@ -231,6 +231,15 @@ class DioService {
         final statusCode = error.response?.statusCode ?? 0;
         final responseData = error.response?.data;
 
+        if (statusCode == 401 && _isHandlingSessionExpiration) {
+          return EitherUtil.failure(
+            HttpFailure.serverError(
+              401,
+              'Tu sesión ha expirado, inicia sesión nuevamente.',
+            ),
+          );
+        }
+
         // Define standard default fallback message
         final String defaultMessage = '${AppTexts.errorServerResponse} (Status code: $statusCode)';
         String finalMessage = defaultMessage;

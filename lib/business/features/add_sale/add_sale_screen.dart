@@ -4,6 +4,7 @@ import 'package:admivida/business/features/add_sale/cart/cart_screen.dart';
 import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_screen.dart';
+import 'package:admivida/business/features/cash_shifts/cash_shifts_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/routes/routes.dart';
@@ -24,6 +25,8 @@ class AddSaleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(posCatalogProvider(businessId));
+    final shiftState = ref.watch(cashShiftsProvider(businessId));
+    final hasOpenShift = shiftState.activeShift != null;
 
     return PosScannerListener(
       onBarcodeScanned: (code) async {
@@ -107,6 +110,47 @@ class AddSaleScreen extends ConsumerWidget {
           title: AppText(AppTexts.createSale, color: AppColors.kBackgroundColor),
           backgroundColor: AppColors.kPrimaryColor,
           iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  backgroundColor: hasOpenShift
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.orange.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                onPressed: () {
+                  NavigationService.navigateTo(
+                    context,
+                    Routes.cashShifts,
+                    arguments: {
+                      'businessId': businessId,
+                      'businessName': businessName,
+                    },
+                  );
+                },
+                icon: Icon(
+                  hasOpenShift
+                      ? Icons.point_of_sale_rounded
+                      : Icons.lock_outline_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  hasOpenShift ? 'Turno Abierto' : 'Abrir Caja',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         mobile: MobileTabletView(businessId: businessId, crossAxisCount: 2, businessName: businessName),
         tablet: MobileTabletView(businessId: businessId, crossAxisCount: 4, businessName: businessName),

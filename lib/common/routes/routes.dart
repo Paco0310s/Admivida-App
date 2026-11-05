@@ -32,6 +32,7 @@ class Routes {
   static final String employeePayments = '/employee_payments';
   static final String userBusinesses = '/user_businesses';
   static final String businessReports = '/business_reports';
+  static final String cashShifts = '/cash_shifts';
 
   // Módulo de Finanzas Personales
   static final String personalDashboard = '/personal_dashboard';

@@ -135,6 +135,7 @@ class DashboardSession {
         routeName == Routes.commissionPayments ||
         routeName == Routes.employeePayments ||
         routeName == Routes.userBusinesses ||
+        routeName == Routes.cashShifts ||
         routeName == Routes.addSale;
   }
 
@@ -332,6 +333,14 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                                   currentRoute == Routes.cart,
                               isCollapsed: isCollapsed,
                               onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.sales, activeBiz),
+                            ),
+                            const Gap(4),
+                            _SidebarItem(
+                              icon: Icons.lock_clock_rounded,
+                              label: 'Cortes de Caja',
+                              isSelected: currentRoute == Routes.cashShifts,
+                              isCollapsed: isCollapsed,
+                              onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.cashShifts, activeBiz),
                             ),
                             const Gap(4),
                             _SidebarItem(

@@ -90,6 +90,12 @@ class AppConfig {
   static String users = '/users';
   static String businessesRoles = '/businesses-roles';
   static String transfersEndpoint = '/transactions/business/transfers';
+  static const String openCashShiftEndpoint = '/cash-shifts/open';
+  static String activeCashShiftEndpoint(String businessId) => '/cash-shifts/business/$businessId/active';
+  static String businessCashShiftsEndpoint(String businessId) => '/cash-shifts/business/$businessId';
+  static String cashShiftDetailEndpoint(String shiftId) => '/cash-shifts/detail/$shiftId';
+  static String addCashMovementEndpoint(String shiftId) => '/cash-shifts/$shiftId/movements';
+  static String closeCashShiftEndpoint(String shiftId) => '/cash-shifts/$shiftId/close';
 
   // Public endpoints (no authentication required)
   static const List<String> publicEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];

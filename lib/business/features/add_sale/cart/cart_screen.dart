@@ -4,7 +4,9 @@ import 'package:admivida/business/features/add_sale/cart/models/create_sale_dto.
 import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/add_transaction/add_transactions_provider.dart';
+import 'package:admivida/business/features/cash_shifts/cash_shifts_provider.dart';
 import 'package:admivida/business/features/clients/clients_provider.dart';
+import 'package:admivida/common/enums/app_failure_enum.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_provider.dart';
 import 'package:admivida/business/features/products/products_provider.dart' show productsListProvider;
 import 'package:admivida/business/features/sales/models/sale_model.dart';
@@ -548,6 +550,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ref.invalidate(posCatalogProvider(widget.businessId));
                     ref.invalidate(productsListProvider(widget.businessId));
                     ref.invalidate(clientsDebtListProvider(widget.businessId));
+                    ref.invalidate(cashShiftsProvider(widget.businessId));
 
                     // On mobile/tablet where CartScreen was pushed as a separate page, pop back to POS catalog
                     if (ModalRoute.of(context)?.settings.name == Routes.cart) {
@@ -563,6 +566,154 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         },
       ),
     );
+  }
+
+  Future<bool> _showQuickOpenShiftDialog() async {
+    final amountCtrl = TextEditingController(text: '0.00');
+    String? selectedAccountId;
+    bool opened = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Consumer(
+        builder: (ctx, dialogRef, _) {
+          final accountsAsync = dialogRef.watch(
+            accountsBusinessProvider(businessId: widget.businessId),
+          );
+          return StatefulBuilder(
+            builder: (ctx, setDialogState) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.lock_open_rounded, color: AppColors.kPrimaryColor),
+                  Gap(10),
+                  Expanded(
+                    child: AppText(
+                      'Abre tu Turno de Caja',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppText(
+                    'Para registrar ventas es obligatorio tener tu turno de caja abierto. Selecciona la caja/cuenta del turno e ingresa tu fondo inicial:',
+                    fontSize: 13,
+                    color: AppColors.kNeutral600,
+                  ),
+                  const Gap(14),
+                  accountsAsync.when(
+                    data: (accounts) {
+                      final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+                      final selectable = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+                      if (selectedAccountId == null && selectable.isNotEmpty) {
+                        final defaultAcc = selectable.firstWhere(
+                          (a) => a.isDefault,
+                          orElse: () => selectable.first,
+                        );
+                        selectedAccountId = defaultAcc.id;
+                      }
+                      if (selectable.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedAccountId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Caja / Cuenta del Turno',
+                            prefixIcon: const Icon(Icons.point_of_sale_rounded, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          items: selectable
+                              .map(
+                                (a) => DropdownMenuItem<String>(
+                                  value: a.id,
+                                  child: Text(
+                                    a.isDefault ? '${a.name} (Principal)' : a.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) {
+                            setDialogState(() => selectedAccountId = val);
+                          },
+                        ),
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  TextField(
+                    controller: amountCtrl,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      prefixText: '\$ ',
+                      labelText: 'Fondo Inicial en Efectivo',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => NavigationService.pop(dialogContext),
+                  child: const AppText('Cancelar', color: AppColors.kNeutral600),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.kPrimaryColor),
+                  onPressed: () async {
+                    final parsed = double.tryParse(amountCtrl.text.trim());
+                    if (parsed == null || parsed < 0) {
+                      SnackbarUtil.showWarning(
+                        context,
+                        'Ingresa un monto inicial válido mayor o igual a 0.',
+                      );
+                      return;
+                    }
+                    NavigationService.pop(dialogContext);
+                    final error = await ref
+                        .read(cashShiftsProvider(widget.businessId).notifier)
+                        .openShift(
+                          openingAmount: parsed,
+                          accountId: selectedAccountId,
+                        );
+                    if (!mounted) return;
+                    if (error != null) {
+                      SnackbarUtil.showError(context, error);
+                    } else {
+                      if (selectedAccountId != null) {
+                        _selectedAccountId = selectedAccountId;
+                      }
+                      opened = true;
+                      SnackbarUtil.showSuccess(
+                        context,
+                        'Turno de caja abierto. Procesando venta...',
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Abrir Caja y Cobrar',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return opened;
   }
 
   // --- Process Sale Action ---
@@ -625,8 +776,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
       // 3. Handle success and failure using EitherUtil pattern
       saleResult.when(
-        (failure) {
+        (failure) async {
           if (!mounted) return;
+          if (failure.type == AppFailure.cashShiftRequiredForSale.toCode() ||
+              failure.message == AppFailure.cashShiftRequiredForSale.message) {
+            final opened = await _showQuickOpenShiftDialog();
+            if (opened && mounted) {
+              await _processSale(finalTotal, cartItems);
+            }
+            return;
+          }
           SnackbarUtil.showError(context, 'Error al procesar la venta: ${failure.message}');
         },
         (saleResponse) async {
@@ -637,6 +796,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
           // Limpiar carrito y mostrar modal de UI desde donde puede imprimir las veces que desee
           ref.read(cartProvider.notifier).clearCart();
+          ref.invalidate(cashShiftsProvider(widget.businessId));
           _showTicketDialog(context, saleResponse);
         },
       );
@@ -665,6 +825,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
     final sellersAsync = ref.watch(businessSellersProvider(widget.businessId));
     final clientsAsync = ref.watch(businessClientsProvider(widget.businessId));
+    final cashShiftsState = ref.watch(cashShiftsProvider(widget.businessId));
+    final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId));
 
     final finalTotal = (rawSubtotal - _discountAmount).clamp(0.0, double.infinity);
     final changeGiven = (_amountPaid > finalTotal) ? (_amountPaid - finalTotal) : 0.0;
@@ -701,29 +863,45 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               AppText('Detalles del Cobro', fontWeight: FontWeight.bold, fontSize: 16),
               const Gap(16),
 
-              // Seller Dropdown
+              // Seller Dropdown (Visible only to Business Admins; regular Sellers automatically use their own user)
               sellersAsync.when(
                 data: (sellers) {
-                  if ((_selectedSellerId == null || !sellers.any((s) => s.userId == _selectedSellerId)) && sellers.isNotEmpty) {
-                    final currentUserId = SecureStorageService.getString(AppConfig.uuidKey);
-                    final currentUserAsSeller = currentUserId != null
-                        ? sellers.where((s) => s.userId == currentUserId).firstOrNull
-                        : null;
+                  final currentUserId = SecureStorageService.getString(AppConfig.uuidKey);
+                  final currentUserAsSeller = currentUserId != null
+                      ? sellers.where((s) => s.userId == currentUserId).firstOrNull
+                      : null;
+                  final isCurrentUserAdmin = isAdmin ||
+                      (currentUserAsSeller?.roles.any(
+                            (r) => r.name.toUpperCase() == 'ADMIN',
+                          ) ??
+                          false);
+
+                  if (!isCurrentUserAdmin) {
+                    _selectedSellerId = currentUserId ??
+                        currentUserAsSeller?.userId ??
+                        (sellers.isNotEmpty ? sellers.first.userId : null);
+                    return const SizedBox.shrink();
+                  }
+
+                  if ((_selectedSellerId == null || !sellers.any((s) => s.userId == _selectedSellerId)) &&
+                      sellers.isNotEmpty) {
                     _selectedSellerId = currentUserAsSeller?.userId ?? sellers.first.userId;
                   }
                   final itemsMap = {for (var s in sellers) s.userId: '${s.firstName} ${s.lastName}'};
-                  return _buildDropdown(
-                    label: 'Vendedor',
-                    icon: Icons.person_outline,
-                    value: _selectedSellerId,
-                    items: itemsMap,
-                    onChanged: (val) => setState(() => _selectedSellerId = val),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildDropdown(
+                      label: 'Vendedor (Modo Administrador)',
+                      icon: Icons.person_outline,
+                      value: _selectedSellerId,
+                      items: itemsMap,
+                      onChanged: (val) => setState(() => _selectedSellerId = val),
+                    ),
                   );
                 },
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => const Text('Error al cargar vendedores'),
+                loading: () => isAdmin ? const LinearProgressIndicator() : const SizedBox.shrink(),
+                error: (_, _) => isAdmin ? const Text('Error al cargar vendedores') : const SizedBox.shrink(),
               ),
-              const Gap(12),
 
               // Client Selector
               clientsAsync.when(
@@ -809,69 +987,81 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               const Gap(12),
 
-              // Payment Method & Account (Defaulting Cash & Caja General)
-              Row(
-                children: [
-                  Expanded(
-                    child: paymentMethodsAsync.when(
-                      data: (methods) {
-                        if (_selectedPaymentMethodId == null && methods.isNotEmpty) {
-                          final cashMethod = methods.firstWhere(
-                            (m) => m.name.toLowerCase().contains('efectivo') || m.name.toLowerCase().contains('cash'),
-                            orElse: () => methods.first,
-                          );
-                          _selectedPaymentMethodId = cashMethod.id;
-                        }
-                        final itemsMap = {for (var m in methods) m.id: m.name};
-                        return _buildDropdown(
-                          label: 'Método de Pago',
-                          icon: Icons.payment,
-                          value: _selectedPaymentMethodId,
-                          items: itemsMap,
-                          onChanged: (val) => setState(() => _selectedPaymentMethodId = val),
+              // Payment Method & Account (Regular Sellers only pick Payment Method; Server & POS auto-bind their Shift's Account)
+              accountsAsync.when(
+                data: (accounts) {
+                  final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
+                  final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+                  final shiftAccountId = cashShiftsState.activeShift?.accountId;
+
+                  if (selectableAccounts.isNotEmpty) {
+                    final defaultAcc = selectableAccounts.firstWhere(
+                      (a) => a.isDefault,
+                      orElse: () => selectableAccounts.firstWhere(
+                        (a) => a.name.toLowerCase().startsWith('caja general'),
+                        orElse: () => selectableAccounts.first,
+                      ),
+                    );
+                    if (!isAdmin) {
+                      if (shiftAccountId != null &&
+                          selectableAccounts.any((a) => a.id == shiftAccountId)) {
+                        _selectedAccountId = shiftAccountId;
+                      } else {
+                        _selectedAccountId ??= defaultAcc.id;
+                      }
+                    } else {
+                      _selectedAccountId ??= shiftAccountId ?? defaultAcc.id;
+                    }
+                  }
+
+                  final paymentMethodWidget = paymentMethodsAsync.when(
+                    data: (methods) {
+                      if (_selectedPaymentMethodId == null && methods.isNotEmpty) {
+                        final cashMethod = methods.firstWhere(
+                          (m) => m.name.toLowerCase().contains('efectivo') || m.name.toLowerCase().contains('cash'),
+                          orElse: () => methods.first,
                         );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      error: (_, _) => const Text('Error métodos pago'),
-                    ),
-                  ),
-                  const Gap(12),
-                  Expanded(
-                    child: accountsAsync.when(
-                      data: (accounts) {
-                        final isAdmin = ref.watch(isBusinessAdminProvider(widget.businessId));
-                        final operationalAccounts = accounts.where((a) => !a.isCreditOrLoan).toList();
-                        final selectableAccounts = operationalAccounts.isNotEmpty ? operationalAccounts : accounts;
+                        _selectedPaymentMethodId = cashMethod.id;
+                      }
+                      final itemsMap = {for (var m in methods) m.id: m.name};
+                      return _buildDropdown(
+                        label: 'Método de Pago',
+                        icon: Icons.payment,
+                        value: _selectedPaymentMethodId,
+                        items: itemsMap,
+                        onChanged: (val) => setState(() => _selectedPaymentMethodId = val),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    error: (_, _) => const Text('Error métodos pago'),
+                  );
 
-                        if (selectableAccounts.isNotEmpty) {
-                          final defaultAcc = selectableAccounts.firstWhere(
-                            (a) => a.isDefault,
-                            orElse: () => selectableAccounts.firstWhere(
-                              (a) => a.name.toLowerCase().startsWith('caja general'),
-                              orElse: () => selectableAccounts.first,
-                            ),
-                          );
-                          if (_selectedAccountId == null || !isAdmin) {
-                            _selectedAccountId = defaultAcc.id;
-                          }
-                        }
+                  // For a regular Seller (!isAdmin), do not show the Account dropdown at all — the shift's account is used automatically
+                  if (!isAdmin) {
+                    return paymentMethodWidget;
+                  }
 
-                        final itemsMap = {
-                          for (var a in selectableAccounts) a.id: a.isDefault ? '${a.name} ★' : a.name,
-                        };
-                        return _buildDropdown(
-                          label: isAdmin ? 'Cuenta Destino' : 'Cuenta Destino (Fija)',
-                          icon: isAdmin ? Icons.account_balance_wallet_outlined : Icons.lock_outline,
+                  final itemsMap = {
+                    for (var a in selectableAccounts) a.id: a.isDefault ? '${a.name} ★' : a.name,
+                  };
+                  return Row(
+                    children: [
+                      Expanded(child: paymentMethodWidget),
+                      const Gap(12),
+                      Expanded(
+                        child: _buildDropdown(
+                          label: 'Cuenta Destino',
+                          icon: Icons.account_balance_wallet_outlined,
                           value: _selectedAccountId,
                           items: itemsMap,
-                          onChanged: isAdmin ? (val) => setState(() => _selectedAccountId = val) : null,
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      error: (_, _) => const Text('Error cuentas'),
-                    ),
-                  ),
-                ],
+                          onChanged: (val) => setState(() => _selectedAccountId = val),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                error: (_, _) => const Text('Error cuentas'),
               ),
               const Gap(12),
 

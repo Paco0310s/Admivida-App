@@ -18,22 +18,20 @@ class ConnectivityService {
       hasActiveAdapter = false;
     }
 
+    if (!hasActiveAdapter) {
+      return false;
+    }
+
     if (kIsWeb) {
-      if (hasActiveAdapter) return true;
       return await isServerLive();
     }
 
-    // En desarrollo local (Debug) con adaptador activo, operar directamente
-    if (hasActiveAdapter && !kReleaseMode) {
-      return true;
-    }
-
-    // 1. Verificación rápida de internet general
+    // 1. Verificación rápida de salida real a internet
     if (await checkInternetConnection()) {
       return true;
     }
 
-    // 2. Respaldo definitivo: si nuestro propio servidor responde, sí hay conexión
+    // 2. Respaldo para red local (LAN/emulador sin salida externa): si nuestro propio servidor responde, sí hay conexión
     return await isServerLive();
   }
 

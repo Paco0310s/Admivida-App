@@ -13,6 +13,7 @@ import 'package:admivida/business/features/clients/create_client_screen.dart';
 import 'package:admivida/business/features/commission_payment_history/commission_payment_history_screen.dart';
 import 'package:admivida/business/features/commission_payments/commission_payment_screen.dart';
 import 'package:admivida/business/features/create_employee_payments/create_employee_payment_screen.dart';
+import 'package:admivida/business/features/cash_shifts/cash_shifts_screen.dart';
 import 'package:admivida/business/features/reports/reports_screen.dart';
 import 'package:admivida/business/features/products/products_screen.dart';
 import 'package:admivida/business/features/products/product_detail_screen.dart';
@@ -200,6 +201,11 @@ class AppRoutes {
       Routes.businessReports: (context) {
         final business = ModalRoute.of(context)?.settings.arguments as BusinessModel;
         return BusinessReportsScreen(business: business);
+      },
+      Routes.cashShifts: (context) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        final businessId = args is BusinessModel ? args.id : (args as String? ?? '');
+        return CashShiftsScreen(businessId: businessId);
       },
       Routes.cart: (context) {
         final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
