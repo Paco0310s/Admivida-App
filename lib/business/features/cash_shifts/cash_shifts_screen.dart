@@ -16,7 +16,7 @@ class CashShiftsScreen extends ConsumerStatefulWidget {
   final String businessId;
   final String businessName;
 
-  const CashShiftsScreen({super.key, required this.businessId, required this.businessName});
+  const CashShiftsScreen({super.key, required this.businessId, this.businessName = 'Negocio'});
 
   @override
   ConsumerState<CashShiftsScreen> createState() => _CashShiftsScreenState();

@@ -204,8 +204,18 @@ class AppRoutes {
       },
       Routes.cashShifts: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
-        final businessId = args is BusinessModel ? args.id : (args as String? ?? '');
-        return CashShiftsScreen(businessId: businessId);
+        String businessId = '';
+        String businessName = 'Negocio';
+        if (args is BusinessModel) {
+          businessId = args.id;
+          businessName = args.name;
+        } else if (args is Map<String, dynamic>) {
+          businessId = args['businessId'] as String? ?? '';
+          businessName = args['businessName'] as String? ?? 'Negocio';
+        } else if (args is String) {
+          businessId = args;
+        }
+        return CashShiftsScreen(businessId: businessId, businessName: businessName);
       },
       Routes.cart: (context) {
         final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
