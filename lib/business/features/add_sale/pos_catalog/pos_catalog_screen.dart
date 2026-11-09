@@ -110,7 +110,9 @@ class _PosCatalogScreenState extends ConsumerState<PosCatalogScreen> {
               }
 
               final double price = variant.salePrice;
-              final String displayName = (variant.name != null && variant.name!.isNotEmpty) ? variant.name! : variant.sku;
+              final String displayName = (variant.name != null && variant.name!.isNotEmpty)
+                  ? variant.name!
+                  : (variant.sku ?? variant.barcode ?? cleanCode);
 
               final newItem = CreateSaleDetailInnerDto(
                 productVariantId: variant.id,

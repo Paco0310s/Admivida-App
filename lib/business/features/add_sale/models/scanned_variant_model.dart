@@ -1,7 +1,7 @@
 class ScannedVariantModel {
   final String id;
   final String productId;
-  final String sku;
+  final String? sku;
   final String? barcode;
   final String? name;
   final double purchasePrice;
@@ -20,7 +20,7 @@ class ScannedVariantModel {
   ScannedVariantModel({
     required this.id,
     required this.productId,
-    required this.sku,
+    this.sku,
     this.barcode,
     this.name,
     required this.purchasePrice,
@@ -42,7 +42,7 @@ class ScannedVariantModel {
     return ScannedVariantModel(
       id: json['id'] as String,
       productId: json['productId'] as String,
-      sku: json['sku'] as String,
+      sku: json['sku'] as String?,
       barcode: json['barcode'] as String?,
       name: json['name'] as String?,
       purchasePrice: (json['purchasePrice'] as num?)?.toDouble() ?? 0.0,
