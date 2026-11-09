@@ -1,27 +1,27 @@
 {
   "versionCode": 5,
   "versionName": "0.7.5 (Beta)",
-  "releaseNotes": "Reportes financieros completos, rentabilidad real de ventas, valorización de inventario con ganancia proyectada y gráficas interactivas.",
+  "releaseNotes": "Cortes de caja por turno y cuenta, reportes financieros con rentabilidad neta real, valorización de inventario con alertas y modo sin conexión mejorado.",
   "whatsNew": [
     {
+      "title": "Cortes de Caja y Control de Turnos",
+      "description": "Abre y cierra turnos vinculados a cada caja del negocio, registra entradas o retiros manuales y audita diferencias de efectivo al instante.",
+      "icon": "pos"
+    },
+    {
       "title": "Reportes y Rentabilidad Real",
-      "description": "Conoce tus ventas totales, costo de mercancía y ganancia neta realizada con gráficas interactivas y desglose de métodos de pago.",
+      "description": "Conoce tus ventas de contado vs. crédito, utilidad neta después de comisiones, saldos por cuenta operativa, top productos y rendimiento por vendedor.",
       "icon": "analytics"
     },
     {
-      "title": "Valor de Inventario y Ganancia Esperada",
-      "description": "Consulta en tiempo real la inversión total en estantes, valor proyectado de venta y la ganancia que obtendrás al vender todo tu stock.",
+      "title": "Valor de Inventario y Alertas",
+      "description": "Consulta la inversión total en stock, ganancia proyectada y alertas directas de productos agotados, con stock bajo o sin costo registrado.",
       "icon": "inventory"
     },
     {
-      "title": "Caja Predeterminada del Negocio",
-      "description": "Cada negocio cuenta con una caja operativa principal blindada para cobros y abonos con control de permisos para administradores.",
+      "title": "Modo Offline y Escáner POS Mejorado",
+      "description": "Inicio inteligente con respaldo sin conexión, renovación silenciosa de sesión y escaneo rápido por código de barras o SKU.",
       "icon": "shield"
-    },
-    {
-      "title": "Finanzas Personales y Multi-Dispositivo",
-      "description": "Gestiona tu dinero propio de forma 100% independiente y sincroniza tus sesiones en tiempo real en todos tus dispositivos.",
-      "icon": "wallet"
     }
   ],
   "history": [

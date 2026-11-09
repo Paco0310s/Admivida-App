@@ -229,33 +229,33 @@ class WhatsNewModel {
   /// Novedades empaquetadas por defecto para la versión actual en caso de no haber conexión
   static WhatsNewModel fallback() => const WhatsNewModel(
         versionCode: 5,
-        versionName: '0.7.5 "Beta"',
+        versionName: '0.7.5 (Beta)',
         releaseNotes:
-            'Reportes Financieros, Rentabilidad Real, Valorización de Inventario, Cajas Predeterminadas y Gráficas Interactivas.',
+            'Cortes de caja por turno y cuenta, reportes financieros con rentabilidad neta real, valorización de inventario con alertas y modo sin conexión mejorado.',
         items: [
+          WhatsNewItem(
+            title: 'Cortes de Caja y Control de Turnos',
+            description:
+                'Abre y cierra turnos vinculados a cada caja del negocio, registra entradas o retiros manuales y audita diferencias de efectivo al instante.',
+            iconName: 'pos',
+          ),
           WhatsNewItem(
             title: 'Reportes y Rentabilidad Real',
             description:
-                'Conoce tus ventas totales, costo de mercancía y ganancia neta realizada con gráficas interactivas y desglose de métodos de pago.',
+                'Conoce tus ventas de contado vs. crédito, utilidad neta después de comisiones, saldos por cuenta operativa, top productos y rendimiento por vendedor.',
             iconName: 'analytics',
           ),
           WhatsNewItem(
-            title: 'Valor de Inventario y Ganancia Esperada',
+            title: 'Valor de Inventario y Alertas',
             description:
-                'Consulta en tiempo real la inversión total en estantes, valor proyectado de venta y la ganancia que obtendrás al vender todo tu stock.',
+                'Consulta la inversión total en stock, ganancia proyectada y alertas directas de productos agotados, con stock bajo o sin costo registrado.',
             iconName: 'inventory',
           ),
           WhatsNewItem(
-            title: 'Caja Predeterminada del Negocio',
+            title: 'Modo Offline y Escáner POS Mejorado',
             description:
-                'Caja operativa principal protegida para cobros y abonos con roles de seguridad para vendedores y administradores.',
-            iconName: 'caja',
-          ),
-          WhatsNewItem(
-            title: 'Finanzas Personales y Multi-Dispositivo',
-            description:
-                'Gestión independiente de tu dinero propio y sincronización segura entre móvil, tablet y PC.',
-            iconName: 'wallet',
+                'Inicio inteligente con respaldo sin conexión, renovación silenciosa de sesión y escaneo rápido por código de barras o SKU.',
+            iconName: 'shield',
           ),
         ],
       );
