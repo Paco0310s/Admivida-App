@@ -213,6 +213,7 @@ enum AppFailure {
   saleDetailProductVariantIdInvalid('El ID de la variante vendida debe ser un UUID válido.'),
   saleDetailQuantityRequired('La cantidad vendida es obligatoria.'),
   saleDetailQuantityInvalid('La cantidad vendida debe ser mayor que cero.'),
+  saleDetailQuantityMustBeInteger('Este producto se vende por pieza cerrada y solo permite cantidades en números enteros.'),
   saleDetailProductNameInvalid('El nombre del producto vendido debe ser texto válido.'),
   saleDetailProductNameTooLong('El nombre del producto vendido no puede exceder los 255 caracteres.'),
   saleDetailPriceInvalid('El precio del detalle de venta no es válido.'),
@@ -358,6 +359,14 @@ enum AppFailure {
   cashShiftRequiredForSale('Debes abrir tu turno de caja antes de poder registrar una venta.'),
   cashShiftForbiddenNotOwner('Solo el cajero titular del turno o un administrador puede operar este corte de caja.'),
   cashShiftAccountMismatch('El vendedor seleccionado tiene un turno de caja abierto en otra cuenta. Debes usar la cuenta de su turno.'),
+
+  // ===========================================================================
+  // 💳 CLIENT PAYMENTS (ABONOS)
+  // ===========================================================================
+  clientPaymentExceedsDebt('El monto a abonar excede el saldo pendiente de uno o más tickets.'),
+  clientPaymentSaleNotPending('Uno de los tickets seleccionados ya fue liquidado o cancelado.'),
+  clientPaymentDuplicateSale('No se puede abonar dos veces al mismo ticket en una misma operación.'),
+  clientPaymentMethodRequired('Debes seleccionar al menos un método de pago válido para el abono.'),
 
   // ===========================================================================
   // 🌐 SERVER FALLBACKS

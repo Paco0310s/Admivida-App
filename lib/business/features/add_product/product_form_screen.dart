@@ -639,46 +639,97 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         const SizedBox(height: 8),
         ...List.generate(_variantFields.length, (index) {
           final field = _variantFields[index];
+          final hasAdvancedData =
+              field.wholesalePriceController.text.trim().isNotEmpty ||
+              field.wholesaleQuantityController.text.trim().isNotEmpty ||
+              field.minimumStockController.text.trim().isNotEmpty ||
+              field.maximumStockController.text.trim().isNotEmpty ||
+              field.expirationDate != null ||
+              field.pickedImages.isNotEmpty ||
+              field.existingImages.isNotEmpty ||
+              field.attributeFields.any(
+                (a) =>
+                    a.keyController.text.trim().isNotEmpty ||
+                    a.valueController.text.trim().isNotEmpty,
+              );
+
           return AppCard(
             margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // SKU and Barcode
+                if (_variantFields.length > 1) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      AppText(
+                        'Variante ${index + 1}',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: AppColors.kPrimaryColor,
+                      ),
+                      IconButton(
+                        onPressed: () => _removeVariantRow(index),
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        color: AppColors.kError,
+                        tooltip: AppTexts.removeMetadata,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  AppTextField(
+                    text: AppTexts.productVariantNameLabel,
+                    hintText: AppTexts.productVariantNameHint,
+                    controller: field.variantNameController,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // Essential pricing & initial stock upfront
                 Row(
                   children: [
                     Expanded(
                       child: AppTextField(
-                        text: AppTexts.productSkuLabel,
-                        hintText: AppTexts.productSkuHint,
-                        controller: field.skuController,
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.qr_code_scanner, size: 20),
-                          tooltip: 'Escanear código de barras',
-                          onPressed: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.white,
-                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (_) => BarcodeScannerSheet(
-                                onCode: (scannedCode) {
-                                  setState(() {
-                                    field.barcodeController.text = scannedCode;
-                                  });
-                                  SnackbarUtil.showSuccess(context, 'Código asignado: $scannedCode');
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                        text: AppTexts.productSalePriceLabel,
+                        hintText: '\$100.00',
+                        controller: field.salePriceController,
+                        isRequired: true,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'Requerido';
+                          if (double.tryParse(value.trim()) == null) return 'Invalido';
+                          return null;
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: AppTextField(
-                        text: 'Barcode',
+                        text: AppTexts.productPurchasePriceLabel,
+                        hintText: '\$60.00',
+                        controller: field.purchasePriceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Stock + Barcode upfront for rapid POS registration
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        text: AppTexts.productStockLabel,
+                        hintText: '30',
+                        controller: field.stockQuantityController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppTextField(
+                        text: 'Código de barras',
                         hintText: '7501234567890',
                         controller: field.barcodeController,
                         suffixIcon: IconButton(
@@ -705,107 +756,106 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                AppTextField(
-                  text: AppTexts.productVariantNameLabel,
-                  hintText: _variantFields.length == 1 ? 'General / Default' : AppTexts.productVariantNameHint,
-                  controller: field.variantNameController,
-                ),
-                const SizedBox(height: 12),
-                // Purchase and Sale Prices
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        text: AppTexts.productPurchasePriceLabel,
-                        hintText: '\$60.00',
-                        controller: field.purchasePriceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
+                const SizedBox(height: 8),
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(top: 8),
+                    initiallyExpanded: hasAdvancedData,
+                    leading: const Icon(Icons.tune_rounded, size: 19, color: AppColors.kPrimaryColor),
+                    title: const AppText(
+                      'Opciones avanzadas (SKU, mayoreo, stock mín/máx, caducidad, fotos)',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.kNeutral700,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppTextField(
-                        text: AppTexts.productSalePriceLabel,
-                        hintText: '\$100.00',
-                        controller: field.salePriceController,
-                        isRequired: true,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Requerido';
-                          if (double.tryParse(value.trim()) == null) return 'Invalido';
-                          return null;
-                        },
+                    children: [
+                      if (_variantFields.length == 1) ...[
+                        AppTextField(
+                          text: AppTexts.productVariantNameLabel,
+                          hintText: 'General / Default',
+                          controller: field.variantNameController,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      AppTextField(
+                        text: AppTexts.productSkuLabel,
+                        hintText: AppTexts.productSkuHint,
+                        controller: field.skuController,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner, size: 20),
+                          tooltip: 'Escanear SKU',
+                          onPressed: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                              builder: (_) => BarcodeScannerSheet(
+                                onCode: (scannedCode) {
+                                  setState(() {
+                                    field.skuController.text = scannedCode;
+                                  });
+                                  SnackbarUtil.showSuccess(context, 'Código asignado: $scannedCode');
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Wholesale Settings
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        text: 'Precio de Mayoreo',
-                        hintText: '\$85.00',
-                        controller: field.wholesalePriceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      const SizedBox(height: 12),
+                      // Wholesale Settings
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppTextField(
+                              text: 'Precio de Mayoreo',
+                              hintText: '\$85.00',
+                              controller: field.wholesalePriceController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AppTextField(
+                              text: 'Cantidad Mínima de Mayoreo',
+                              hintText: '10',
+                              controller: field.wholesaleQuantityController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppTextField(
-                        text: 'Cantidad Mínima de Mayoreo',
-                        hintText: '10',
-                        controller: field.wholesaleQuantityController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      const SizedBox(height: 12),
+                      // Stock Thresholds & Expiration Date
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppTextField(
+                              text: AppTexts.productMinimumStockLabel,
+                              hintText: '5',
+                              controller: field.minimumStockController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AppTextField(
+                              text: AppTexts.productMaximumStockLabel,
+                              hintText: '50',
+                              controller: field.maximumStockController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Stock Management
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        text: AppTexts.productStockLabel,
-                        hintText: '30',
-                        controller: field.stockQuantityController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppTextField(
-                        text: AppTexts.productMinimumStockLabel,
-                        hintText: '5',
-                        controller: field.minimumStockController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Reemplaza el AppTextField de maximumStock con este Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        text: AppTexts.productMaximumStockLabel,
-                        hintText: '50',
-                        controller: field.maximumStockController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppTextField(
+                      const SizedBox(height: 12),
+                      AppTextField(
                         text: 'Caducidad Próxima',
                         hintText: 'YYYY-MM-DD',
                         controller: field.expirationDateController,
                         readOnly: true,
-                        // 👇 NUEVO: Ícono dinámico para limpiar la fecha
                         suffixIcon: field.expirationDate != null
                             ? IconButton(
                                 icon: const Icon(Icons.clear, size: 20, color: Colors.red),
@@ -833,20 +883,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                           }
                         },
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildVariantImagePicker(field),
-                const SizedBox(height: 12),
-                _buildAttributeEditor(field),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                    onPressed: _variantFields.length == 1 ? null : () => _removeVariantRow(index),
-                    icon: const Icon(Icons.delete_outline),
-                    color: AppColors.kNeutral500,
-                    tooltip: AppTexts.removeMetadata,
+                      const SizedBox(height: 12),
+                      _buildVariantImagePicker(field),
+                      const SizedBox(height: 12),
+                      _buildAttributeEditor(field),
+                    ],
                   ),
                 ),
               ],

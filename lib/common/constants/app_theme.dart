@@ -26,13 +26,25 @@ class PremiumPageTransitionBuilder extends PageTransitionsBuilder {
   }
 }
 
-/// ⚡ Dry transition for Web environment (Prevents frame drops in browsers)
-class NoTransitionsBuilder extends PageTransitionsBuilder {
-  const NoTransitionsBuilder();
+/// ⚡ Subtle micro-fade transition for Desktop & Web so view switches feel fluid and instantaneous
+class DesktopFadeTransitionBuilder extends PageTransitionsBuilder {
+  const DesktopFadeTransitionBuilder();
 
   @override
   Widget buildTransitions<T>(PageRoute<T> route, BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
-    return child; // Returns the widget without any animation
+    final fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic));
+    final slideTween = Tween<Offset>(
+      begin: const Offset(0.0, 0.012),
+      end: Offset.zero,
+    ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+    return FadeTransition(
+      opacity: animation.drive(fadeTween),
+      child: SlideTransition(
+        position: animation.drive(slideTween),
+        child: child,
+      ),
+    );
   }
 }
 
@@ -41,18 +53,18 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       primaryColor: AppColors.kPrimary500,
-      scaffoldBackgroundColor: AppColors.kNeutral100,
+      scaffoldBackgroundColor: AppColors.kBackgroundColor,
+      dividerColor: AppColors.kNeutral200,
+      splashFactory: InkSparkle.splashFactory,
 
       // 🔄 Intelligent global transitions control (Native navigation / Named Routes)
       pageTransitionsTheme: PageTransitionsTheme(
         builders: {
-          // On Web and Desktop (Windows/macOS/Linux), no page transition animation is used so the Dashboard shell feels instant.
-          // On native Mobile (Android/iOS), uses the smooth slide + fade transition.
-          TargetPlatform.android: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
-          TargetPlatform.iOS: kIsWeb ? const NoTransitionsBuilder() : const PremiumPageTransitionBuilder(),
-          TargetPlatform.windows: const NoTransitionsBuilder(),
-          TargetPlatform.macOS: const NoTransitionsBuilder(),
-          TargetPlatform.linux: const NoTransitionsBuilder(),
+          TargetPlatform.android: kIsWeb ? const DesktopFadeTransitionBuilder() : const PremiumPageTransitionBuilder(),
+          TargetPlatform.iOS: kIsWeb ? const DesktopFadeTransitionBuilder() : const PremiumPageTransitionBuilder(),
+          TargetPlatform.windows: const DesktopFadeTransitionBuilder(),
+          TargetPlatform.macOS: const DesktopFadeTransitionBuilder(),
+          TargetPlatform.linux: const DesktopFadeTransitionBuilder(),
         },
       ),
 
@@ -97,21 +109,21 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.kWhiteColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        labelStyle: GoogleFonts.poppins(color: AppColors.kNeutral500, fontSize: 14),
-        hintStyle: GoogleFonts.poppins(color: AppColors.kNeutral400, fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        labelStyle: GoogleFonts.poppins(color: AppColors.kNeutral500, fontSize: 13.5),
+        hintStyle: GoogleFonts.poppins(color: AppColors.kNeutral400, fontSize: 13.5),
         errorStyle: GoogleFonts.poppins(color: AppColors.kError, fontSize: 12, fontWeight: FontWeight.w500),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.kNeutral300, width: 1),
+          borderSide: const BorderSide(color: AppColors.kNeutral200, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.kNeutral300, width: 1),
+          borderSide: const BorderSide(color: AppColors.kNeutral200, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.kPrimary500, width: 2),
+          borderSide: const BorderSide(color: AppColors.kPrimary500, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -119,7 +131,22 @@ class AppTheme {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.kError, width: 2),
+          borderSide: const BorderSide(color: AppColors.kError, width: 1.8),
+        ),
+      ),
+
+      // 🪟 Dialog & BottomSheet Themes
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.kWhiteColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.kWhiteColor,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
       ),
 

@@ -74,6 +74,13 @@ class BusinessDetailView extends StatelessWidget {
   final int crossAxisCount;
   const BusinessDetailView({super.key, required this.crossAxisCount});
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = crossAxisCount >= 3;
@@ -81,17 +88,19 @@ class BusinessDetailView extends StatelessWidget {
     final List<Map<String, dynamic>> modules = [
       {
         'title': 'Negocios',
-        'subtitle': 'Punto de venta, inventario, clientes y finanzas',
+        'subtitle': 'Punto de venta, inventario, clientes, cortes de caja y finanzas.',
         'icon': Icons.storefront_rounded,
         'color': AppColors.kPrimaryColor,
+        'badge': 'Principal',
         'isEnabled': true,
         'route': Routes.businesses,
       },
       {
         'title': 'Control Personal',
-        'subtitle': 'Efectivo, tarjetas de débito y billetera personal',
+        'subtitle': 'Efectivo, cuentas personales, ingresos y gastos diarios.',
         'icon': Icons.account_balance_wallet_rounded,
         'color': AppColors.kSecondaryColor,
+        'badge': 'Finanzas',
         'isEnabled': true,
         'route': Routes.personalDashboard,
       },
@@ -121,67 +130,163 @@ class BusinessDetailView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sleek Welcome Banner
+                // Sleek Welcome Banner with subtle ambient geometry
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20, vertical: isDesktop ? 24 : 20),
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF163542), AppColors.kPrimaryColor, AppColors.kSecondaryColor],
+                      colors: [Color(0xFF122C38), AppColors.kPrimaryColor, AppColors.kSecondaryColor],
                     ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [BoxShadow(color: AppColors.kPrimaryColor.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6))],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                        child: AppImage(AdaptedFile.asset(AppAssets.icon), height: isDesktop ? 52 : 44, width: isDesktop ? 52 : 44, fit: BoxFit.contain),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.kPrimaryColor.withValues(alpha: 0.18),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
                       ),
-                      const Gap(18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -30,
+                        top: -40,
+                        child: Container(
+                          width: 170,
+                          height: 170,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 80,
+                        bottom: -50,
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.04),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20, vertical: isDesktop ? 26 : 20),
+                        child: Row(
                           children: [
-                            AppText('Bienvenido a ${AppTexts.appName}', fontSize: isDesktop ? 22 : 18, fontWeight: FontWeight.bold, color: Colors.white),
-                            const Gap(4),
-                            const AppText('Selecciona un módulo para comenzar a administrar tus operaciones.', fontSize: 13, color: Color(0xD9FFFFFF)),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.12),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: AppImage(
+                                AdaptedFile.asset(AppAssets.icon),
+                                height: isDesktop ? 50 : 42,
+                                width: isDesktop ? 50 : 42,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const Gap(18),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: AppText(
+                                      '${_getGreeting()} • Panel Inteligente',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.kPrimary100,
+                                    ),
+                                  ),
+                                  const Gap(6),
+                                  AppText(
+                                    'Bienvenido a ${AppTexts.appName}',
+                                    fontSize: isDesktop ? 23 : 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  const Gap(4),
+                                  const AppText(
+                                    'Todo tu ecosistema comercial y personal en un solo lugar, rápido y claro.',
+                                    fontSize: 13,
+                                    color: Color(0xD9FFFFFF),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isDesktop) ...[
+                              const Gap(16),
+                              ElevatedButton.icon(
+                                onPressed: () => NavigationService.navigateTo(context, Routes.businesses),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppColors.kPrimaryColor,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.storefront_rounded, size: 18),
+                                label: const Text(
+                                  'Ir a Mis Empresas',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                      if (isDesktop) ...[
-                        const Gap(16),
-                        ElevatedButton.icon(
-                          onPressed: () => NavigationService.navigateTo(context, Routes.businesses),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppColors.kPrimaryColor,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          icon: const Icon(Icons.storefront_rounded, size: 18),
-                          label: const Text('Ir a Mis Empresas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        ),
-                      ],
                     ],
                   ),
                 ),
-                const Gap(24),
-                const AppText(AppTexts.modules, fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
-                const Gap(12),
+                const Gap(28),
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.kSecondaryColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const Gap(8),
+                    const AppText(
+                      AppTexts.modules,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.kNeutral900,
+                    ),
+                  ],
+                ),
+                const Gap(14),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: modules.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: isDesktop ? 1.45 : 1.15,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: isDesktop ? 1.45 : 1.12,
                   ),
                   itemBuilder: (context, index) {
                     final option = modules[index];
@@ -189,16 +294,17 @@ class BusinessDetailView extends StatelessWidget {
                     final title = option['title'] as String;
                     final subtitle = option['subtitle'] as String;
                     final color = option['color'] as Color;
+                    final badge = option['badge'] as String?;
                     final isEnabled = option['isEnabled'] as bool;
 
                     if (!isEnabled) {
-                      return SizedBox.shrink();
+                      return const SizedBox.shrink();
                     }
                     return AppCard(
                       margin: EdgeInsets.zero,
-                      backgroundColor: isEnabled ? Colors.white : AppColors.kNeutral50,
-                      borderColor: isEnabled ? AppColors.kPrimary100 : AppColors.kNeutral200,
-                      padding: const EdgeInsets.all(18),
+                      backgroundColor: Colors.white,
+                      borderColor: AppColors.kNeutral200,
+                      padding: const EdgeInsets.all(20),
                       onTap: () {
                         if (isEnabled) {
                           NavigationService.navigateTo(context, option['route']);
@@ -214,29 +320,73 @@ class BusinessDetailView extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(11),
                                 decoration: BoxDecoration(
-                                  color: isEnabled ? color.withValues(alpha: 0.12) : AppColors.kNeutral200.withValues(alpha: 0.6),
-                                  borderRadius: BorderRadius.circular(12),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      color.withValues(alpha: 0.16),
+                                      color.withValues(alpha: 0.07),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: Icon(icon, color: isEnabled ? color : AppColors.kNeutral500, size: 24),
+                                child: Icon(icon, color: color, size: 24),
                               ),
-                              if (!isEnabled)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: AppColors.kNeutral200, borderRadius: BorderRadius.circular(20)),
-                                  child: const AppText('Próximamente', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.kNeutral600),
-                                )
-                              else
-                                const Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.kPrimaryColor),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (badge != null) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: AppText(
+                                        badge,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: color,
+                                      ),
+                                    ),
+                                    const Gap(6),
+                                  ],
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.kNeutral100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      size: 15,
+                                      color: AppColors.kPrimaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AppText(title, fontSize: 15, fontWeight: FontWeight.bold, color: isEnabled ? AppColors.kNeutral900 : AppColors.kNeutral600),
+                              AppText(
+                                title,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.kNeutral900,
+                              ),
                               const Gap(4),
-                              AppText(subtitle, fontSize: 12, color: AppColors.kNeutral600, maxLines: 2, overflow: TextOverflow.ellipsis),
+                              AppText(
+                                subtitle,
+                                fontSize: 12,
+                                color: AppColors.kNeutral500,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                           ),
                         ],

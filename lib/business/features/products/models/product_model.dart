@@ -185,6 +185,16 @@ class ProductsMetaModel {
       currentPage: json['currentPage'] as int? ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'totalItems': totalItems,
+      'itemCount': itemCount,
+      'itemsPerPage': itemsPerPage,
+      'totalPages': totalPages,
+      'currentPage': currentPage,
+    };
+  }
 }
 
 /// Paginated Products Wrapper
@@ -203,6 +213,13 @@ class ProductsPageModel {
       meta: json['meta'] != null ? ProductsMetaModel.fromJson(json['meta'] as Map<String, dynamic>) : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'data': data.map((item) => item.toJson()).toList(),
+      if (meta != null) 'meta': meta!.toJson(),
+    };
+  }
 }
 
 /// Root Model representing a Product in the catalog
@@ -215,6 +232,7 @@ class ProductModel {
   final String name;
   final String? description;
   final String unitOfMeasure;
+  final bool allowFractions;
   final bool isActive;
   final List<ProductVariantModel> variants;
   final List<ProductImageModel> images;
@@ -230,6 +248,7 @@ class ProductModel {
     required this.name,
     this.description,
     required this.unitOfMeasure,
+    this.allowFractions = false,
     required this.isActive,
     required this.variants,
     required this.images,
@@ -246,6 +265,7 @@ class ProductModel {
     String? name,
     String? description,
     String? unitOfMeasure,
+    bool? allowFractions,
     bool? isActive,
     List<ProductVariantModel>? variants,
     List<ProductImageModel>? images,
@@ -261,6 +281,7 @@ class ProductModel {
       name: name ?? this.name,
       description: description ?? this.description,
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
+      allowFractions: allowFractions ?? this.allowFractions,
       isActive: isActive ?? this.isActive,
       variants: variants ?? this.variants,
       images: images ?? this.images,
@@ -270,6 +291,9 @@ class ProductModel {
   }
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final unit = (json['unitOfMeasure'] as String? ?? 'PZ').trim();
+    final unitUpper = unit.toUpperCase();
+    final explicitFractions = json['allowFractions'] as bool?;
     return ProductModel(
       id: json['id'] as String? ?? '',
       businessId: json['businessId'] as String? ?? '',
@@ -278,7 +302,8 @@ class ProductModel {
       productCategoryName: json['productCategoryName'] as String?,
       name: json['name'] as String? ?? '',
       description: json['description'] as String?,
-      unitOfMeasure: json['unitOfMeasure'] as String? ?? 'PZ',
+      unitOfMeasure: unit,
+      allowFractions: explicitFractions ?? (unitUpper != 'PZ' && unitUpper != 'PZA' && unitUpper != 'PIEZA'),
       isActive: json['isActive'] as bool? ?? true,
       variants: (json['variants'] as List<dynamic>?)?.map((v) => ProductVariantModel.fromJson(v as Map<String, dynamic>)).toList() ?? [],
       images: (json['images'] as List<dynamic>?)?.map((i) => ProductImageModel.fromJson(i as Map<String, dynamic>)).toList() ?? [],
@@ -297,6 +322,7 @@ class ProductModel {
       'name': name,
       'description': description,
       'unitOfMeasure': unitOfMeasure,
+      'allowFractions': allowFractions,
       'isActive': isActive,
       'variants': variants.map((v) => v.toJson()).toList(),
       'images': images.map((i) => i.toJson()).toList(),
@@ -306,6 +332,11 @@ class ProductModel {
   }
 
   // 💡 GETTERS AUXILIARES PARA LA UI
+
+  bool get allowsFractionalQuantity {
+    final unitUpper = unitOfMeasure.trim().toUpperCase();
+    return allowFractions || (unitUpper != 'PZ' && unitUpper != 'PZA' && unitUpper != 'PIEZA');
+  }
 
   String? get mainImageUrl {
     if (images.isNotEmpty) {

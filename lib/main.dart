@@ -1,5 +1,12 @@
 import 'dart:async';
 
+import 'package:admivida/business/features/add_sale/offline/held_carts_service.dart';
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_service.dart';
+import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
+import 'package:admivida/business/features/cash_shifts/cash_shifts_provider.dart';
+import 'package:admivida/business/features/products/products_provider.dart';
+import 'package:admivida/business/features/sales/sales_provider.dart';
+import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/constants/app_theme.dart';
 import 'package:admivida/common/logging/app_logger.dart';
@@ -28,6 +35,8 @@ void main() async {
   await StorageService.init();
   await SecureStorageService.init();
   await IsarCacheService.init();
+  await OfflineSalesQueueService.init();
+  await HeldCartsService.init();
   WhatsNewService.init();
 
   // Initialize Logger
@@ -46,11 +55,21 @@ class AdmividaApp extends ConsumerStatefulWidget {
 
 class _AdmividaAppState extends ConsumerState<AdmividaApp> with WidgetsBindingObserver {
   Timer? _updateCheckTimer;
+  StreamSubscription<String>? _offlineSyncSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _offlineSyncSubscription = OfflineSalesQueueService.onBusinessSynced.listen((businessId) {
+      if (!mounted) return;
+      ref.invalidate(salesListProvider(businessId));
+      ref.invalidate(posCatalogProvider(businessId));
+      ref.invalidate(productsListProvider(businessId));
+      ref.invalidate(cashShiftsProvider(businessId));
+      ref.invalidate(accountsBusinessProvider(businessId: businessId));
+    });
 
     // Windows: revisar periódicamente si hay una nueva versión mientras la app sigue abierta
     if (WindowsUpdaterService.isSupported) {
@@ -68,14 +87,17 @@ class _AdmividaAppState extends ConsumerState<AdmividaApp> with WidgetsBindingOb
   @override
   void dispose() {
     _updateCheckTimer?.cancel();
+    _offlineSyncSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
-  // ignore: unnecessary_overrides
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && OfflineSalesQueueService.queueNotifier.value.isNotEmpty) {
+      OfflineSalesQueueService.syncPendingSales();
+    }
   }
 
   @override

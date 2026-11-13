@@ -13,16 +13,32 @@ class ClientsDebtListState {
   final int currentPage;
   final bool hasReachedMax;
   final String searchQuery;
+  final bool onlyWithDebt;
 
-  ClientsDebtListState({required this.clients, this.isLoadingMore = false, this.currentPage = 1, this.hasReachedMax = false, this.searchQuery = ''});
+  ClientsDebtListState({
+    required this.clients,
+    this.isLoadingMore = false,
+    this.currentPage = 1,
+    this.hasReachedMax = false,
+    this.searchQuery = '',
+    this.onlyWithDebt = false,
+  });
 
-  ClientsDebtListState copyWith({List<ClientWithDebtModel>? clients, bool? isLoadingMore, int? currentPage, bool? hasReachedMax, String? searchQuery}) {
+  ClientsDebtListState copyWith({
+    List<ClientWithDebtModel>? clients,
+    bool? isLoadingMore,
+    int? currentPage,
+    bool? hasReachedMax,
+    String? searchQuery,
+    bool? onlyWithDebt,
+  }) {
     return ClientsDebtListState(
       clients: clients ?? this.clients,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       currentPage: currentPage ?? this.currentPage,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       searchQuery: searchQuery ?? this.searchQuery,
+      onlyWithDebt: onlyWithDebt ?? this.onlyWithDebt,
     );
   }
 }
@@ -36,12 +52,27 @@ class ClientsDebtList extends _$ClientsDebtList {
     return _fetchInitialPage();
   }
 
-  Future<ClientsDebtListState> _fetchInitialPage({String searchQuery = ''}) async {
-    final result = await ClientsService.getClientsWithDebt(businessId: businessId, page: 1, limit: _limit, search: searchQuery);
+  Future<ClientsDebtListState> _fetchInitialPage({
+    String searchQuery = '',
+    bool onlyWithDebt = false,
+  }) async {
+    final result = await ClientsService.getClientsWithDebt(
+      businessId: businessId,
+      page: 1,
+      limit: _limit,
+      search: searchQuery,
+      onlyWithDebt: onlyWithDebt,
+    );
 
     return result.when(
       (failure) => throw failure,
-      (pageData) => ClientsDebtListState(clients: pageData.data, currentPage: 1, hasReachedMax: pageData.data.length < _limit, searchQuery: searchQuery),
+      (pageData) => ClientsDebtListState(
+        clients: pageData.data,
+        currentPage: 1,
+        hasReachedMax: pageData.data.length < _limit,
+        searchQuery: searchQuery,
+        onlyWithDebt: onlyWithDebt,
+      ),
     );
   }
 
@@ -56,7 +87,13 @@ class ClientsDebtList extends _$ClientsDebtList {
 
     final nextPage = currentState.currentPage + 1;
 
-    final result = await ClientsService.getClientsWithDebt(businessId: businessId, page: nextPage, limit: _limit, search: currentState.searchQuery);
+    final result = await ClientsService.getClientsWithDebt(
+      businessId: businessId,
+      page: nextPage,
+      limit: _limit,
+      search: currentState.searchQuery,
+      onlyWithDebt: currentState.onlyWithDebt,
+    );
 
     result.when(
       (failure) {
@@ -76,15 +113,23 @@ class ClientsDebtList extends _$ClientsDebtList {
   }
 
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
     final currentState = state.value;
     final query = currentState?.searchQuery ?? '';
-    state = await AsyncValue.guard(() => _fetchInitialPage(searchQuery: query));
+    final onlyDebt = currentState?.onlyWithDebt ?? false;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchInitialPage(searchQuery: query, onlyWithDebt: onlyDebt));
   }
 
   void setSearchQuery(String query) async {
+    final onlyDebt = state.value?.onlyWithDebt ?? false;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetchInitialPage(searchQuery: query));
+    state = await AsyncValue.guard(() => _fetchInitialPage(searchQuery: query, onlyWithDebt: onlyDebt));
+  }
+
+  Future<void> setOnlyWithDebt(bool onlyWithDebt) async {
+    final query = state.value?.searchQuery ?? '';
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchInitialPage(searchQuery: query, onlyWithDebt: onlyWithDebt));
   }
 }
 
@@ -199,7 +244,31 @@ class PaymentDistribution extends _$PaymentDistribution {
       }
     }
 
-    state = state.copyWith(distributions: newDist);
+    // Always keep totalAmount strictly synchronized with the sum of ticket distributions
+    final recalculatedTotal = double.parse(
+      newDist.values.fold<double>(0.0, (sum, v) => sum + v).toStringAsFixed(2),
+    );
+    state = state.copyWith(totalAmount: recalculatedTotal, distributions: newDist);
+  }
+
+  /// Liquidates 100% of all pending tickets.
+  void payAll() {
+    final newDist = <String, double>{};
+    double sum = 0.0;
+    for (final sale in state.sales) {
+      final bal = double.parse(sale.pendingBalance.toStringAsFixed(2));
+      newDist[sale.id] = bal;
+      sum += bal;
+    }
+    state = state.copyWith(
+      totalAmount: double.parse(sum.toStringAsFixed(2)),
+      distributions: newDist,
+    );
+  }
+
+  /// Resets all allocations to zero.
+  void clearDistributions() {
+    state = state.copyWith(totalAmount: 0.0, distributions: {});
   }
 }
 

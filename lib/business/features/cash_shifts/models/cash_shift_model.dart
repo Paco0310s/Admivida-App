@@ -95,6 +95,8 @@ class CashShiftModel {
   final double? actualCash;
   final double? difference;
   final int salesCount;
+  final int? clientPaymentsCount;
+  final double? clientPaymentsTotal;
   final int? discountSalesCount;
   final double? discountTotal;
   final int? cancelledSalesCount;
@@ -128,6 +130,8 @@ class CashShiftModel {
     this.actualCash,
     this.difference,
     required this.salesCount,
+    this.clientPaymentsCount,
+    this.clientPaymentsTotal,
     this.discountSalesCount,
     this.discountTotal,
     this.cancelledSalesCount,
@@ -186,6 +190,12 @@ class CashShiftModel {
       difference:
           json['difference'] != null ? _toDouble(json['difference']) : null,
       salesCount: int.tryParse((json['salesCount'] ?? '0').toString()) ?? 0,
+      clientPaymentsCount: json['clientPaymentsCount'] != null
+          ? int.tryParse(json['clientPaymentsCount'].toString())
+          : null,
+      clientPaymentsTotal: json['clientPaymentsTotal'] != null
+          ? _toDouble(json['clientPaymentsTotal'])
+          : null,
       discountSalesCount: json['discountSalesCount'] != null
           ? int.tryParse(json['discountSalesCount'].toString())
           : null,

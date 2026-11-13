@@ -1,6 +1,9 @@
 import 'dart:async';
 
+import 'package:admivida/business/features/add_product/add_product_provider.dart';
+import 'package:admivida/business/features/add_product/models/product_category_model.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
+import 'package:admivida/business/features/products/models/products_list_state.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
@@ -20,9 +23,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 
 class ProductsScreen extends ConsumerWidget {
-  const ProductsScreen({super.key, required this.businessId});
+  const ProductsScreen({super.key, required this.businessId, this.initialStockStatus});
 
   final String businessId;
+  final String? initialStockStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,9 +40,9 @@ class ProductsScreen extends ConsumerWidget {
         iconTheme: const IconThemeData(color: AppColors.kNeutral100),
         backgroundColor: AppColors.kPrimaryColor,
       ),
-      mobile: ProductsListView(businessId: businessId),
-      tablet: ProductsListView(businessId: businessId),
-      desktop: ProductsListView(businessId: businessId),
+      mobile: ProductsListView(businessId: businessId, initialStockStatus: initialStockStatus),
+      tablet: ProductsListView(businessId: businessId, initialStockStatus: initialStockStatus),
+      desktop: ProductsListView(businessId: businessId, initialStockStatus: initialStockStatus),
       floatingActionButton: isMobile && isAdmin
           ? FloatingActionButton.extended(
               onPressed: () => NavigationService.navigateTo(
@@ -56,9 +60,10 @@ class ProductsScreen extends ConsumerWidget {
 }
 
 class ProductsListView extends ConsumerStatefulWidget {
-  const ProductsListView({super.key, required this.businessId});
+  const ProductsListView({super.key, required this.businessId, this.initialStockStatus});
 
   final String businessId;
+  final String? initialStockStatus;
 
   @override
   ConsumerState<ProductsListView> createState() => _ProductsListViewState();
@@ -76,6 +81,12 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
     super.initState();
     _scrollController.addListener(_handleScroll);
     HardwareKeyboard.instance.addHandler(_handleGlobalKeyEvent);
+    if (widget.initialStockStatus != null) {
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(productsListProvider(widget.businessId).notifier).setStockStatusFilter(widget.initialStockStatus);
+      });
+    }
   }
 
   @override
@@ -153,6 +164,8 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSearchHeader(isMobile: isMobile),
+            const Gap(6),
+            _buildFiltersBar(productsAsync.value),
             const Gap(8),
             Expanded(
               child: productsAsync.when(
@@ -173,6 +186,14 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
                           ),
                           const Gap(12),
                           const AppText(AppTexts.noData, color: AppColors.kNeutral600, fontWeight: FontWeight.w600),
+                          if (listState.hasActiveFilters) ...[
+                            const Gap(10),
+                            TextButton.icon(
+                              onPressed: () => ref.read(productsListProvider(widget.businessId).notifier).clearFilters(),
+                              icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                              label: const Text('Limpiar filtros'),
+                            ),
+                          ],
                         ],
                       ),
                     );
@@ -520,6 +541,152 @@ class _ProductsListViewState extends ConsumerState<ProductsListView> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildFiltersBar(ProductsListState? currentState) {
+    final notifier = ref.read(productsListProvider(widget.businessId).notifier);
+    final categoriesAsync = ref.watch(productCategoriesProvider(widget.businessId));
+    final categories = categoriesAsync.value ?? const <ProductCategoryModel>[];
+
+    final selectedCategoryId = currentState?.selectedCategoryId;
+    final stockStatus = currentState?.stockStatusFilter;
+    final isActive = currentState?.isActiveFilter;
+    final hasAnyFilter = currentState?.hasActiveFilters ?? false;
+
+    String categoryLabel = 'Categoría';
+    if (selectedCategoryId != null) {
+      final matched = categories.where((c) => c.id == selectedCategoryId);
+      if (matched.isNotEmpty) {
+        categoryLabel = matched.first.name;
+      }
+    }
+
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          FilterChip(
+            label: const Text('Todos', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            selected: !hasAnyFilter,
+            onSelected: (_) => notifier.clearFilters(),
+            selectedColor: AppColors.kPrimary100,
+            checkmarkColor: AppColors.kPrimaryColor,
+            visualDensity: VisualDensity.compact,
+          ),
+          const Gap(6),
+          FilterChip(
+            avatar: Icon(
+              Icons.warning_amber_rounded,
+              size: 16,
+              color: stockStatus == 'LOW' ? AppColors.kWarning : AppColors.kNeutral600,
+            ),
+            label: const Text('Stock bajo', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            selected: stockStatus == 'LOW',
+            onSelected: (val) => notifier.setStockStatusFilter(val ? 'LOW' : null),
+            selectedColor: AppColors.kWarning.withValues(alpha: 0.16),
+            checkmarkColor: AppColors.kWarning,
+            visualDensity: VisualDensity.compact,
+          ),
+          const Gap(6),
+          FilterChip(
+            avatar: Icon(
+              Icons.remove_shopping_cart_outlined,
+              size: 15,
+              color: stockStatus == 'OUT' ? AppColors.kError : AppColors.kNeutral600,
+            ),
+            label: const Text('Agotados', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            selected: stockStatus == 'OUT',
+            onSelected: (val) => notifier.setStockStatusFilter(val ? 'OUT' : null),
+            selectedColor: AppColors.kError.withValues(alpha: 0.15),
+            checkmarkColor: AppColors.kError,
+            visualDensity: VisualDensity.compact,
+          ),
+          const Gap(6),
+          FilterChip(
+            label: const Text('Activos', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            selected: isActive == true,
+            onSelected: (val) => notifier.setIsActiveFilter(val ? true : null),
+            selectedColor: AppColors.kSuccess.withValues(alpha: 0.16),
+            checkmarkColor: AppColors.kSuccess,
+            visualDensity: VisualDensity.compact,
+          ),
+          const Gap(6),
+          FilterChip(
+            label: const Text('Inactivos', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            selected: isActive == false,
+            onSelected: (val) => notifier.setIsActiveFilter(val ? false : null),
+            selectedColor: AppColors.kNeutral200,
+            checkmarkColor: AppColors.kNeutral700,
+            visualDensity: VisualDensity.compact,
+          ),
+          if (categories.isNotEmpty) ...[
+            const Gap(6),
+            PopupMenuButton<String?>(
+              tooltip: 'Filtrar por categoría',
+              onSelected: (catId) => notifier.setCategoryFilter(catId == '__ALL__' ? null : catId),
+              itemBuilder: (context) => [
+                const PopupMenuItem<String?>(
+                  value: '__ALL__',
+                  child: Text('Todas las categorías'),
+                ),
+                const PopupMenuDivider(),
+                ...categories.map(
+                  (c) => PopupMenuItem<String?>(
+                    value: c.id,
+                    child: Row(
+                      children: [
+                        if (selectedCategoryId == c.id)
+                          const Icon(Icons.check, size: 16, color: AppColors.kPrimaryColor)
+                        else
+                          const SizedBox(width: 16),
+                        const Gap(8),
+                        Text(c.name),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: selectedCategoryId != null ? AppColors.kPrimary100 : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: selectedCategoryId != null ? AppColors.kPrimaryColor : AppColors.kNeutral300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.category_outlined,
+                      size: 15,
+                      color: selectedCategoryId != null ? AppColors.kPrimaryColor : AppColors.kNeutral600,
+                    ),
+                    const Gap(5),
+                    Text(
+                      categoryLabel,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: selectedCategoryId != null ? AppColors.kPrimaryColor : AppColors.kNeutral800,
+                      ),
+                    ),
+                    const Gap(2),
+                    Icon(
+                      Icons.arrow_drop_down_rounded,
+                      size: 18,
+                      color: selectedCategoryId != null ? AppColors.kPrimaryColor : AppColors.kNeutral600,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

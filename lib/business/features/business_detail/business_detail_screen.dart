@@ -1,3 +1,5 @@
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_service.dart';
+import 'package:admivida/business/features/cash_shifts/cash_shifts_provider.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/business/models/business_model.dart';
 import 'package:admivida/common/constants/app_colors.dart';
@@ -55,6 +57,15 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
     final bool isAdmin = roles.any((role) => role == 'ADMIN' || role.contains('ADMIN'));
 
     final List<Map<String, dynamic>> options = [
+      {
+        'title': 'Punto de Venta (POS)',
+        'subtitle': 'Registra una nueva venta rápida con escáner o catálogo.',
+        'icon': Icons.add_shopping_cart_rounded,
+        'color': AppColors.kSuccess,
+        'isEnabled': true,
+        'route': Routes.addSale,
+        'role': ['SELLER', 'ADMIN'],
+      },
       {
         'title': AppTexts.businessSales,
         'subtitle': AppTexts.businessSalesDescription,
@@ -154,187 +165,241 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
         children: [
           // Header Card
           Container(
-            padding: EdgeInsets.all(isDesktop ? 24 : 18),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF163542),
+                  Color(0xFF122C38),
                   AppColors.kPrimaryColor,
+                  AppColors.kSecondaryColor,
                 ],
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.kPrimaryColor.withValues(alpha: 0.16),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+                  color: AppColors.kPrimaryColor.withValues(alpha: 0.18),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Column(
+            child: Stack(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: business.image == null
-                          ? Container(
-                              width: isDesktop ? 72 : 60,
-                              height: isDesktop ? 72 : 60,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(Icons.storefront_rounded, size: 34, color: Colors.white),
-                            )
-                          : SizedBox(
-                              width: isDesktop ? 72 : 60,
-                              height: isDesktop ? 72 : 60,
-                              child: AdaptedFile.network(
-                                business.image!.url,
-                                blurHash: business.image!.blurHash,
-                              ).getWidget(width: isDesktop ? 72 : 60, height: isDesktop ? 72 : 60),
-                            ),
+                Positioned(
+                  right: -25,
+                  top: -35,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
-                    const Gap(16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(isDesktop ? 26 : 18),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: AppText(
-                                  business.name,
-                                  fontSize: isDesktop ? 22 : 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.22), width: 1.5),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: business.image == null
+                                  ? Container(
+                                      width: isDesktop ? 72 : 60,
+                                      height: isDesktop ? 72 : 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(Icons.storefront_rounded, size: 34, color: Colors.white),
+                                    )
+                                  : SizedBox(
+                                      width: isDesktop ? 72 : 60,
+                                      height: isDesktop ? 72 : 60,
+                                      child: AdaptedFile.network(
+                                        business.image!.url,
+                                        blurHash: business.image!.blurHash,
+                                      ).getWidget(width: isDesktop ? 72 : 60, height: isDesktop ? 72 : 60),
+                                    ),
+                            ),
+                          ),
+                          const Gap(16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    AppText(
+                                      business.name,
+                                      fontSize: isDesktop ? 22 : 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: AppText(
+                                        business.categoryName,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.kPrimary100,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: AppText(
+                                        isAdmin ? 'Administrador' : 'Vendedor',
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const Gap(10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.16),
-                                  borderRadius: BorderRadius.circular(20),
+                                if (business.description != null && business.description!.trim().isNotEmpty) ...[
+                                  const Gap(5),
+                                  AppText(
+                                    business.description!,
+                                    color: const Color(0xD9FFFFFF),
+                                    fontSize: 13,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (isDesktop) ...[
+                            if (isAdmin) ...[
+                              const Gap(12),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final updatedBusiness = await NavigationService.navigateTo(
+                                    context,
+                                    Routes.createOrUpdateBusinessScreen,
+                                    arguments: business,
+                                  );
+
+                                  if (updatedBusiness != null && updatedBusiness is BusinessModel) {
+                                    setState(() {
+                                      business = updatedBusiness;
+                                    });
+                                    DashboardSession.setActiveBusiness(updatedBusiness);
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
                                 ),
-                                child: AppText(
-                                  business.categoryName,
-                                  fontSize: 11,
+                                icon: const Icon(Icons.edit_rounded, size: 17, color: Colors.white),
+                                label: const AppText(
+                                  AppTexts.editBusinessButton,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.kPrimary100,
+                                  color: Colors.white,
                                 ),
                               ),
                             ],
-                          ),
-                          if (business.description != null && business.description!.trim().isNotEmpty) ...[
-                            const Gap(4),
-                            AppText(
-                              business.description!,
-                              color: const Color(0xD9FFFFFF),
-                              fontSize: 13,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            const Gap(10),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                DashboardSession.navigateToBusinessRoute(
+                                  context,
+                                  Routes.addSale,
+                                  business,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.kPrimaryColor,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+                              ),
+                              icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                              label: const Text(
+                                'Nueva Venta (POS)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ] else if (isAdmin) ...[
+                            IconButton(
+                              tooltip: AppTexts.editBusinessButton,
+                              onPressed: () async {
+                                final updatedBusiness = await NavigationService.navigateTo(
+                                  context,
+                                  Routes.createOrUpdateBusinessScreen,
+                                  arguments: business,
+                                );
+
+                                if (updatedBusiness != null && updatedBusiness is BusinessModel) {
+                                  setState(() {
+                                    business = updatedBusiness;
+                                  });
+                                  DashboardSession.setActiveBusiness(updatedBusiness);
+                                }
+                              },
+                              icon: const Icon(Icons.edit_rounded, color: Colors.white),
                             ),
                           ],
                         ],
                       ),
-                    ),
-                    if (isDesktop) ...[
-                      if (isAdmin) ...[
-                        const Gap(12),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final updatedBusiness = await NavigationService.navigateTo(
-                              context,
-                              Routes.createOrUpdateBusinessScreen,
-                              arguments: business,
-                            );
-
-                            if (updatedBusiness != null && updatedBusiness is BusinessModel) {
-                              setState(() {
-                                business = updatedBusiness;
-                              });
-                              DashboardSession.setActiveBusiness(updatedBusiness);
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          icon: const Icon(Icons.edit_rounded, size: 17, color: Colors.white),
-                          label: const AppText(
-                            AppTexts.editBusinessButton,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                      const Gap(10),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          NavigationService.navigateTo(
-                            context,
-                            Routes.addSale,
-                            arguments: {'businessId': business.id, 'businessName': business.name},
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.kPrimaryColor,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                        label: const Text(
-                          'Nueva Venta (POS)',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ),
-                    ] else if (isAdmin) ...[
-                      IconButton(
-                        tooltip: AppTexts.editBusinessButton,
-                        onPressed: () async {
-                          final updatedBusiness = await NavigationService.navigateTo(
-                            context,
-                            Routes.createOrUpdateBusinessScreen,
-                            arguments: business,
-                          );
-
-                          if (updatedBusiness != null && updatedBusiness is BusinessModel) {
-                            setState(() {
-                              business = updatedBusiness;
-                            });
-                            DashboardSession.setActiveBusiness(updatedBusiness);
-                          }
-                        },
-                        icon: const Icon(Icons.edit_rounded, color: Colors.white),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-          const Gap(24),
+          const Gap(16),
+          _buildLiveStatusBar(context, isAdmin: isAdmin),
+          const Gap(20),
 
           // Grid Options
-          const AppText(
-            AppTexts.businessOptionsTitle,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.kNeutral900,
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: AppColors.kSecondaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const Gap(8),
+              const AppText(
+                AppTexts.businessOptionsTitle,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.kNeutral900,
+              ),
+            ],
           ),
-          const Gap(12),
+          const Gap(14),
           Builder(
             builder: (context) {
               final visibleOptions = options.where((option) {
@@ -348,9 +413,9 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                 itemCount: visibleOptions.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: isDesktop ? 1.5 : 1.18,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: isDesktop ? 1.48 : 1.16,
                 ),
                 itemBuilder: (context, index) {
                   final option = visibleOptions[index];
@@ -360,11 +425,13 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                   final color = option['color'] as Color;
                   final isEnabled = option['isEnabled'] as bool;
                   final route = option['route'] as String;
+                  final isPosCard = route == Routes.addSale;
 
                   return AppCard(
                     margin: EdgeInsets.zero,
-                    backgroundColor: !isEnabled ? AppColors.kNeutral200 : Colors.white,
-                    padding: const EdgeInsets.all(16),
+                    backgroundColor: !isEnabled ? AppColors.kNeutral100 : Colors.white,
+                    borderColor: isPosCard ? color.withValues(alpha: 0.45) : AppColors.kNeutral200,
+                    padding: const EdgeInsets.all(18),
                     onTap: () {
                       if (isEnabled) {
                         DashboardSession.navigateToBusinessRoute(context, route, business);
@@ -382,15 +449,51 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    color.withValues(alpha: 0.16),
+                                    color.withValues(alpha: 0.07),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(13),
                               ),
                               child: Icon(icon, color: color, size: 24),
                             ),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 14,
-                              color: AppColors.kNeutral400,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isPosCard) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: AppText(
+                                      'Acceso directo',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: color,
+                                    ),
+                                  ),
+                                  const Gap(6),
+                                ],
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.kNeutral100,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 15,
+                                    color: AppColors.kPrimaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -409,7 +512,7 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                             AppText(
                               subtitle,
                               fontSize: 12,
-                              color: AppColors.kNeutral600,
+                              color: AppColors.kNeutral500,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -423,6 +526,124 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLiveStatusBar(BuildContext context, {required bool isAdmin}) {
+    final shiftState = ref.watch(cashShiftsProvider(business.id));
+    final activeShift = shiftState.activeShift;
+
+    final Color shiftColor;
+    final IconData shiftIcon;
+    final String shiftText;
+
+    if (shiftState.isLoading && activeShift == null) {
+      shiftColor = AppColors.kNeutral500;
+      shiftIcon = Icons.sync_rounded;
+      shiftText = 'Verificando caja...';
+    } else if (activeShift != null) {
+      shiftColor = AppColors.kSuccess;
+      shiftIcon = Icons.lock_open_rounded;
+      shiftText = 'Caja abierta';
+    } else if (isAdmin) {
+      shiftColor = AppColors.kNeutral600;
+      shiftIcon = Icons.lock_outline_rounded;
+      shiftText = 'Sin turno (Admin libre)';
+    } else {
+      shiftColor = AppColors.kWarning;
+      shiftIcon = Icons.lock_clock_rounded;
+      shiftText = 'Sin turno abierto';
+    }
+
+    return ValueListenableBuilder<List<PendingOfflineSale>>(
+      valueListenable: OfflineSalesQueueService.queueNotifier,
+      builder: (context, allPending, _) {
+        final pendingForBiz = allPending.where((s) => s.businessId == business.id).toList();
+        final hasAttention = pendingForBiz.any((s) => s.requiresAttention);
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _StatusPill(
+              icon: shiftIcon,
+              color: shiftColor,
+              label: shiftText,
+              onTap: () => DashboardSession.navigateToBusinessRoute(
+                context,
+                Routes.cashShifts,
+                business,
+              ),
+            ),
+            if (pendingForBiz.isNotEmpty)
+              _StatusPill(
+                icon: hasAttention ? Icons.error_outline_rounded : Icons.cloud_upload_outlined,
+                color: hasAttention ? AppColors.kError : AppColors.kWarning,
+                label: '${pendingForBiz.length} ${pendingForBiz.length == 1 ? 'venta offline' : 'ventas offline'}',
+                onTap: () => DashboardSession.navigateToBusinessRoute(
+                  context,
+                  Routes.addSale,
+                  business,
+                ),
+              ),
+            _StatusPill(
+              icon: Icons.point_of_sale_rounded,
+              color: AppColors.kPrimaryColor,
+              label: 'Ir al POS →',
+              onTap: () => DashboardSession.navigateToBusinessRoute(
+                context,
+                Routes.addSale,
+                business,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const Gap(6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

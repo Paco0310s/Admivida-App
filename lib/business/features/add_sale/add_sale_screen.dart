@@ -2,6 +2,8 @@ import 'package:admivida/business/features/add_sale/add_sale_provider.dart';
 import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
 import 'package:admivida/business/features/add_sale/cart/cart_screen.dart';
 import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_dialog.dart';
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_service.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_provider.dart';
 import 'package:admivida/business/features/add_sale/pos_catalog/pos_catalog_screen.dart';
 import 'package:admivida/business/features/cash_shifts/cash_shifts_provider.dart';
@@ -79,6 +81,13 @@ class AddSaleScreen extends ConsumerWidget {
             if (proceed != true) return;
           }
 
+          if (variant.stockQuantity <= 0) {
+            if (context.mounted) {
+              SnackbarUtil.showWarning(context, 'Este producto no tiene existencias disponibles');
+            }
+            return;
+          }
+
           final double price = variant.salePrice;
           final String displayName = (variant.name != null && variant.name!.isNotEmpty)
               ? variant.name!
@@ -94,11 +103,20 @@ class AddSaleScreen extends ConsumerWidget {
             isPaid: true,
             imageUrl: variant.images.isNotEmpty ? variant.images.first : null,
             subtotal: price,
+            allowFractions: variant.allowFractions,
+            availableStock: variant.stockQuantity,
           );
 
-          ref.read(cartProvider.notifier).addItem(newItem);
+          final added = ref.read(cartProvider.notifier).addItem(newItem);
           ref.read(posCatalogProvider(businessId).notifier).setSearchQuery('');
-          if (context.mounted) SnackbarUtil.showSuccess(context, '$displayName agregado');
+          if (context.mounted) {
+            if (added) {
+              SnackbarUtil.showSuccess(context, '$displayName agregado');
+            } else {
+              final stockText = variant.stockQuantity % 1 == 0 ? variant.stockQuantity.toInt().toString() : variant.stockQuantity.toString();
+              SnackbarUtil.showWarning(context, 'Stock máximo alcanzado para $displayName ($stockText disponibles)');
+            }
+          }
         } catch (e) {
           if (context.mounted) {
             SnackbarUtil.showWarning(context, 'No se encontró el producto: $cleanCode');
@@ -113,6 +131,33 @@ class AddSaleScreen extends ConsumerWidget {
           backgroundColor: AppColors.kPrimaryColor,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
+            ValueListenableBuilder<List<PendingOfflineSale>>(
+              valueListenable: OfflineSalesQueueService.queueNotifier,
+              builder: (context, allPending, _) {
+                final pendingCount = allPending.where((s) => s.businessId == businessId).length;
+                if (pendingCount == 0) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.amber.shade700,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    onPressed: () => OfflineSalesQueueDialog.show(
+                      context,
+                      businessId: businessId,
+                      businessName: businessName,
+                    ),
+                    icon: const Icon(Icons.cloud_upload_rounded, size: 17, color: Colors.white),
+                    label: Text(
+                      'Cola ($pendingCount)',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: TextButton.icon(
@@ -158,7 +203,7 @@ class AddSaleScreen extends ConsumerWidget {
         tablet: MobileTabletView(businessId: businessId, crossAxisCount: 4, businessName: businessName),
         desktop: Row(
           children: [
-            Flexible(flex: 72, child: PosCatalogScreen(businessId: businessId, crossAxisCount: 6)),
+            Flexible(flex: 72, child: PosCatalogScreen(businessId: businessId, businessName: businessName, crossAxisCount: 6)),
             Container(width: 2, color: AppColors.kNeutral300),
             Flexible(
               flex: 28,
@@ -183,7 +228,7 @@ class MobileTabletView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        PosCatalogScreen(businessId: businessId, crossAxisCount: crossAxisCount),
+        PosCatalogScreen(businessId: businessId, businessName: businessName, crossAxisCount: crossAxisCount),
         Positioned(
           bottom: 70,
           right: 10,
@@ -253,25 +298,48 @@ class _PosScannerListenerState extends State<PosScannerListener> {
     super.dispose();
   }
 
+  bool _isAnyTextFieldFocused() {
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null || focus.context == null) return false;
+    bool hasEditable = false;
+    focus.context!.visitAncestorElements((el) {
+      if (el.widget is EditableText) {
+        hasEditable = true;
+        return false;
+      }
+      return true;
+    });
+    if (focus.context!.widget is EditableText) hasEditable = true;
+    return hasEditable;
+  }
+
   bool _handleGlobalKeyEvent(KeyEvent event) {
     // Solo procesamos cuando la tecla se presiona hacia abajo (KeyDownEvent)
-    if (event is! KeyDownEvent) return false;
+    if (event is! KeyDownEvent || !mounted) return false;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+
+    // Si el usuario tiene un campo de texto enfocado (ej. buscador F2 o diálogo), no interceptar como escáner global
+    if (_isAnyTextFieldFocused()) {
+      _buffer = '';
+      return false;
+    }
 
     final now = DateTime.now();
 
-    // Si pasan más de 100 ms entre caracteres, es un humano tecleando a mano.
+    // Si pasan más de 70 ms entre caracteres, es un humano tecleando o navegando con el teclado.
     // Reiniciamos el buffer acumulador.
-    if (_lastKeyEventTime != null && now.difference(_lastKeyEventTime!).inMilliseconds > 100) {
+    if (_lastKeyEventTime != null && now.difference(_lastKeyEventTime!).inMilliseconds > 70) {
       _buffer = '';
     }
     _lastKeyEventTime = now;
 
     // Detectar fin de lectura del escáner (Tecla Enter / Numpad Enter)
+    // Un código de barras real tiene al menos 4 caracteres seguidos leídos a alta velocidad (< 70ms entre cada uno).
     if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-      if (_buffer.trim().isNotEmpty) {
-        final scannedSku = _buffer.trim();
-        _buffer = ''; // Limpiamos el acumulador
-
+      final scannedSku = _buffer.trim();
+      _buffer = ''; // Limpiamos el acumulador siempre en Enter
+      if (scannedSku.length >= 4) {
         // 1. Quitamos el foco de cualquier TextField activo (para cerrar teclado si estaba abierto)
         FocusManager.instance.primaryFocus?.unfocus();
 
@@ -285,15 +353,16 @@ class _PosScannerListenerState extends State<PosScannerListener> {
 
         return true; // Indicamos que el evento fue manejado por el escáner
       }
+      return false;
     }
 
-    // Acumular caracteres del código de barras
+    // Acumular caracteres imprimibles del código de barras
     final character = event.character;
-    if (character != null && character.isNotEmpty) {
+    if (character != null && character.trim().isNotEmpty) {
       _buffer += character;
     }
 
-    return false; // Permitimos que otros widgets (como un TextField) sigan recibiendo la tecla si es escritura manual
+    return false; // Permitimos que otros widgets sigan recibiendo la tecla si es escritura o navegación manual
   }
 
   @override

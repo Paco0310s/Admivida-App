@@ -18,7 +18,8 @@ class ConnectivityService {
       hasActiveAdapter = false;
     }
 
-    if (!hasActiveAdapter) {
+    final isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    if (!hasActiveAdapter && !isDesktop) {
       return false;
     }
 

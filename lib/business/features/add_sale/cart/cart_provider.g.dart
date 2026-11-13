@@ -43,7 +43,7 @@ final class CartProvider
   }
 }
 
-String _$cartHash() => r'a71d0f582260c34944688e1a28ef8a141827dfdb';
+String _$cartHash() => r'26220933d9ad76bf93ba47d79ad447f08d1d9638';
 
 abstract class _$Cart extends $Notifier<List<CreateSaleDetailInnerDto>> {
   List<CreateSaleDetailInnerDto> build();

@@ -105,7 +105,14 @@ class AppRoutes {
         );
       },
       Routes.products: (context) {
-        final businessId = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+        final args = ModalRoute.of(context)?.settings.arguments;
+        if (args is Map<String, dynamic>) {
+          return ProductsScreen(
+            businessId: args['businessId'] as String? ?? '',
+            initialStockStatus: args['stockStatus'] as String?,
+          );
+        }
+        final businessId = args as String? ?? '';
         return ProductsScreen(businessId: businessId);
       },
       Routes.productDetail: (context) {

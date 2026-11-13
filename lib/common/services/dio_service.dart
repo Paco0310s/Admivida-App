@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_service.dart';
 import 'package:admivida/common/enums/app_failure_enum.dart';
 import 'package:admivida/common/features/sign_in/sign_in_service.dart';
 import 'package:admivida/common/routes/routes.dart';
@@ -148,6 +149,10 @@ class DioService {
                 }
               }
               return handler.next(options);
+            },
+            onResponse: (response, handler) {
+              OfflineSalesQueueService.notifyNetworkSuccess();
+              return handler.next(response);
             },
             onError: (DioException error, handler) async {
               if (error.response?.statusCode != 401) {

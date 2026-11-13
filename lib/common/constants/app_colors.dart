@@ -20,7 +20,7 @@ class AppColors {
   static const Color kPrimaryColor = Color(0xFF1F4554);
   static const Color kSecondaryColor = Color(0xFF247569);
   static const Color kTertiaryColor = Color(0xFF28668C);
-  static const Color kBackgroundColor = Color(0xFFF5F5F5);
+  static const Color kBackgroundColor = Color(0xFFF8FAFC);
   static const Color kBlackColor = Color(0xff000000);
   static const Color kWhiteColor = Color(0xffffffff);
 
@@ -36,17 +36,17 @@ class AppColors {
   static const Color kPrimary800 = Color(0xFF1e433f);
   static const Color kPrimary900 = Color(0xFF0c2724);
 
-  //---------------Neutral Colors---------------
-  static const Color kNeutral50 = Color(0xffF6F6F6);
-  static const Color kNeutral100 = Color(0xffF5F5F5);
-  static const Color kNeutral200 = Color(0xffE5E5E5);
-  static const Color kNeutral300 = Color(0xffD4D4D4);
-  static const Color kNeutral400 = Color(0xffA3A3A3);
-  static const Color kNeutral500 = Color(0xff737373);
-  static const Color kNeutral600 = Color(0xff525252);
-  static const Color kNeutral700 = Color(0xff404040);
-  static const Color kNeutral800 = Color(0xff262626);
-  static const Color kNeutral900 = Color(0xff171717);
+  //---------------Neutral Colors (Modern Slate Palette)---------------
+  static const Color kNeutral50 = Color(0xFFF8FAFC);
+  static const Color kNeutral100 = Color(0xFFF1F5F9);
+  static const Color kNeutral200 = Color(0xFFE2E8F0);
+  static const Color kNeutral300 = Color(0xFFCBD5E1);
+  static const Color kNeutral400 = Color(0xFF94A3B8);
+  static const Color kNeutral500 = Color(0xFF64748B);
+  static const Color kNeutral600 = Color(0xFF475569);
+  static const Color kNeutral700 = Color(0xFF334155);
+  static const Color kNeutral800 = Color(0xFF1E293B);
+  static const Color kNeutral900 = Color(0xFF0F172A);
 
   //---------------Success Colors---------------//
   static const Color kSuccess = Color(0xff00B243);

@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
 import 'package:admivida/business/features/clients/clients_provider.dart';
 import 'package:admivida/business/features/clients/models/client_debt_model.dart';
+import 'package:admivida/business/features/clients/widgets/client_actions_dialogs.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
@@ -101,6 +104,37 @@ class _ClientsDebtListViewState extends ConsumerState<ClientsDebtListView> {
           children: [
             _buildSearchHeader(isMobile: isMobile),
             const Gap(8),
+            clientsAsync.maybeWhen(
+              data: (listState) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('Todos'),
+                      selected: !listState.onlyWithDebt,
+                      onSelected: (_) {
+                        if (listState.onlyWithDebt) {
+                          ref.read(clientsDebtListProvider(widget.businessId).notifier).setOnlyWithDebt(false);
+                        }
+                      },
+                    ),
+                    const Gap(8),
+                    FilterChip(
+                      label: const Text('Con saldo pendiente'),
+                      selected: listState.onlyWithDebt,
+                      selectedColor: AppColors.kWarning.withValues(alpha: 0.16),
+                      checkmarkColor: AppColors.kWarning,
+                      onSelected: (_) {
+                        if (!listState.onlyWithDebt) {
+                          ref.read(clientsDebtListProvider(widget.businessId).notifier).setOnlyWithDebt(true);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
             Expanded(
               child: clientsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -247,9 +281,78 @@ class _ClientsDebtListViewState extends ConsumerState<ClientsDebtListView> {
               ),
             ],
           ),
+          const Gap(4),
+          PopupMenuButton<String>(
+            tooltip: 'Acciones del cliente',
+            icon: const Icon(Icons.more_vert_rounded, color: AppColors.kNeutral500, size: 20),
+            onSelected: (action) => _handleClientAction(action, client),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'pay',
+                child: Row(
+                  children: [
+                    Icon(Icons.payments_outlined, size: 18, color: AppColors.kPrimaryColor),
+                    Gap(10),
+                    Text('Cobrar / Abonar'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'history',
+                child: Row(
+                  children: [
+                    Icon(Icons.history_rounded, size: 18, color: AppColors.kNeutral700),
+                    Gap(10),
+                    Text('Historial de compras'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 18, color: AppColors.kNeutral700),
+                    Gap(10),
+                    Text('Editar datos'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleClientAction(String action, ClientWithDebtModel client) async {
+    switch (action) {
+      case 'pay':
+        NavigationService.navigateTo(
+          context,
+          Routes.clientPayments,
+          arguments: {'businessId': widget.businessId, 'clientId': client.id, 'clientName': client.fullName},
+        );
+        break;
+      case 'history':
+        await showClientPurchaseHistoryDialog(
+          context,
+          businessId: widget.businessId,
+          client: client,
+        );
+        break;
+      case 'edit':
+        final updated = await showEditClientDialog(
+          context,
+          businessId: widget.businessId,
+          client: client,
+        );
+        if (updated && mounted) {
+          SnackbarUtil.showSuccess(context, 'Cliente actualizado');
+          ref.invalidate(businessClientsProvider(widget.businessId));
+          await ref.read(clientsDebtListProvider(widget.businessId).notifier).refresh();
+        }
+        break;
+    }
   }
 
   Widget _buildSearchHeader({required bool isMobile}) {

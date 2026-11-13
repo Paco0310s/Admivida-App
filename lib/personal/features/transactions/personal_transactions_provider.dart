@@ -8,7 +8,7 @@ part 'personal_transactions_provider.g.dart';
 
 @riverpod
 class PersonalTransactionsList extends _$PersonalTransactionsList {
-  static const int _pageSize = 15;
+  static const int _pageSize = 30;
 
   String? _accountId;
   String _category = 'REAL';

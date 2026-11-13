@@ -2,6 +2,7 @@ import 'package:admivida/common/utils/snackbar_util.dart';
 
 import 'package:admivida/business/features/products/products_service.dart';
 
+import 'package:admivida/business/features/products/models/inventory_movement_model.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
@@ -259,6 +260,8 @@ class ProductDetailView extends StatelessWidget {
                 ),
 
               const Gap(24),
+              _ProductMovementsSection(businessId: businessId, productId: productId),
+              const Gap(24),
               // 💡 Registration dates
               Center(
                 child: AppText(
@@ -490,6 +493,25 @@ class _VariantCard extends ConsumerWidget {
                               child: const Icon(Icons.add, size: 20),
                             ),
                           ),
+                          const Gap(8),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _showAdjustStockDialog(context, ref),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.kPrimary50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppColors.kPrimaryColor.withValues(alpha: 0.3)),
+                              ),
+                              child: const AppText(
+                                'Surtir / Ajustar',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.kPrimaryColor,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -565,6 +587,200 @@ class _VariantCard extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _showAdjustStockDialog(BuildContext context, WidgetRef ref) async {
+    final currentStock = variant.stockQuantity ?? 0.0;
+    final qtyCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+    String mode = 'ADD'; // 'ADD' | 'SUB' | 'SET'
+    String selectedReason = 'PURCHASE';
+    bool isSaving = false;
+
+    const reasonOptions = <({String code, String label})>[
+      (code: 'PURCHASE', label: 'Surtido / Compra'),
+      (code: 'ADJUSTMENT', label: 'Ajuste de conteo físico'),
+      (code: 'WASTE', label: 'Merma / Caducidad'),
+      (code: 'MANUFACTURE', label: 'Producción interna'),
+    ];
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          final parsed = double.tryParse(qtyCtrl.text.trim());
+          double? previewStock;
+          if (parsed != null && parsed >= 0) {
+            previewStock = switch (mode) {
+              'ADD' => currentStock + parsed,
+              'SUB' => currentStock - parsed,
+              _ => parsed,
+            };
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: const Row(
+              children: [
+                Icon(Icons.inventory_rounded, color: AppColors.kPrimaryColor),
+                Gap(10),
+                Expanded(
+                  child: AppText('Ajustar / Surtir Stock', fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.kNeutral50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.kNeutral200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppText('Stock actual:', color: AppColors.kNeutral600, fontSize: 13),
+                          AppText(
+                            currentStock == currentStock.toInt()
+                                ? currentStock.toInt().toString()
+                                : currentStock.toStringAsFixed(2),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppColors.kNeutral900,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Gap(12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'ADD', label: Text('Sumar (+)')),
+                        ButtonSegment(value: 'SUB', label: Text('Restar (-)')),
+                        ButtonSegment(value: 'SET', label: Text('Fijar (=)')),
+                      ],
+                      selected: {mode},
+                      onSelectionChanged: (sel) {
+                        setDialogState(() {
+                          mode = sel.first;
+                          if (mode == 'SUB' && selectedReason == 'PURCHASE') {
+                            selectedReason = 'WASTE';
+                          } else if (mode == 'ADD' && selectedReason == 'WASTE') {
+                            selectedReason = 'PURCHASE';
+                          }
+                        });
+                      },
+                    ),
+                    const Gap(12),
+                    TextField(
+                      controller: qtyCtrl,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: InputDecoration(
+                        labelText: mode == 'SET' ? 'Nuevo stock total' : 'Cantidad',
+                        hintText: 'Ej. 10',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    if (previewStock != null) ...[
+                      const Gap(6),
+                      AppText(
+                        previewStock < 0
+                            ? 'El stock final no puede ser menor a 0'
+                            : 'Stock resultante: ${previewStock == previewStock.toInt() ? previewStock.toInt() : previewStock.toStringAsFixed(2)}',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: previewStock < 0 ? AppColors.kError : AppColors.kPrimaryColor,
+                      ),
+                    ],
+                    const Gap(12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedReason,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Motivo del movimiento',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      items: reasonOptions
+                          .map((r) => DropdownMenuItem(value: r.code, child: Text(r.label)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedReason = val);
+                      },
+                    ),
+                    const Gap(12),
+                    TextField(
+                      controller: notesCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Nota / Referencia (Opcional)',
+                        hintText: 'Ej. Compra semanal o merma por daño',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSaving ? null : () => NavigationService.pop(dialogContext),
+                child: const AppText('Cancelar', color: AppColors.kNeutral600),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.kPrimaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: isSaving || previewStock == null || previewStock < 0
+                    ? null
+                    : () async {
+                        final delta = previewStock! - currentStock;
+                        if (delta.abs() < 0.0001) {
+                          NavigationService.pop(dialogContext);
+                          return;
+                        }
+                        setDialogState(() => isSaving = true);
+                        await ref.read(stockAdjustmentProvider.notifier).adjustStock(
+                              businessId: businessId,
+                              productId: productId,
+                              variantId: variant.id,
+                              currentStock: currentStock,
+                              adjustment: delta,
+                              reason: selectedReason,
+                              notes: notesCtrl.text.trim(),
+                            );
+                        if (!dialogContext.mounted) return;
+                        ref.invalidate(productDetailProvider(businessId: businessId, productId: productId));
+                        NavigationService.pop(dialogContext);
+                        if (context.mounted) {
+                          SnackbarUtil.showSuccess(context, 'Stock actualizado correctamente');
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Aplicar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    qtyCtrl.dispose();
+    notesCtrl.dispose();
+  }
 }
 
 class _VariantValue extends StatelessWidget {
@@ -632,6 +848,143 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
       child: AppText(isActive ? AppTexts.active : AppTexts.inactive, fontSize: 12, fontWeight: FontWeight.bold, color: color),
+    );
+  }
+}
+
+class _ProductMovementsSection extends ConsumerWidget {
+  const _ProductMovementsSection({required this.businessId, required this.productId});
+
+  final String businessId;
+  final String productId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final movementsAsync = ref.watch(
+      productMovementsProvider((businessId: businessId, productId: productId)),
+    );
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.swap_vert_rounded, color: AppColors.kPrimaryColor, size: 20),
+              const Gap(8),
+              const Expanded(
+                child: AppText(
+                  'Movimientos recientes (Kardex)',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15.5,
+                  color: AppColors.kNeutral900,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Actualizar historial',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.kNeutral600),
+                onPressed: () => ref.invalidate(
+                  productMovementsProvider((businessId: businessId, productId: productId)),
+                ),
+              ),
+            ],
+          ),
+          const Gap(8),
+          movementsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, _) => const AppText(
+              'No se pudieron cargar los movimientos.',
+              color: AppColors.kNeutral500,
+              fontSize: 12.5,
+            ),
+            data: (List<InventoryMovementModel> movements) {
+              if (movements.isEmpty) {
+                return const AppText(
+                  'Aún no hay movimientos registrados para este producto.',
+                  color: AppColors.kNeutral500,
+                  fontSize: 12.5,
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: movements.length > 10 ? 10 : movements.length,
+                separatorBuilder: (_, _) => const Divider(height: 12, color: AppColors.kNeutral100),
+                itemBuilder: (context, index) {
+                  final m = movements[index];
+                  final qtyStr = m.quantity == m.quantity.toInt()
+                      ? m.quantity.toInt().toString()
+                      : m.quantity.toStringAsFixed(2);
+                  final prevStr = m.previousStock == m.previousStock.toInt()
+                      ? m.previousStock.toInt().toString()
+                      : m.previousStock.toStringAsFixed(2);
+                  final nextStr = m.newStock == m.newStock.toInt()
+                      ? m.newStock.toInt().toString()
+                      : m.newStock.toStringAsFixed(2);
+                  final color = m.isEntry ? AppColors.kSuccess : AppColors.kWarning;
+                  final dateStr = DateFormat('dd/MM HH:mm').format(m.createdAt);
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${m.isEntry ? '+' : '-'}$qtyStr',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+                        ),
+                      ),
+                      const Gap(10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppText(
+                                    m.variantName?.isNotEmpty == true
+                                        ? '${m.reasonLabel} • ${m.variantName}'
+                                        : m.reasonLabel,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: AppColors.kNeutral900,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                AppText(dateStr, fontSize: 11, color: AppColors.kNeutral500),
+                              ],
+                            ),
+                            const Gap(2),
+                            AppText(
+                              'Stock: $prevStr → $nextStr${m.notes?.isNotEmpty == true ? ' · ${m.notes}' : ''}',
+                              fontSize: 11.5,
+                              color: AppColors.kNeutral600,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

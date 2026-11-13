@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:admivida/business/features/add_sale/cart/cart_service.dart';
 import 'package:admivida/business/features/add_sale/models/business_client_model.dart';
 import 'package:admivida/business/features/add_sale/models/create_sale_detail_inner_dto.dart';
@@ -12,30 +13,67 @@ class Cart extends _$Cart {
     return []; // The cart starts empty
   }
 
-  void addItem(CreateSaleDetailInnerDto newItem) {
+  double currentVariantQuantity(String productVariantId, {String? excludeItemId}) {
+    double total = 0.0;
+    for (final item in state) {
+      if (item.productVariantId == productVariantId && item.id != excludeItemId) {
+        total += item.quantity;
+      }
+    }
+    return total;
+  }
+
+  bool addItem(CreateSaleDetailInnerDto newItem) {
     final index = state.indexWhere(
       (item) => item.productVariantId == newItem.productVariantId && item.unitPrice == newItem.unitPrice && item.commentary == newItem.commentary,
     );
 
+    if (!newItem.isCommonProduct) {
+      final double? stockLimit = newItem.availableStock ??
+          state.where((i) => i.productVariantId == newItem.productVariantId && i.availableStock != null).map((i) => i.availableStock).firstOrNull;
+      if (stockLimit != null) {
+        final alreadyInCart = currentVariantQuantity(newItem.productVariantId);
+        if (alreadyInCart + newItem.quantity > stockLimit + 1e-6) {
+          return false;
+        }
+      }
+    }
+
     if (index != -1) {
       final existingItem = state[index];
       final newQuantity = existingItem.quantity + newItem.quantity;
-      final updatedItem = existingItem.copyWith(quantity: newQuantity, subtotal: newQuantity * existingItem.unitPrice);
+      final updatedItem = existingItem.copyWith(
+        quantity: newQuantity,
+        subtotal: newQuantity * existingItem.unitPrice,
+        availableStock: newItem.availableStock ?? existingItem.availableStock,
+      );
 
       state = [...state.sublist(0, index), updatedItem, ...state.sublist(index + 1)];
     } else {
       state = [...state, newItem];
     }
+    return true;
   }
 
   void removeItem(String id) {
     state = state.where((item) => item.id != id).toList();
   }
 
-  void updateQuantity(String id, double newQuantity) {
+  bool updateQuantity(String id, double newQuantity) {
     if (newQuantity <= 0) {
       removeItem(id);
-      return;
+      return true;
+    }
+
+    final targetIndex = state.indexWhere((item) => item.id == id);
+    if (targetIndex == -1) return false;
+    final target = state[targetIndex];
+
+    if (!target.isCommonProduct && target.availableStock != null) {
+      final otherQty = currentVariantQuantity(target.productVariantId, excludeItemId: id);
+      if (otherQty + newQuantity > target.availableStock! + 1e-6) {
+        return false;
+      }
     }
 
     state = state.map((item) {
@@ -44,10 +82,15 @@ class Cart extends _$Cart {
       }
       return item;
     }).toList();
+    return true;
   }
 
   void clearCart() {
     state = [];
+  }
+
+  void replaceCart(List<CreateSaleDetailInnerDto> items) {
+    state = List<CreateSaleDetailInnerDto>.from(items);
   }
 
   /// Updates the unit price of a specific item in the cart
@@ -95,4 +138,28 @@ Future<List<BusinessClientModel>> businessClients(Ref ref, String businessId) as
   final result = await CartService.getClients(businessId);
 
   return result.when((failure) => throw failure, (clients) => clients);
+}
+
+enum PosCartShortcutAction {
+  cycleCartSelection,
+  editQuantity,
+  editPrice,
+  selectClient,
+  parkSale,
+  focusDiscount,
+  showHeldCarts,
+  cyclePaymentMethod,
+  checkout,
+}
+
+class PosShortcutBus {
+  static final StreamController<PosCartShortcutAction> _controller = StreamController<PosCartShortcutAction>.broadcast();
+
+  static Stream<PosCartShortcutAction> get stream => _controller.stream;
+
+  static void emit(PosCartShortcutAction action) {
+    if (!_controller.isClosed) {
+      _controller.add(action);
+    }
+  }
 }

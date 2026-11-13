@@ -38,28 +38,40 @@ class _AppCardState extends State<AppCard> {
   Widget build(BuildContext context) {
     final effectiveBackgroundColor = widget.backgroundColor ?? Theme.of(context).cardColor;
     final bool isInteractive = widget.onTap != null;
-    final effectiveBorderColor = _isHovered && isInteractive
-        ? AppColors.kPrimary300
-        : (widget.borderColor ?? AppColors.kNeutral200);
+    final bool activeHover = _isHovered && isInteractive;
+    final effectiveBorderColor = activeHover
+        ? AppColors.kPrimary300.withValues(alpha: 0.85)
+        : (widget.borderColor ?? AppColors.kNeutral200.withValues(alpha: 0.85));
 
     return MouseRegion(
       onEnter: isInteractive ? (_) => setState(() => _isHovered = true) : null,
       onExit: isInteractive ? (_) => setState(() => _isHovered = false) : null,
       cursor: isInteractive ? SystemMouseCursors.click : MouseCursor.defer,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, activeHover ? -2.0 : 0.0, 0),
         margin: widget.margin ?? const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(
           color: effectiveBackgroundColor,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: widget.border ?? Border.all(color: effectiveBorderColor, width: _isHovered && isInteractive ? 1.3 : 1.0),
+          border: widget.border ??
+              Border.all(
+                color: effectiveBorderColor,
+                width: activeHover ? 1.3 : 1.0,
+              ),
           boxShadow: widget.showShadow
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: _isHovered && isInteractive ? 0.07 : 0.035),
-                    blurRadius: _isHovered && isInteractive ? 16.0 : 12.0,
-                    offset: Offset(0, _isHovered && isInteractive ? 6 : 3),
+                    color: AppColors.kPrimaryColor.withValues(alpha: activeHover ? 0.07 : 0.03),
+                    blurRadius: activeHover ? 20.0 : 12.0,
+                    spreadRadius: activeHover ? 0.5 : 0.0,
+                    offset: Offset(0, activeHover ? 8 : 3),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: activeHover ? 0.03 : 0.015),
+                    blurRadius: 4.0,
+                    offset: const Offset(0, 1),
                   ),
                 ]
               : null,
@@ -70,8 +82,9 @@ class _AppCardState extends State<AppCard> {
           child: InkWell(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             onTap: widget.onTap,
-            highlightColor: Theme.of(context).primaryColor.withValues(alpha: 0.04),
-            splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.08),
+            highlightColor: AppColors.kPrimaryColor.withValues(alpha: 0.03),
+            splashColor: AppColors.kPrimaryColor.withValues(alpha: 0.06),
+            hoverColor: Colors.transparent,
             child: Padding(
               padding: widget.padding ?? const EdgeInsets.all(16.0),
               child: widget.child,

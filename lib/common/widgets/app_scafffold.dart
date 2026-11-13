@@ -67,15 +67,19 @@ class AppScaffold extends StatelessWidget {
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DashboardSidebar(currentRoute: currentRoute),
+            ExcludeFocus(
+              child: DashboardSidebar(currentRoute: currentRoute),
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  DashboardTopBar(
-                    title: title,
-                    currentRoute: currentRoute,
-                    originalAppBar: appBar,
+                  ExcludeFocus(
+                    child: DashboardTopBar(
+                      title: title,
+                      currentRoute: currentRoute,
+                      originalAppBar: appBar,
+                    ),
                   ),
                   Expanded(
                     child: SafeArea(

@@ -23,13 +23,37 @@ class PrintableRow {
   double get totalDiscount => unitDiscount * quantity;
 }
 
+class PrintablePayment {
+  final String methodName;
+  final double amount;
+
+  const PrintablePayment({
+    required this.methodName,
+    required this.amount,
+  });
+}
+
+class PrintableShiftLine {
+  final String label;
+  final String value;
+  final bool isBold;
+  final bool hrAfter;
+
+  const PrintableShiftLine({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+    this.hrAfter = false,
+  });
+}
+
 class ObjectToPrint {
   // Cabecera
   final String businessName; // Nombre de la sucursal o empresa
   final String ticketId; // Folio
   final DateTime date; // Fecha y hora
-  final String cashierName; // Vendedor
-  final String customerName; // Cliente
+  final String cashierName; // Vendedor / Cajero
+  final String customerName; // Cliente (o Nombre de Caja en Corte)
 
   // Cuerpo
   final List<PrintableRow> rows;
@@ -40,6 +64,19 @@ class ObjectToPrint {
   final double total;
   final double amountPaid;
   final double changeGiven;
+  final List<PrintablePayment> payments;
+
+  // Modo recibo de abono (opcional; por defecto imprime ticket de venta normal)
+  final bool isPaymentReceipt;
+  final double? previousBalance;
+  final double? remainingBalance;
+
+  // Modo Corte de Caja (Ticket X/Z)
+  final bool isShiftCutReceipt;
+  final String? shiftHeaderTitle;
+  final List<PrintableShiftLine> shiftLines;
+
+  final String footerMessage;
 
   // Configuración de hardware
   final bool openDrawer;
@@ -56,6 +93,14 @@ class ObjectToPrint {
     required this.total,
     required this.amountPaid,
     required this.changeGiven,
+    this.payments = const [],
+    this.isPaymentReceipt = false,
+    this.previousBalance,
+    this.remainingBalance,
+    this.isShiftCutReceipt = false,
+    this.shiftHeaderTitle,
+    this.shiftLines = const [],
+    this.footerMessage = '¡Gracias por su compra!',
     this.openDrawer = false,
   });
 

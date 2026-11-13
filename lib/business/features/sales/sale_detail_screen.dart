@@ -3,6 +3,7 @@ import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/pdf_receipt_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
@@ -38,6 +39,14 @@ class SaleDetailScreen extends ConsumerWidget {
         backgroundColor: AppColors.kPrimaryColor,
         actions: [
           IconButton(
+            tooltip: 'Comprobante PDF / WhatsApp',
+            onPressed: () => PdfReceiptService.showSalePdfPreviewDialog(
+              context: context,
+              sale: sale,
+            ),
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+          ),
+          IconButton(
             tooltip: 'Reimprimir ticket',
             onPressed: () => _reprintSale(context, ref),
             icon: const Icon(Icons.print_rounded),
@@ -58,8 +67,25 @@ class _SaleDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateFormatted = DateFormat('dd/MM/yyyy • hh:mm a').format(sale.createdAt.toLocal());
-    final isPaid = sale.status.toUpperCase() == 'PAID' || sale.status.toUpperCase() == 'COMPLETED';
+    final dateFormatted = DateFormat('dd/MM/yyyy • hh:mm a').format(sale.effectiveDate.toLocal());
+    final statusUpper = sale.status.toUpperCase();
+    final isPaid = statusUpper == 'PAID' || statusUpper == 'COMPLETED';
+    final isCancelled = statusUpper == 'CANCELLED' || statusUpper == 'REFUNDED';
+    final isCreditOrLayaway = statusUpper == 'CREDIT' || statusUpper == 'LAYAWAY';
+
+    final String statusLabel = switch (statusUpper) {
+      'CREDIT' => 'Venta a Crédito (Fiado)',
+      'LAYAWAY' => 'Apartado (Layaway)',
+      'CANCELLED' => 'Venta Cancelada',
+      'REFUNDED' => 'Venta Reembolsada',
+      _ => 'Venta Cobrada',
+    };
+    final IconData statusIcon = isCancelled
+        ? Icons.cancel_rounded
+        : (isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded);
+    final Color statusColor = isCancelled
+        ? AppColors.kError
+        : (isPaid ? AppColors.kSuccess : AppColors.kWarning);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -75,10 +101,10 @@ class _SaleDetailView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // --- HEADER ---
-                    const Icon(Icons.check_circle_rounded, color: AppColors.kSuccess, size: 56),
+                    Icon(statusIcon, color: statusColor, size: 56),
                     const Gap(12),
                     Center(
-                      child: AppText(isPaid ? 'Venta Cobrada' : 'Venta Pendiente', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+                      child: AppText(statusLabel, fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
                     ),
                     Center(
                       child: AppText(
@@ -182,11 +208,72 @@ class _SaleDetailView extends ConsumerWidget {
                     _SummaryRow(label: 'Total', value: '\$${sale.totalPriceSnapshot.toStringAsFixed(2)}', isTotal: true),
 
                     const Gap(16),
+                    if (sale.payments.isNotEmpty) ...[
+                      AppText(
+                        sale.payments.length > 1 ? 'Desglose de Pago Mixto' : 'Método de Pago',
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.kNeutral700,
+                        fontSize: 13,
+                      ),
+                      const Gap(6),
+                      ...sale.payments.map(
+                        (p) => _SummaryRow(
+                          label: p.paymentMethodName,
+                          value: '\$${p.amount.toStringAsFixed(2)}',
+                        ),
+                      ),
+                      const Gap(4),
+                    ],
                     if (sale.amountPaid != null) ...[
-                      _SummaryRow(label: 'Efectivo recibido', value: '\$${sale.amountPaid!.toStringAsFixed(2)}'),
+                      _SummaryRow(label: isCreditOrLayaway ? 'Anticipo inicial' : 'Total recibido', value: '\$${sale.amountPaid!.toStringAsFixed(2)}'),
                       _SummaryRow(label: 'Cambio', value: '\$${(sale.changeGiven ?? 0).toStringAsFixed(2)}'),
                     ],
+                    if (isCreditOrLayaway && sale.clientUserId != null) ...[
+                      const Gap(12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          NavigationService.navigateTo(
+                            context,
+                            Routes.clientPayments,
+                            arguments: {
+                              'businessId': sale.businessId,
+                              'clientId': sale.clientUserId!,
+                              'clientName': sale.clientNameSnapshot,
+                            },
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.kPrimaryColor,
+                          side: const BorderSide(color: AppColors.kPrimaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.payments_outlined, size: 20),
+                        label: const Text(
+                          'Ir a Cobrar / Abonar Cliente',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                     const Gap(20),
+                    OutlinedButton.icon(
+                      onPressed: () => PdfReceiptService.showSalePdfPreviewDialog(
+                        context: context,
+                        sale: sale,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F766E),
+                        side: const BorderSide(color: Color(0xFF0F766E)),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                      label: const Text(
+                        'Comprobante PDF Carta / WhatsApp',
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const Gap(10),
                     ElevatedButton.icon(
                       onPressed: () async {
                         final businessName = DashboardSession.activeBusiness.value?.name ?? 'Ticket de Venta';

@@ -14,6 +14,8 @@ class NetworkFile extends AdaptedFile {
 
   @override
   Widget getWidget({BoxFit fit = BoxFit.cover, double? width, double? height, double borderRadius = 10}) {
+    final bool hasBlurHash = blurHash != null && blurHash!.isNotEmpty;
+
     final imageWidget = SizedBox(
       width: width,
       height: height,
@@ -24,20 +26,45 @@ class NetworkFile extends AdaptedFile {
         height: height,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (wasSynchronouslyLoaded) return child;
-          return AnimatedOpacity(opacity: frame == null ? 0.0 : 1.0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut, child: child);
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
+          final bool isLoaded = frame != null;
 
-          if (blurHash != null && blurHash!.isNotEmpty) {
-            return BlurHash(hash: blurHash!, imageFit: fit);
-          }
-
-          return Container(
-            width: width,
-            height: height,
-            color: AppColors.kNeutral200,
-            child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.0))),
+          return Stack(
+            fit: StackFit.passthrough,
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    opacity: isLoaded ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOut,
+                    child: hasBlurHash
+                        ? BlurHash(
+                            hash: blurHash!,
+                            imageFit: fit,
+                            color: AppColors.kNeutral200,
+                            decodingWidth: 32,
+                            decodingHeight: 32,
+                          )
+                        : Container(
+                            color: AppColors.kNeutral100,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2.0),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+              AnimatedOpacity(
+                opacity: isLoaded ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOut,
+                child: child,
+              ),
+            ],
           );
         },
         errorBuilder: (context, error, stackTrace) {

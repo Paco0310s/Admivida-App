@@ -94,6 +94,38 @@ class SaleDetailModel {
   }
 }
 
+class SalePaymentModel {
+  final String paymentMethodId;
+  final String paymentMethodName;
+  final String paymentMethodCode;
+  final double amount;
+
+  const SalePaymentModel({
+    required this.paymentMethodId,
+    required this.paymentMethodName,
+    required this.paymentMethodCode,
+    required this.amount,
+  });
+
+  factory SalePaymentModel.fromJson(Map<String, dynamic> json) {
+    return SalePaymentModel(
+      paymentMethodId: json['paymentMethodId'] as String? ?? '',
+      paymentMethodName: json['paymentMethodName'] as String? ?? 'Pago',
+      paymentMethodCode: json['paymentMethodCode'] as String? ?? 'OTHER',
+      amount: (json['amount'] as num? ?? 0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'paymentMethodId': paymentMethodId,
+      'paymentMethodName': paymentMethodName,
+      'paymentMethodCode': paymentMethodCode,
+      'amount': amount,
+    };
+  }
+}
+
 class SaleModel {
   final String id;
   final String businessId;
@@ -110,8 +142,12 @@ class SaleModel {
   final double? latitude;
   final double? longitude;
   final List<SaleDetailModel> details;
+  final List<SalePaymentModel> payments;
+  final DateTime? soldAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  DateTime get effectiveDate => soldAt ?? createdAt;
 
   const SaleModel({
     required this.id,
@@ -129,11 +165,14 @@ class SaleModel {
     this.latitude,
     this.longitude,
     required this.details,
+    this.payments = const [],
+    this.soldAt,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory SaleModel.fromJson(Map<String, dynamic> json) {
+    final rawSoldAt = (json['soldAt'] ?? json['sold_at']) as String?;
     return SaleModel(
       id: json['id'] as String? ?? '',
       businessId: json['businessId'] as String? ?? '',
@@ -150,6 +189,11 @@ class SaleModel {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       details: (json['details'] as List<dynamic>?)?.map((item) => SaleDetailModel.fromJson(item as Map<String, dynamic>)).toList() ?? [],
+      payments: (json['payments'] as List<dynamic>?)
+              ?.map((item) => SalePaymentModel.fromJson(Map<String, dynamic>.from(item as Map)))
+              .toList() ??
+          const [],
+      soldAt: rawSoldAt != null ? DateTime.tryParse(rawSoldAt)?.toLocal() : null,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
     );
@@ -172,6 +216,8 @@ class SaleModel {
       'latitude': latitude,
       'longitude': longitude,
       'details': details.map((d) => d.toJson()).toList(),
+      if (payments.isNotEmpty) 'payments': payments.map((p) => p.toJson()).toList(),
+      if (soldAt != null) 'soldAt': soldAt!.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -195,7 +241,7 @@ class SaleModel {
     return ObjectToPrint(
       businessName: businessName,
       ticketId: id,
-      date: createdAt,
+      date: effectiveDate,
       cashierName: sellerName ?? 'Cajero Default',
       customerName: clientNameSnapshot,
       rows: ticketRows,
@@ -204,6 +250,9 @@ class SaleModel {
       total: totalPriceSnapshot,
       amountPaid: amountPaid ?? 0.0,
       changeGiven: changeGiven ?? 0.0,
+      payments: payments
+          .map((p) => PrintablePayment(methodName: p.paymentMethodName, amount: p.amount))
+          .toList(),
       openDrawer: openDrawer,
     );
   }

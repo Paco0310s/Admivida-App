@@ -56,7 +56,7 @@ final class PersonalTransactionsListProvider
 }
 
 String _$personalTransactionsListHash() =>
-    r'3c6351c2c2531a567830b6d5f27532a1b59ba2bd';
+    r'347aa73c9fc96c197afa7eacd7260bb8adccd674';
 
 final class PersonalTransactionsListFamily extends $Family
     with

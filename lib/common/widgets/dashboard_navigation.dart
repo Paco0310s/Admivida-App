@@ -1,3 +1,4 @@
+import 'package:admivida/business/features/add_sale/cart/cart_provider.dart';
 import 'package:admivida/business/features/businesses/businesses_provider.dart';
 import 'package:admivida/business/features/products/products_provider.dart';
 import 'package:admivida/business/features/sales/models/sale_model.dart';
@@ -139,29 +140,50 @@ class DashboardSession {
         routeName == Routes.addSale;
   }
 
-  /// Navigate cleanly to a business route from the Sidebar.
-  static void navigateToBusinessRoute(BuildContext context, String targetRoute, BusinessModel business) {
-    setActiveBusiness(business);
-    final currentRoute = ModalRoute.of(context)?.settings.name;
-    if (currentRoute == targetRoute) return;
+  /// True if the route requires Business Admin permissions.
+  static bool isAdminOnlyBusinessRoute(String? routeName) {
+    return routeName == Routes.businessReports ||
+        routeName == Routes.transactions ||
+        routeName == Routes.addTransaction ||
+        routeName == Routes.transferFunds ||
+        routeName == Routes.userBusinesses ||
+        routeName == Routes.commissionPayments ||
+        routeName == Routes.employeePayments;
+  }
 
-    Object? arguments;
+  /// Builds the route arguments expected by [AppRoutes] for a given [targetRoute] and [business].
+  static Object buildRouteArguments(String targetRoute, BusinessModel business) {
     if (targetRoute == Routes.businessDetail || targetRoute == Routes.businessReports) {
-      arguments = business;
+      return business;
     } else if (targetRoute == Routes.sales || targetRoute == Routes.addSale || targetRoute == Routes.cashShifts) {
-      arguments = {'businessId': business.id, 'businessName': business.name};
+      return {'businessId': business.id, 'businessName': business.name};
     } else if (targetRoute == Routes.paymentsHistory) {
-      arguments = {
+      return {
         'businessId': business.id,
         'isAdmin': SecureStorageService.isBusinessAdmin(business.id),
       };
     } else {
-      arguments = business.id;
+      return business.id;
     }
+  }
+
+  /// Navigate cleanly to a business route from the Sidebar.
+  static void navigateToBusinessRoute(BuildContext context, String targetRoute, BusinessModel business) {
+    final previousBusinessId = activeBusiness.value?.id;
+    setActiveBusiness(business);
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute == targetRoute && previousBusinessId == business.id) return;
+
+    final Object arguments = buildRouteArguments(targetRoute, business);
 
     if (targetRoute == Routes.businessDetail) {
-      if (isBusinessModuleRoute(currentRoute) && NavigationService.canPop(context)) {
-        NavigationService.popUntil(context, (route) => route.settings.name == Routes.businessDetail || route.isFirst);
+      if (isBusinessModuleRoute(currentRoute) || currentRoute == Routes.businessDetail) {
+        NavigationService.replaceUntil(
+          context,
+          Routes.businessDetail,
+          arguments: arguments,
+          predicate: (route) => isGlobalRoute(route.settings.name) || route.isFirst,
+        );
         return;
       }
       NavigationService.navigateTo(context, Routes.businessDetail, arguments: arguments);
@@ -173,6 +195,63 @@ class DashboardSession {
       NavigationService.replaceWith(context, targetRoute, arguments: arguments);
     } else {
       NavigationService.navigateTo(context, targetRoute, arguments: arguments);
+    }
+  }
+
+  /// Switches the active business from the Sidebar selector, keeping the user in the equivalent module when appropriate.
+  static void switchBusiness(BuildContext context, WidgetRef ref, BusinessModel newBusiness) {
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    final previousBusinessId = activeBusiness.value?.id;
+
+    if (!isGlobalRoute(currentRoute) && previousBusinessId == newBusiness.id) {
+      return;
+    }
+
+    // Clear POS cart if switching between two different businesses
+    if (previousBusinessId != null && previousBusinessId != newBusiness.id) {
+      ref.read(cartProvider.notifier).clearCart();
+    }
+
+    setActiveBusiness(newBusiness);
+
+    final bool isAdminInNew = SecureStorageService.isBusinessAdmin(newBusiness.id);
+
+    // Determine which route to open for the newly selected business
+    String targetRoute = Routes.businessDetail;
+    final keepableModuleRoutes = <String>{
+      Routes.businessDetail,
+      Routes.addSale,
+      Routes.sales,
+      Routes.cashShifts,
+      Routes.products,
+      Routes.clients,
+      Routes.paymentsHistory,
+      Routes.businessReports,
+      Routes.transactions,
+      Routes.userBusinesses,
+      Routes.commissionPayments,
+      Routes.employeePayments,
+    };
+
+    if (currentRoute == Routes.cart) {
+      targetRoute = Routes.addSale;
+    } else if (currentRoute != null && keepableModuleRoutes.contains(currentRoute)) {
+      if (!isAdminOnlyBusinessRoute(currentRoute) || isAdminInNew) {
+        targetRoute = currentRoute;
+      }
+    }
+
+    final Object arguments = buildRouteArguments(targetRoute, newBusiness);
+
+    if (isGlobalRoute(currentRoute)) {
+      NavigationService.navigateTo(context, targetRoute, arguments: arguments);
+    } else {
+      NavigationService.replaceUntil(
+        context,
+        targetRoute,
+        arguments: arguments,
+        predicate: (route) => isGlobalRoute(route.settings.name) || route.isFirst,
+      );
     }
   }
 }
@@ -230,11 +309,19 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
           curve: Curves.easeOutCubic,
           width: width,
           decoration: const BoxDecoration(
-            color: AppColors.kPrimaryColor,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF142F3B),
+                AppColors.kPrimaryColor,
+                Color(0xFF193A47),
+              ],
+            ),
             boxShadow: [
               BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 12,
+                color: Color(0x18000000),
+                blurRadius: 16,
                 offset: Offset(2, 0),
               ),
             ],
@@ -298,24 +385,54 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                             },
                           ),
 
-                          // Contextual Business Menu: ONLY shown when inside a business
-                          if (showBusinessMenu && activeBiz != null) ...[
+                          // Business Switcher (always accessible when the user has businesses or an active business)
+                          if ((knownBusinesses != null && knownBusinesses.isNotEmpty) || activeBiz != null) ...[
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 12),
                               child: Divider(color: Color(0x24FFFFFF), height: 1),
                             ),
-                            if (!isCollapsed)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                                child: AppText(
-                                  activeBiz.name.toUpperCase(),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.kPrimary200,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                            _BusinessSwitcherCard(
+                              activeBusiness: activeBiz,
+                              businesses: knownBusinesses ?? (activeBiz != null ? [activeBiz] : const []),
+                              isCollapsed: isCollapsed,
+                              isInsideBusiness: showBusinessMenu && activeBiz != null,
+                              onBusinessSelected: (selected) {
+                                DashboardSession.switchBusiness(context, ref, selected);
+                              },
+                              onViewAllBusinesses: () {
+                                if (currentRoute != Routes.businesses) {
+                                  NavigationService.navigateTo(context, Routes.businesses);
+                                }
+                              },
+                            ),
+                            const Gap(8),
+                            Builder(
+                              builder: (context) {
+                                final posBiz = activeBiz ??
+                                    (knownBusinesses != null && knownBusinesses.isNotEmpty ? knownBusinesses.first : null);
+                                if (posBiz == null) return const SizedBox.shrink();
+                                return _SidebarItem(
+                                  icon: Icons.add_shopping_cart_rounded,
+                                  label: 'Punto de Venta (POS)',
+                                  isSelected: currentRoute == Routes.addSale || currentRoute == Routes.cart,
+                                  isHighlighted: true,
+                                  isCollapsed: isCollapsed,
+                                  onTap: () {
+                                    if (currentRoute == Routes.addSale && activeBiz?.id == posBiz.id) return;
+                                    if (activeBiz?.id != posBiz.id) {
+                                      ref.read(cartProvider.notifier).clearCart();
+                                      DashboardSession.setActiveBusiness(posBiz);
+                                    }
+                                    DashboardSession.navigateToBusinessRoute(context, Routes.addSale, posBiz);
+                                  },
+                                );
+                              },
+                            ),
+                            if (showBusinessMenu && activeBiz != null) const Gap(6),
+                          ],
+
+                          // Contextual Business Menu: ONLY shown when inside a business
+                          if (showBusinessMenu && activeBiz != null) ...[
                             _SidebarItem(
                               icon: Icons.dashboard_rounded,
                               label: 'Resumen',
@@ -327,10 +444,7 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
                             _SidebarItem(
                               icon: Icons.point_of_sale_rounded,
                               label: AppTexts.businessSales,
-                              isSelected: currentRoute == Routes.sales ||
-                                  currentRoute == Routes.saleDetail ||
-                                  currentRoute == Routes.addSale ||
-                                  currentRoute == Routes.cart,
+                              isSelected: currentRoute == Routes.sales || currentRoute == Routes.saleDetail,
                               isCollapsed: isCollapsed,
                               onTap: () => DashboardSession.navigateToBusinessRoute(context, Routes.sales, activeBiz),
                             ),
@@ -546,12 +660,288 @@ class _DashboardSidebarState extends ConsumerState<DashboardSidebar> {
   }
 }
 
+class _BusinessSwitcherCard extends StatefulWidget {
+  final BusinessModel? activeBusiness;
+  final List<BusinessModel> businesses;
+  final bool isCollapsed;
+  final bool isInsideBusiness;
+  final ValueChanged<BusinessModel> onBusinessSelected;
+  final VoidCallback onViewAllBusinesses;
+
+  const _BusinessSwitcherCard({
+    required this.activeBusiness,
+    required this.businesses,
+    required this.isCollapsed,
+    required this.isInsideBusiness,
+    required this.onBusinessSelected,
+    required this.onViewAllBusinesses,
+  });
+
+  @override
+  State<_BusinessSwitcherCard> createState() => _BusinessSwitcherCardState();
+}
+
+class _BusinessSwitcherCardState extends State<_BusinessSwitcherCard> {
+  bool _isHovered = false;
+
+  String _initialsFor(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return 'N';
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return trimmed.substring(0, trimmed.length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  Widget _buildBusinessAvatar(BusinessModel? biz, {double size = 32}) {
+    final imageUrl = biz?.image?.url;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: AdaptedFile.network(imageUrl, blurHash: biz?.image?.blurHash).getWidget(
+            fit: BoxFit.cover,
+            width: size,
+            height: size,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.kSecondaryColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        biz != null ? _initialsFor(biz.name) : 'N',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.38,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSwitcherMenu(BuildContext context) async {
+    if (widget.businesses.isEmpty) {
+      widget.onViewAllBusinesses();
+      return;
+    }
+
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final Offset topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Offset bottomRight = button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay);
+
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        Offset(topLeft.dx, bottomRight.dy + 4),
+        Offset(bottomRight.dx, bottomRight.dy + 4),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final selected = await showMenu<String>(
+      context: context,
+      position: position,
+      elevation: 10,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: AppColors.kNeutral200),
+      ),
+      constraints: const BoxConstraints(minWidth: 250, maxWidth: 290),
+      items: <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+          enabled: false,
+          height: 32,
+          child: Text(
+            'CAMBIAR DE NEGOCIO',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: AppColors.kNeutral500,
+            ),
+          ),
+        ),
+        ...widget.businesses.map((biz) {
+          final isCurrent = widget.activeBusiness?.id == biz.id && widget.isInsideBusiness;
+          return PopupMenuItem<String>(
+            value: biz.id,
+            height: 52,
+            child: Row(
+              children: [
+                _buildBusinessAvatar(biz, size: 32),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        biz.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                          color: isCurrent ? AppColors.kPrimaryColor : AppColors.kNeutral900,
+                        ),
+                      ),
+                      if (biz.categoryName.isNotEmpty)
+                        Text(
+                          biz.categoryName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.kNeutral500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (isCurrent)
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.kSecondaryColor,
+                    size: 18,
+                  )
+                else
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.kNeutral300,
+                    size: 13,
+                  ),
+              ],
+            ),
+          );
+        }),
+        const PopupMenuDivider(height: 8),
+        const PopupMenuItem<String>(
+          value: '__view_all__',
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.storefront_rounded, size: 18, color: AppColors.kPrimaryColor),
+              Gap(10),
+              Text(
+                'Ver todas mis empresas',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.kPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (selected == null) return;
+    if (selected == '__view_all__') {
+      widget.onViewAllBusinesses();
+      return;
+    }
+
+    final targetBiz = widget.businesses.where((b) => b.id == selected).firstOrNull;
+    if (targetBiz != null) {
+      widget.onBusinessSelected(targetBiz);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayBiz = widget.activeBusiness ?? (widget.businesses.isNotEmpty ? widget.businesses.first : null);
+    final bgColor = _isHovered
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.08);
+
+    final content = AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.isCollapsed ? 0 : 10,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: _isHovered ? 0.24 : 0.14),
+        ),
+      ),
+      child: widget.isCollapsed
+          ? Center(child: _buildBusinessAvatar(displayBiz, size: 32))
+          : Row(
+              children: [
+                _buildBusinessAvatar(displayBiz, size: 32),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppText(
+                        widget.isInsideBusiness ? 'NEGOCIO ACTIVO' : 'CAMBIAR A NEGOCIO',
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.kPrimary200,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Gap(1),
+                      AppText(
+                        displayBiz?.name ?? 'Seleccionar negocio',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.unfold_more_rounded,
+                  color: Colors.white70,
+                  size: 18,
+                ),
+              ],
+            ),
+    );
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showSwitcherMenu(context),
+        child: Tooltip(
+          message: displayBiz != null ? 'Cambiar de negocio (${displayBiz.name})' : 'Seleccionar negocio',
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
 class _SidebarItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
   final bool isCollapsed;
   final bool isCompact;
+  final bool isHighlighted;
   final IconData? trailingIcon;
   final Color? iconColor;
   final VoidCallback onTap;
@@ -563,6 +953,7 @@ class _SidebarItem extends StatefulWidget {
     required this.isCollapsed,
     required this.onTap,
     this.isCompact = false,
+    this.isHighlighted = false,
     this.trailingIcon,
     this.iconColor,
   });
@@ -578,20 +969,37 @@ class _SidebarItemState extends State<_SidebarItem> {
   Widget build(BuildContext context) {
     final bgColor = widget.isSelected
         ? AppColors.kSecondaryColor
-        : _isHovered
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.transparent;
+        : widget.isHighlighted
+            ? (_isHovered ? AppColors.kSecondaryColor.withValues(alpha: 0.36) : AppColors.kSecondaryColor.withValues(alpha: 0.22))
+            : (_isHovered ? Colors.white.withValues(alpha: 0.08) : Colors.transparent);
 
-    final fgColor = widget.iconColor ?? (widget.isSelected ? Colors.white : Colors.white.withValues(alpha: 0.82));
+    final fgColor = widget.iconColor ??
+        (widget.isSelected || widget.isHighlighted ? Colors.white : Colors.white.withValues(alpha: 0.82));
 
-    final itemContent = Container(
+    final itemContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
       padding: EdgeInsets.symmetric(
         horizontal: widget.isCollapsed ? 0 : 12,
         vertical: widget.isCompact ? 8 : 10,
       ),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(11),
+        border: widget.isHighlighted && !widget.isSelected
+            ? Border.all(color: AppColors.kPrimary200.withValues(alpha: 0.45), width: 1)
+            : (widget.isSelected
+                ? Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1)
+                : null),
+        boxShadow: widget.isSelected
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisAlignment: widget.isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
@@ -603,12 +1011,29 @@ class _SidebarItemState extends State<_SidebarItem> {
               child: AppText(
                 widget.label,
                 fontSize: widget.isCompact ? 12.5 : 13.5,
-                fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: widget.isSelected || widget.isHighlighted ? FontWeight.w700 : FontWeight.w500,
                 color: fgColor,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (widget.isHighlighted && widget.trailingIcon == null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'RÁPIDO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
             if (widget.trailingIcon != null)
               Icon(widget.trailingIcon, color: Colors.white60, size: 18),
           ],
@@ -652,13 +1077,20 @@ class DashboardTopBar extends StatelessWidget {
     final isRootDashboardRoute = currentRoute == Routes.home || currentRoute == Routes.businesses;
 
     return Container(
-      height: 60,
+      height: 62,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
+        border: const Border(
           bottom: BorderSide(color: AppColors.kNeutral200, width: 1),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -669,12 +1101,22 @@ class DashboardTopBar extends StatelessWidget {
             ),
             const Gap(8),
           ] else if (canPop && !isRootDashboardRoute) ...[
-            IconButton(
-              onPressed: () => NavigationService.maybePop(context),
-              icon: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.kPrimaryColor),
-              tooltip: 'Regresar',
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.kNeutral100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.kNeutral200),
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => NavigationService.maybePop(context),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: AppColors.kPrimaryColor),
+                tooltip: 'Regresar',
+              ),
             ),
-            const Gap(8),
+            const Gap(12),
           ],
           Expanded(
             child: ValueListenableBuilder<BusinessModel?>(
@@ -688,16 +1130,32 @@ class DashboardTopBar extends StatelessWidget {
                   children: [
                     if (showBizBreadcrumb) ...[
                       InkWell(
+                        borderRadius: BorderRadius.circular(8),
                         onTap: () => DashboardSession.navigateToBusinessRoute(
                           context,
                           Routes.businessDetail,
                           activeBiz,
                         ),
-                        child: AppText(
-                          activeBiz.name,
-                          fontSize: 15,
-                          color: AppColors.kNeutral500,
-                          fontWeight: FontWeight.w500,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.kNeutral100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.kNeutral200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.storefront_rounded, size: 14, color: AppColors.kPrimaryColor),
+                              const Gap(6),
+                              AppText(
+                                activeBiz.name,
+                                fontSize: 12.5,
+                                color: AppColors.kNeutral700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const Padding(
@@ -719,6 +1177,42 @@ class DashboardTopBar extends StatelessWidget {
                 );
               },
             ),
+          ),
+          ValueListenableBuilder<BusinessModel?>(
+            valueListenable: DashboardSession.activeBusiness,
+            builder: (context, activeBiz, _) {
+              final showQuickPos = activeBiz != null &&
+                  !DashboardSession.isGlobalRoute(currentRoute) &&
+                  currentRoute != Routes.addSale &&
+                  currentRoute != Routes.cart &&
+                  currentRoute != Routes.businessDetail;
+              if (!showQuickPos) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: OutlinedButton.icon(
+                  onPressed: () => DashboardSession.navigateToBusinessRoute(
+                    context,
+                    Routes.addSale,
+                    activeBiz,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.kSecondaryColor,
+                    backgroundColor: AppColors.kPrimary50.withValues(alpha: 0.45),
+                    side: BorderSide(color: AppColors.kSecondaryColor.withValues(alpha: 0.35)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                  label: const Text(
+                    'Abrir POS',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              );
+            },
           ),
           if (originalAppBar?.actions != null)
             IconTheme(

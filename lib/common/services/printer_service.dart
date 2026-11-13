@@ -260,128 +260,204 @@ class PrinterService {
         document.businessName,
         styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2),
       );
-      bytes += generator.text('Folio: ${document.ticketId}', styles: const PosStyles(align: PosAlign.center));
-      // Formatear la fecha a un string legible
-      bytes += generator.text('Fecha: ${document.date.toString()}', styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.text('Le atendió: ${document.cashierName}', styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.text('Cliente: ${document.customerName}', styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.hr();
-
-      // Cuerpo (Productos)
-      for (final row in document.rows) {
-        // Puedes dividir la fila en columnas para alinear cantidades y precios
-        bytes += generator.row([
-          PosColumn(text: '${row.quantity} x', width: 2),
-          PosColumn(text: row.description, width: 7),
-          PosColumn(
-            text: '\$${row.total.toStringAsFixed(2)}',
-            width: 3,
-            styles: const PosStyles(align: PosAlign.right),
-          ),
-        ]);
-
-        // Si el producto tuvo cambio manual de precio (descuento individual)
-        if (row.hasDiscount) {
-          bytes += generator.text(
-            '  Antes: \$${row.originalPrice!.toStringAsFixed(2)} -> Ahora: \$${row.price.toStringAsFixed(2)} c/u',
-            styles: const PosStyles(fontType: PosFontType.fontB),
-          );
-          bytes += generator.text(
-            '  * Desc. aplicado: -\$${row.totalDiscount.toStringAsFixed(2)}',
-            styles: const PosStyles(fontType: PosFontType.fontB),
-          );
-        }
-      }
-      bytes += generator.hr();
-
-      // Totales y Descuentos
-      final hasItemDiscounts = document.itemDiscountsTotal > 0.001;
-      final hasGlobalDiscount = document.discount > 0.001;
-
-      if (hasItemDiscounts || hasGlobalDiscount) {
-        // Muestra el precio regular que se tenía que cobrar antes de cualquier descuento
-        bytes += generator.row([
-          PosColumn(text: 'Precio regular:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
-          PosColumn(
-            text: '\$${document.regularSubtotal.toStringAsFixed(2)}',
-            width: 5,
-            styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
-          ),
-        ]);
-
-        if (hasItemDiscounts) {
-          bytes += generator.row([
-            PosColumn(text: 'Desc. en productos:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
-            PosColumn(
-              text: '-\$${document.itemDiscountsTotal.toStringAsFixed(2)}',
-              width: 5,
-              styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
-            ),
-          ]);
-        }
-
-        if (hasGlobalDiscount) {
-          bytes += generator.row([
-            PosColumn(text: 'Descuento global:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
-            PosColumn(
-              text: '-\$${document.discount.toStringAsFixed(2)}',
-              width: 5,
-              styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
-            ),
-          ]);
-        }
-      } else {
-        bytes += generator.row([
-          PosColumn(text: 'Subtotal:', width: 6),
-          PosColumn(
-            text: '\$${document.subtotal.toStringAsFixed(2)}',
-            width: 6,
-            styles: const PosStyles(align: PosAlign.right),
-          ),
-        ]);
-      }
-
-      bytes += generator.row([
-        PosColumn(
-          text: (hasItemDiscounts || hasGlobalDiscount) ? 'TOTAL COBRADO:' : 'TOTAL:',
-          width: 7,
-          styles: const PosStyles(bold: true, height: PosTextSize.size2),
-        ),
-        PosColumn(
-          text: '\$${document.total.toStringAsFixed(2)}',
-          width: 5,
-          styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2),
-        ),
-      ]);
-
-      if (document.totalSavings > 0.001) {
-        bytes += generator.feed(1);
+      if (document.isShiftCutReceipt) {
         bytes += generator.text(
-          '*** ¡USTED AHORRÓ: \$${document.totalSavings.toStringAsFixed(2)}! ***',
+          document.shiftHeaderTitle ?? 'CORTE DE CAJA',
           styles: const PosStyles(align: PosAlign.center, bold: true),
         );
+        bytes += generator.text('Turno: #${document.ticketId.substring(0, document.ticketId.length >= 8 ? 8 : document.ticketId.length).toUpperCase()}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Fecha: ${document.date.toString().substring(0, 16)}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Cajero: ${document.cashierName}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Caja: ${document.customerName}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.hr();
+
+        for (final line in document.shiftLines) {
+          bytes += generator.row([
+            PosColumn(text: line.label, width: 7, styles: PosStyles(bold: line.isBold)),
+            PosColumn(
+              text: line.value,
+              width: 5,
+              styles: PosStyles(align: PosAlign.right, bold: line.isBold),
+            ),
+          ]);
+          if (line.hrAfter) {
+            bytes += generator.hr();
+          }
+        }
+      } else {
+        bytes += generator.text('Folio: ${document.ticketId}', styles: const PosStyles(align: PosAlign.center));
+        // Formatear la fecha a un string legible
+        bytes += generator.text('Fecha: ${document.date.toString()}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Le atendió: ${document.cashierName}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text('Cliente: ${document.customerName}', styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.hr();
+
+        // Cuerpo (Productos)
+        for (final row in document.rows) {
+          // Puedes dividir la fila en columnas para alinear cantidades y precios
+          bytes += generator.row([
+            PosColumn(text: '${row.quantity} x', width: 2),
+            PosColumn(text: row.description, width: 7),
+            PosColumn(
+              text: '\$${row.total.toStringAsFixed(2)}',
+              width: 3,
+              styles: const PosStyles(align: PosAlign.right),
+            ),
+          ]);
+
+          // Si el producto tuvo cambio manual de precio (descuento individual)
+          if (row.hasDiscount) {
+            bytes += generator.text(
+              '  Antes: \$${row.originalPrice!.toStringAsFixed(2)} -> Ahora: \$${row.price.toStringAsFixed(2)} c/u',
+              styles: const PosStyles(fontType: PosFontType.fontB),
+            );
+            bytes += generator.text(
+              '  * Desc. aplicado: -\$${row.totalDiscount.toStringAsFixed(2)}',
+              styles: const PosStyles(fontType: PosFontType.fontB),
+            );
+          }
+        }
+        bytes += generator.hr();
+
+        // Totales y Descuentos / Resumen de Abono
+        if (document.isPaymentReceipt) {
+          if (document.previousBalance != null) {
+            bytes += generator.row([
+              PosColumn(text: 'Saldo anterior:', width: 7),
+              PosColumn(
+                text: '\$${document.previousBalance!.toStringAsFixed(2)}',
+                width: 5,
+                styles: const PosStyles(align: PosAlign.right),
+              ),
+            ]);
+          }
+          bytes += generator.row([
+            PosColumn(
+              text: 'ABONADO:',
+              width: 7,
+              styles: const PosStyles(bold: true, height: PosTextSize.size2),
+            ),
+            PosColumn(
+              text: '\$${document.total.toStringAsFixed(2)}',
+              width: 5,
+              styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2),
+            ),
+          ]);
+          if (document.remainingBalance != null) {
+            bytes += generator.row([
+              PosColumn(text: 'Saldo restante:', width: 7, styles: const PosStyles(bold: true)),
+              PosColumn(
+                text: '\$${document.remainingBalance!.toStringAsFixed(2)}',
+                width: 5,
+                styles: const PosStyles(align: PosAlign.right, bold: true),
+              ),
+            ]);
+          }
+          bytes += generator.hr();
+        } else {
+          final hasItemDiscounts = document.itemDiscountsTotal > 0.001;
+          final hasGlobalDiscount = document.discount > 0.001;
+
+          if (hasItemDiscounts || hasGlobalDiscount) {
+            // Muestra el precio regular que se tenía que cobrar antes de cualquier descuento
+            bytes += generator.row([
+              PosColumn(text: 'Precio regular:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
+              PosColumn(
+                text: '\$${document.regularSubtotal.toStringAsFixed(2)}',
+                width: 5,
+                styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+              ),
+            ]);
+
+            if (hasItemDiscounts) {
+              bytes += generator.row([
+                PosColumn(text: 'Desc. en productos:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
+                PosColumn(
+                  text: '-\$${document.itemDiscountsTotal.toStringAsFixed(2)}',
+                  width: 5,
+                  styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+                ),
+              ]);
+            }
+
+            if (hasGlobalDiscount) {
+              bytes += generator.row([
+                PosColumn(text: 'Descuento global:', width: 7, styles: const PosStyles(fontType: PosFontType.fontB)),
+                PosColumn(
+                  text: '-\$${document.discount.toStringAsFixed(2)}',
+                  width: 5,
+                  styles: const PosStyles(align: PosAlign.right, fontType: PosFontType.fontB),
+                ),
+              ]);
+            }
+          } else {
+            bytes += generator.row([
+              PosColumn(text: 'Subtotal:', width: 6),
+              PosColumn(
+                text: '\$${document.subtotal.toStringAsFixed(2)}',
+                width: 6,
+                styles: const PosStyles(align: PosAlign.right),
+              ),
+            ]);
+          }
+
+          bytes += generator.row([
+            PosColumn(
+              text: (hasItemDiscounts || hasGlobalDiscount) ? 'TOTAL COBRADO:' : 'TOTAL:',
+              width: 7,
+              styles: const PosStyles(bold: true, height: PosTextSize.size2),
+            ),
+            PosColumn(
+              text: '\$${document.total.toStringAsFixed(2)}',
+              width: 5,
+              styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2),
+            ),
+          ]);
+
+          if (document.totalSavings > 0.001) {
+            bytes += generator.feed(1);
+            bytes += generator.text(
+              '*** ¡USTED AHORRÓ: \$${document.totalSavings.toStringAsFixed(2)}! ***',
+              styles: const PosStyles(align: PosAlign.center, bold: true),
+            );
+          }
+
+          bytes += generator.hr();
+          bytes += generator.row([
+            PosColumn(text: 'Su pago:', width: 6),
+            PosColumn(
+              text: '\$${document.amountPaid.toStringAsFixed(2)}',
+              width: 6,
+              styles: const PosStyles(align: PosAlign.right),
+            ),
+          ]);
+          bytes += generator.row([
+            PosColumn(text: 'Su cambio:', width: 6),
+            PosColumn(
+              text: '\$${document.changeGiven.toStringAsFixed(2)}',
+              width: 6,
+              styles: const PosStyles(align: PosAlign.right),
+            ),
+          ]);
+        }
+
+        if (document.payments.length > 1 || (document.isPaymentReceipt && document.payments.isNotEmpty)) {
+          bytes += generator.text('Desglose de pago:', styles: const PosStyles(bold: true));
+          for (final p in document.payments) {
+            bytes += generator.row([
+              PosColumn(text: ' - ${p.methodName}', width: 7),
+              PosColumn(
+                text: '\$${p.amount.toStringAsFixed(2)}',
+                width: 5,
+                styles: const PosStyles(align: PosAlign.right),
+              ),
+            ]);
+          }
+        }
       }
 
-      bytes += generator.hr();
-      bytes += generator.row([
-        PosColumn(text: 'Su pago:', width: 6),
-        PosColumn(
-          text: '\$${document.amountPaid.toStringAsFixed(2)}',
-          width: 6,
-          styles: const PosStyles(align: PosAlign.right),
-        ),
-      ]);
-      bytes += generator.row([
-        PosColumn(text: 'Su cambio:', width: 6),
-        PosColumn(
-          text: '\$${document.changeGiven.toStringAsFixed(2)}',
-          width: 6,
-          styles: const PosStyles(align: PosAlign.right),
-        ),
-      ]);
-
       bytes += generator.feed(2);
-      bytes += generator.text('¡Gracias por su compra!', styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(document.footerMessage, styles: const PosStyles(align: PosAlign.center));
 
       // --- Footer de Admivida ---
       bytes += generator.feed(1);

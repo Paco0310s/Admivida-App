@@ -55,14 +55,22 @@ class IsarCacheService {
     }
   }
 
-  /// Clear all cached HTTP entries (e.g. on logout)
+  /// Clear cached HTTP entries while preserving any pending offline sales queue
   static Future<void> clearCache() async {
     final isar = _isar;
     if (isar == null || !isar.isOpen) return;
 
     try {
+      final preservedEntries = await isar.httpCacheEntrys
+          .filter()
+          .cacheKeyStartsWith('offline_sales_queue_')
+          .findAll();
+
       await isar.writeTxn(() async {
         await isar.httpCacheEntrys.clear();
+        for (final entry in preservedEntries) {
+          await isar.httpCacheEntrys.put(entry);
+        }
       });
     } catch (e) {
       AppLogger.warning('Error clearing Isar cache: $e');

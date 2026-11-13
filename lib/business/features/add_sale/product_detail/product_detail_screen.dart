@@ -10,6 +10,7 @@ import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
 import 'package:admivida/common/widgets/app_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
@@ -25,36 +26,142 @@ class ProductDetailSaleScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScreen> {
-  int _quantity = 1;
+  double _quantity = 1.0;
   String? _selectedVariantId;
 
   // Editable controllers
   late TextEditingController _nameSnapshotController;
   late TextEditingController _priceSnapshotController;
+  late TextEditingController _quantityController;
   final TextEditingController _commentController = TextEditingController();
 
   bool _isCustomPrice = false;
+  final FocusNode _detailFocusNode = FocusNode(debugLabel: 'ProductDetailSaleFocus');
+  late final DateTime _openedAt;
+  bool _hasReleasedInitialEnter = false;
+  Duration? _lastHandledKeyTimeStamp;
 
   @override
   void initState() {
     super.initState();
+    _openedAt = DateTime.now();
+    final pressed = HardwareKeyboard.instance.logicalKeysPressed;
+    _hasReleasedInitialEnter = !pressed.contains(LogicalKeyboardKey.enter) && !pressed.contains(LogicalKeyboardKey.numpadEnter);
     if (widget.product.variants.isNotEmpty) {
       _selectedVariantId = widget.product.variants.first.id;
     }
 
     _nameSnapshotController = TextEditingController(text: _defaultNameSnapshot);
     _priceSnapshotController = TextEditingController(text: _calculatedStandardUnitPrice.toStringAsFixed(2));
+    _quantityController = TextEditingController(text: '1');
+    HardwareKeyboard.instance.addHandler(_handleDetailShortcutsFallback);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleDetailShortcutsFallback);
+    _detailFocusNode.dispose();
     _nameSnapshotController.dispose();
     _priceSnapshotController.dispose();
+    _quantityController.dispose();
     _commentController.dispose();
     super.dispose();
   }
 
   /// Currently selected variant
+  bool _isAnyTextFieldFocused() {
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null || focus.context == null) return false;
+    bool hasEditable = false;
+    focus.context!.visitAncestorElements((el) {
+      if (el.widget is EditableText) {
+        hasEditable = true;
+        return false;
+      }
+      return true;
+    });
+    if (focus.context!.widget is EditableText) hasEditable = true;
+    return hasEditable;
+  }
+
+  KeyEventResult _onDetailFocusKeyEvent(FocusNode node, KeyEvent event) {
+    if (_processDetailKeyEvent(event)) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool _handleDetailShortcutsFallback(KeyEvent event) {
+    return _processDetailKeyEvent(event);
+  }
+
+  bool _processDetailKeyEvent(KeyEvent event) {
+    if (!mounted) return false;
+    final key = event.logicalKey;
+
+    if (event is KeyUpEvent) {
+      if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+        _hasReleasedInitialEnter = true;
+      }
+      return false;
+    }
+
+    if (event is! KeyDownEvent) return false;
+    if (_lastHandledKeyTimeStamp == event.timeStamp) return true;
+
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+
+    if (key == LogicalKeyboardKey.escape) {
+      _lastHandledKeyTimeStamp = event.timeStamp;
+      NavigationService.pop(context);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+      _lastHandledKeyTimeStamp = event.timeStamp;
+      // Ignorar el mismo Enter que abrió esta pantalla para que un producto con 2+ variantes
+      // NUNCA se agregue solo hasta que el usuario elija la variante y vuelva a presionar Enter.
+      final elapsedMs = DateTime.now().difference(_openedAt).inMilliseconds;
+      if (!_hasReleasedInitialEnter || elapsedMs < 300) {
+        return true;
+      }
+      _addToCart();
+      return true;
+    }
+
+    if (_isAnyTextFieldFocused()) return false;
+
+    if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add) {
+      _lastHandledKeyTimeStamp = event.timeStamp;
+      _incrementQuantity();
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.numpadSubtract || key == LogicalKeyboardKey.minus) {
+      _lastHandledKeyTimeStamp = event.timeStamp;
+      _decrementQuantity();
+      return true;
+    }
+
+    if (widget.product.variants.length > 1 && (key == LogicalKeyboardKey.arrowRight || key == LogicalKeyboardKey.arrowLeft)) {
+      _lastHandledKeyTimeStamp = event.timeStamp;
+      final variants = widget.product.variants;
+      final currentIdx = variants.indexWhere((v) => v.id == _selectedVariantId);
+      final safeIdx = currentIdx < 0 ? 0 : currentIdx;
+      final nextIdx = key == LogicalKeyboardKey.arrowRight
+          ? (safeIdx + 1) % variants.length
+          : (safeIdx - 1 + variants.length) % variants.length;
+      setState(() {
+        _selectedVariantId = variants[nextIdx].id;
+        _syncCalculatedFields(resetCustomPrice: true);
+      });
+      return true;
+    }
+
+    return false;
+  }
+
   ProductVariantModel get _currentVariant {
     return widget.product.variants.firstWhere((v) => v.id == _selectedVariantId, orElse: () => widget.product.variants.first);
   }
@@ -116,6 +223,11 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     _nameSnapshotController.text = _defaultNameSnapshot;
   }
 
+  String _formatQuantityValue(double val) {
+    if (val % 1 == 0) return val.toInt().toString();
+    return val.toStringAsFixed(3).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+  }
+
   void _incrementQuantity() {
     final stock = _currentVariant.stockQuantity;
     if (stock != null && _quantity >= stock) {
@@ -123,7 +235,8 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
       return;
     }
     setState(() {
-      _quantity++;
+      _quantity += 1.0;
+      _quantityController.text = _formatQuantityValue(_quantity);
       _syncCalculatedFields();
     });
   }
@@ -131,7 +244,11 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
   void _decrementQuantity() {
     if (_quantity > 1) {
       setState(() {
-        _quantity--;
+        _quantity = (_quantity - 1.0).clamp(widget.product.allowsFractionalQuantity ? 0.01 : 1.0, double.infinity);
+        if (!widget.product.allowsFractionalQuantity) {
+          _quantity = _quantity.roundToDouble();
+        }
+        _quantityController.text = _formatQuantityValue(_quantity);
         _syncCalculatedFields();
       });
     }
@@ -146,6 +263,37 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
 
   void _addToCart() async {
     final variant = _currentVariant;
+    final allowsFractions = widget.product.allowsFractionalQuantity;
+    final parsedQty = double.tryParse(_quantityController.text.trim().replaceAll(',', '.')) ?? _quantity;
+
+    if (parsedQty <= 0) {
+      SnackbarUtil.showWarning(context, 'La cantidad a comprar debe ser mayor a 0');
+      return;
+    }
+
+    if (!allowsFractions && parsedQty % 1 != 0) {
+      SnackbarUtil.showWarning(
+        context,
+        'Este producto se vende por pieza cerrada (${widget.product.unitOfMeasure}). Solo puedes ingresar números enteros.',
+      );
+      return;
+    }
+
+    final existingInCart = ref.read(cartProvider.notifier).currentVariantQuantity(variant.id);
+    if (variant.stockQuantity != null && existingInCart + parsedQty > variant.stockQuantity! + 1e-6) {
+      final availText = _formatQuantityValue(variant.stockQuantity!);
+      if (existingInCart > 0) {
+        SnackbarUtil.showWarning(
+          context,
+          'Ya tienes ${_formatQuantityValue(existingInCart)} en el carrito y el stock disponible es $availText',
+        );
+      } else {
+        SnackbarUtil.showWarning(context, 'La cantidad solicitada supera el stock disponible ($availText)');
+      }
+      return;
+    }
+
+    _quantity = parsedQty;
 
     if (variant.expirationDate != null && variant.expirationDate!.isBefore(DateTime.now())) {
       final proceed = await showDialog<bool>(
@@ -204,20 +352,26 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
     final detail = CreateSaleDetailInnerDto(
       productVariantId: variant.id,
       productNameSnapshot: nameSnapshot,
-      quantity: _quantity.toDouble(),
+      quantity: _quantity,
       originalPriceSnapshot: originalPrice,
       unitPrice: finalPrice,
       priceType: priceType,
       commentary: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
       subtotal: finalPrice * _quantity,
       imageUrl: displayImage?.url,
+      allowFractions: widget.product.allowsFractionalQuantity,
+      availableStock: variant.stockQuantity,
     );
 
     // 3. Add to cart
-    ref.read(cartProvider.notifier).addItem(detail);
+    final added = ref.read(cartProvider.notifier).addItem(detail);
+    if (!added) {
+      if (mounted) SnackbarUtil.showWarning(context, 'No hay suficiente stock disponible para agregar esa cantidad');
+      return;
+    }
 
     // 4. Show confirmation
-    if (mounted) SnackbarUtil.showSuccess(context, 'Agregado al carrito: $nameSnapshot x$_quantity');
+    if (mounted) SnackbarUtil.showSuccess(context, 'Agregado al carrito: $nameSnapshot x${_formatQuantityValue(_quantity)}');
 
     // 5. Back
     if (mounted) NavigationService.pop(context);
@@ -252,7 +406,11 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
   }
 
   Widget _buildContent(ProductVariantModel variant, double finalPrice, String priceType, ProductImageModel? displayImage, String Function(double?) formatQty) {
-    return SingleChildScrollView(
+    return Focus(
+      focusNode: _detailFocusNode,
+      autofocus: true,
+      onKeyEvent: _onDetailFocusKeyEvent,
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Center(
         child: ConstrainedBox(
@@ -321,6 +479,15 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const AppText('Selecciona una variante:', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+                        if (widget.product.variants.length > 1) ...[
+                          const Gap(4),
+                          const AppText(
+                            'Usa ← → para cambiar de variante, ↑ ↓ para cantidad y Enter para agregar a la venta',
+                            fontSize: 11.5,
+                            color: AppColors.kPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ],
                         const Gap(12),
                         Wrap(
                           spacing: 10,
@@ -342,8 +509,9 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                                   setState(() {
                                     _selectedVariantId = v.id;
                                     if (v.stockQuantity != null && _quantity > v.stockQuantity!) {
-                                      _quantity = v.stockQuantity!.toInt();
-                                      if (_quantity < 1) _quantity = 1;
+                                      _quantity = widget.product.allowsFractionalQuantity ? v.stockQuantity! : v.stockQuantity!.floorToDouble();
+                                      if (_quantity <= 0) _quantity = 1.0;
+                                      _quantityController.text = _formatQuantityValue(_quantity);
                                     }
                                     _syncCalculatedFields(resetCustomPrice: true);
                                   });
@@ -485,7 +653,27 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText('Cantidad a vender:', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const AppText('Cantidad a vender:', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.kNeutral900),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: widget.product.allowsFractionalQuantity ? AppColors.kPrimary50 : AppColors.kNeutral100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: AppText(
+                            widget.product.allowsFractionalQuantity
+                                ? 'A granel (${widget.product.unitOfMeasure}) • Admite decimales'
+                                : 'Por pieza (${widget.product.unitOfMeasure}) • Solo enteros',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: widget.product.allowsFractionalQuantity ? AppColors.kPrimaryColor : AppColors.kNeutral700,
+                          ),
+                        ),
+                      ],
+                    ),
                     const Gap(16),
                     Row(
                       children: [
@@ -501,10 +689,31 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                                 icon: const Icon(Icons.remove, color: AppColors.kNeutral700),
                                 onPressed: _decrementQuantity,
                               ),
-                              Container(
-                                width: 40,
-                                alignment: Alignment.center,
-                                child: AppText('$_quantity', fontSize: 18, fontWeight: FontWeight.bold),
+                              SizedBox(
+                                width: 68,
+                                child: TextField(
+                                  controller: _quantityController,
+                                  textAlign: TextAlign.center,
+                                  keyboardType: TextInputType.numberWithOptions(decimal: widget.product.allowsFractionalQuantity),
+                                  inputFormatters: widget.product.allowsFractionalQuantity
+                                      ? null
+                                      : [FilteringTextInputFormatter.digitsOnly],
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                  ),
+                                  onChanged: (val) {
+                                    final parsed = double.tryParse(val.trim().replaceAll(',', '.'));
+                                    if (parsed != null && parsed > 0) {
+                                      setState(() {
+                                        _quantity = widget.product.allowsFractionalQuantity ? parsed : parsed.floorToDouble();
+                                        _syncCalculatedFields();
+                                      });
+                                    }
+                                  },
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.add, color: AppColors.kPrimaryColor),
@@ -565,7 +774,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
                   ),
                   icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
                   label: Text(
-                    (variant.stockQuantity != null && variant.stockQuantity! <= 0) ? 'Sin Stock Disponible' : 'Agregar a la Venta',
+                    (variant.stockQuantity != null && variant.stockQuantity! <= 0) ? 'Sin Stock Disponible' : 'Agregar a la Venta (Enter)',
                     style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -575,6 +784,7 @@ class _ProductDetailSaleScreenState extends ConsumerState<ProductDetailSaleScree
           ),
         ),
       ),
+    ),
     );
   }
 }

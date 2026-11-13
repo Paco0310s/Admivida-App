@@ -13,11 +13,15 @@ class ClientsService {
     required int limit,
     required String businessId,
     String? search,
+    bool onlyWithDebt = false,
   }) async {
     final queryParams = <String, dynamic>{'page': page, 'limit': limit};
 
     if (search != null && search.trim().isNotEmpty) {
       queryParams['search'] = search.trim();
+    }
+    if (onlyWithDebt) {
+      queryParams['onlyWithDebt'] = 'true';
     }
 
     final response = await DioService.get<ClientDebtPageModel>(
@@ -50,6 +54,20 @@ class ClientsService {
   }
 
   static Future<EitherUtil<HttpFailure, UserModel>> createClient(CreateClientDto dto, String businessId) async {
-    return await DioService.post<UserModel>('/users/$businessId/clients', dto.toJson(), (data) => UserModel.fromJson(data));
+    return await DioService.post<UserModel>('/users/$businessId/clients', dto.toJson(), (data) {
+      final clientMap = data['client'] is Map<String, dynamic> ? data['client'] as Map<String, dynamic> : data;
+      return UserModel.fromJson(clientMap);
+    });
+  }
+
+  static Future<EitherUtil<HttpFailure, UserModel>> updateClient({
+    required String businessId,
+    required String clientId,
+    required Map<String, dynamic> payload,
+  }) async {
+    return await DioService.patch<UserModel>('/users/$businessId/clients/$clientId', payload, (data) {
+      final clientMap = data['client'] is Map<String, dynamic> ? data['client'] as Map<String, dynamic> : data;
+      return UserModel.fromJson(clientMap);
+    });
   }
 }

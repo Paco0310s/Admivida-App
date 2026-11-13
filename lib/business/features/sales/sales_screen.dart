@@ -1,10 +1,14 @@
+import 'dart:async';
+import 'package:admivida/business/features/add_sale/offline/offline_sales_queue_dialog.dart';
 import 'package:admivida/business/features/sales/models/sale_model.dart';
+import 'package:admivida/business/features/sales/models/sales_list_state.dart';
 import 'package:admivida/business/features/sales/sales_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
 import 'package:admivida/common/constants/app_texts.dart';
 import 'package:admivida/common/models/files/adapted_file.dart';
 import 'package:admivida/common/routes/routes.dart';
 import 'package:admivida/common/services/navigation_service.dart';
+import 'package:admivida/common/services/pdf_receipt_service.dart';
 import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
@@ -111,6 +115,8 @@ class SalesListView extends ConsumerStatefulWidget {
 
 class _SalesListViewState extends ConsumerState<SalesListView> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -121,7 +127,30 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      ref.read(salesListProvider(widget.businessId).notifier).setSearchQuery(val);
+    });
+  }
+
+  Future<void> _pickDateRange(SalesListState? currentState) async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(),
+      initialDateRange: (currentState?.startDate != null && currentState?.endDate != null)
+          ? DateTimeRange(start: currentState!.startDate!, end: currentState.endDate!)
+          : DateTimeRange(start: DateTime.now().subtract(const Duration(days: 7)), end: DateTime.now()),
+    );
+    if (picked != null && mounted) {
+      await ref.read(salesListProvider(widget.businessId).notifier).setDateRange(picked.start, picked.end);
+    }
   }
 
   void _handleScroll() {
@@ -142,6 +171,16 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
         textColor = AppColors.kSuccess;
         label = 'Pagado';
         break;
+      case 'CREDIT':
+        bgColor = Colors.blue.withValues(alpha: 0.12);
+        textColor = Colors.blue.shade700;
+        label = 'Fiado';
+        break;
+      case 'LAYAWAY':
+        bgColor = Colors.purple.withValues(alpha: 0.12);
+        textColor = Colors.purple.shade700;
+        label = 'Apartado';
+        break;
       case 'PENDING':
         bgColor = AppColors.kWarning.withValues(alpha: 0.12);
         textColor = AppColors.kWarning;
@@ -151,6 +190,11 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
         bgColor = Colors.red.withValues(alpha: 0.12);
         textColor = Colors.red;
         label = 'Cancelado';
+        break;
+      case 'REFUNDED':
+        bgColor = Colors.deepOrange.withValues(alpha: 0.12);
+        textColor = Colors.deepOrange;
+        label = 'Reembolsado';
         break;
       default:
         bgColor = AppColors.kNeutral200;
@@ -178,6 +222,10 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            OfflineSalesQueueBanner(
+              businessId: widget.businessId,
+              businessName: widget.businessName,
+            ),
             if (!isMobile) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -277,8 +325,11 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                   ),
                 ],
               ),
-              const Gap(16),
+              const Gap(12),
             ],
+            // Buscador y filtros rápidos minimalistas
+            _buildFilterBar(salesAsync.value),
+            const Gap(10),
             Expanded(
               child: salesAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.kPrimaryColor)),
@@ -346,6 +397,102 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
     );
   }
 
+  Widget _buildFilterBar(SalesListState? listState) {
+    final notifier = ref.read(salesListProvider(widget.businessId).notifier);
+    final selectedStatus = listState?.statusFilter;
+    final hasDate = listState?.startDate != null && listState?.endDate != null;
+
+    const statusOptions = <({String? value, String label})>[
+      (value: null, label: 'Todas'),
+      (value: 'COMPLETED', label: 'Pagadas'),
+      (value: 'CREDIT', label: 'Fiado'),
+      (value: 'LAYAWAY', label: 'Apartado'),
+      (value: 'CANCELLED', label: 'Canceladas'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _searchController,
+          builder: (context, val, _) => TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            textInputAction: TextInputAction.search,
+            onSubmitted: notifier.setSearchQuery,
+            decoration: InputDecoration(
+              hintText: 'Buscar por cliente, producto o folio...',
+              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.kNeutral500),
+              suffixIcon: val.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        notifier.setSearchQuery('');
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.kNeutral200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.kNeutral200),
+              ),
+            ),
+          ),
+        ),
+        const Gap(8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ...statusOptions.map((opt) {
+                final isSelected = selectedStatus == opt.value;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(opt.label, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
+                    selected: isSelected,
+                    onSelected: (_) => notifier.setStatusFilter(opt.value),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                );
+              }),
+              ActionChip(
+                avatar: Icon(Icons.date_range_rounded, size: 15, color: hasDate ? AppColors.kPrimaryColor : AppColors.kNeutral600),
+                label: Text(
+                  hasDate
+                      ? '${DateFormat('dd/MM').format(listState!.startDate!)} - ${DateFormat('dd/MM').format(listState.endDate!)}'
+                      : 'Fechas',
+                  style: TextStyle(fontSize: 12, fontWeight: hasDate ? FontWeight.bold : FontWeight.w500, color: hasDate ? AppColors.kPrimaryColor : null),
+                ),
+                onPressed: () => _pickDateRange(listState),
+                visualDensity: VisualDensity.compact,
+              ),
+              if (listState?.hasActiveFilters == true) ...[
+                const Gap(4),
+                TextButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    notifier.clearFilters();
+                  },
+                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  child: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _reprintSale(BuildContext context, SaleModel sale) async {
     final document = sale.toObjectToPrint(
       businessName: widget.businessName,
@@ -355,7 +502,7 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
   }
 
   Widget _buildSaleCard(BuildContext context, SaleModel sale, {required bool isGrid}) {
-    final dateFormatted = DateFormat('dd MMM yyyy • hh:mm a').format(sale.createdAt.toLocal());
+    final dateFormatted = DateFormat('dd MMM yyyy • hh:mm a').format(sale.effectiveDate.toLocal());
 
     final previewNames = sale.details.take(3).map((d) => d.productNameSnapshot).join(', ');
     final hasMoreProducts = sale.details.length > 3;
@@ -385,7 +532,36 @@ class _SalesListViewState extends ConsumerState<SalesListView> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildStatusBadge(sale.status),
-                  const Gap(8),
+                  const Gap(6),
+                  Material(
+                    color: const Color(0xFF0F766E).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      onTap: () => PdfReceiptService.showSalePdfPreviewDialog(
+                        context: context,
+                        sale: sale,
+                        fallbackBusinessName: widget.businessName,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF0F766E)),
+                            Gap(4),
+                            AppText(
+                              'PDF',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F766E),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Gap(6),
                   Material(
                     color: AppColors.kPrimary50,
                     borderRadius: BorderRadius.circular(8),

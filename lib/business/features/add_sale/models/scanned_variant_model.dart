@@ -14,6 +14,7 @@ class ScannedVariantModel {
   final DateTime? expirationDate;
   final dynamic attributes;
   final List<String> images;
+  final bool allowFractions;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -33,12 +34,19 @@ class ScannedVariantModel {
     this.expirationDate,
     this.attributes,
     required this.images,
+    this.allowFractions = false,
     this.createdAt,
     this.updatedAt,
   });
 
   /// Factory constructor to create an instance from a JSON map
   factory ScannedVariantModel.fromJson(Map<String, dynamic> json) {
+    final productMap = json['product'] is Map<String, dynamic> ? json['product'] as Map<String, dynamic> : null;
+    final unitOfMeasure = (productMap?['unitOfMeasure'] as String? ?? 'PZ').trim().toUpperCase();
+    final productAllowFractions = productMap?['allowFractions'] as bool? ??
+        (productMap?['productType'] is Map<String, dynamic> ? productMap!['productType']['allowFractions'] as bool? : null) ??
+        (unitOfMeasure != 'PZ' && unitOfMeasure != 'PZA' && unitOfMeasure != 'PIEZA');
+
     return ScannedVariantModel(
       id: json['id'] as String,
       productId: json['productId'] as String,
@@ -65,6 +73,7 @@ class ScannedVariantModel {
               .whereType<String>()
               .toList() ??
           [],
+      allowFractions: (json['allowFractions'] as bool?) ?? productAllowFractions,
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String)?.toLocal() : null,
       updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'] as String)?.toLocal() : null,
     );

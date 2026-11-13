@@ -3,6 +3,9 @@ import 'package:admivida/business/features/cash_shifts/cash_shifts_service.dart'
 import 'package:admivida/business/features/cash_shifts/models/cash_shift_model.dart';
 import 'package:admivida/business/features/transactions/transactions_provider.dart';
 import 'package:admivida/common/constants/app_colors.dart';
+import 'package:admivida/common/models/object_to_print.dart';
+import 'package:admivida/common/services/pdf_receipt_service.dart';
+import 'package:admivida/common/services/printer_service.dart';
 import 'package:admivida/common/utils/snackbar_util.dart';
 import 'package:admivida/common/widgets/app_card.dart';
 import 'package:admivida/common/widgets/app_scafffold.dart';
@@ -535,6 +538,63 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
     );
   }
 
+  Future<void> _printShiftCut(BuildContext ctx, CashShiftModel shift) async {
+    final lines = <PrintableShiftLine>[
+      PrintableShiftLine(label: 'Fondo Inicial:', value: _currency.format(shift.openingAmount)),
+      PrintableShiftLine(label: '+ Entradas:', value: _currency.format(shift.manualIn)),
+      PrintableShiftLine(label: '- Retiros:', value: _currency.format(shift.manualOut), hrAfter: shift.isBlindMode),
+    ];
+
+    if (shift.isBlindMode) {
+      lines.add(PrintableShiftLine(label: 'Ventas:', value: '${shift.salesCount}'));
+      if (shift.actualCash != null) {
+        lines.add(PrintableShiftLine(label: 'Efectivo Contado:', value: _currency.format(shift.actualCash), isBold: true));
+      }
+    } else {
+      final totalGeneral = (shift.cashSales ?? 0) + (shift.expectedCard ?? 0) + (shift.expectedTransfer ?? 0);
+      lines.addAll([
+        PrintableShiftLine(label: '+ Ventas Efectivo:', value: _currency.format(shift.cashSales ?? 0)),
+        if ((shift.clientPaymentsCount ?? 0) > 0)
+          PrintableShiftLine(label: '  (Abonos x${shift.clientPaymentsCount}):', value: _currency.format(shift.clientPaymentsTotal ?? 0)),
+        PrintableShiftLine(label: 'Efectivo Esperado:', value: _currency.format(shift.expectedCash ?? 0), isBold: true),
+        if (shift.actualCash != null) ...[
+          PrintableShiftLine(label: 'Efectivo Contado:', value: _currency.format(shift.actualCash), isBold: true),
+          PrintableShiftLine(
+            label: 'Diferencia:',
+            value: '${(shift.difference ?? 0) > 0 ? '+' : ''}${_currency.format(shift.difference ?? 0)}',
+            isBold: true,
+          ),
+        ],
+        const PrintableShiftLine(label: '-------------------', value: '-----------', hrAfter: true),
+        PrintableShiftLine(label: 'Tarjeta:', value: _currency.format(shift.expectedCard ?? 0)),
+        PrintableShiftLine(label: 'Transferencia:', value: _currency.format(shift.expectedTransfer ?? 0)),
+        PrintableShiftLine(label: 'Total Ingresos:', value: _currency.format(totalGeneral), isBold: true),
+        PrintableShiftLine(label: 'Tickets:', value: '${shift.salesCount}'),
+      ]);
+    }
+
+    final doc = ObjectToPrint(
+      businessName: widget.businessName,
+      ticketId: shift.id,
+      date: shift.closedAt ?? DateTime.now(),
+      cashierName: shift.cashierName ?? 'Cajero',
+      customerName: shift.accountName ?? 'Caja Principal',
+      rows: const [],
+      subtotal: 0,
+      discount: 0,
+      total: shift.expectedCash ?? shift.openingAmount,
+      amountPaid: shift.actualCash ?? 0,
+      changeGiven: 0,
+      isShiftCutReceipt: true,
+      shiftHeaderTitle: shift.isOpen ? 'CORTE PARCIAL (X)' : 'CORTE DE CAJA (Z)',
+      shiftLines: lines,
+      footerMessage: 'Comprobante de corte de caja',
+      openDrawer: false,
+    );
+
+    await ref.read(printerServiceProvider).showPrintersAndPrint(ctx, doc);
+  }
+
   Future<void> _showShiftDetailModal(CashShiftModel initialShift) async {
     showModalBottomSheet<void>(
       context: context,
@@ -613,6 +673,14 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
                             _buildSummaryRow('Fondo Inicial:', _currency.format(shift.openingAmount)),
                             const Divider(height: 18),
                             _buildSummaryRow('(+) Ventas en Efectivo (${shift.salesCount} ventas totales):', _currency.format(shift.cashSales ?? 0)),
+                            if ((shift.clientPaymentsCount ?? 0) > 0) ...[
+                              const Gap(4),
+                              _buildSummaryRow(
+                                '    Incluye Abonos de Clientes (${shift.clientPaymentsCount}):',
+                                _currency.format(shift.clientPaymentsTotal ?? 0),
+                                valueColor: AppColors.kPrimaryColor,
+                              ),
+                            ],
                             const Gap(6),
                             _buildSummaryRow('(+) Entradas Manuales (IN):', _currency.format(shift.manualIn)),
                             const Gap(6),
@@ -648,6 +716,54 @@ class _CashShiftsScreenState extends ConsumerState<CashShiftsScreen> with Single
                       // 2. ANTI-FRAUD AUDIT PANEL FOR OWNER/ADMIN
                       _buildOwnerAuditCard(shift),
                     ],
+                    const Gap(14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0F766E),
+                                side: const BorderSide(color: Color(0xFF0F766E)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () => PdfReceiptService.showShiftCutPdfPreviewDialog(
+                                context: ctx,
+                                shift: shift,
+                                fallbackBusinessName: widget.businessName,
+                              ),
+                              icon: const Icon(Icons.picture_as_pdf_rounded, size: 19),
+                              label: const Text(
+                                'PDF / WhatsApp',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Gap(10),
+                        Expanded(
+                          child: SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.kPrimaryColor,
+                                side: const BorderSide(color: AppColors.kPrimaryColor),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () => _printShiftCut(ctx, shift),
+                              icon: const Icon(Icons.print_rounded, size: 19),
+                              label: Text(
+                                shift.isOpen ? 'Ticket (X)' : 'Ticket (Z)',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     if (shift.isOpen) ...[
                       const Gap(14),
                       SizedBox(

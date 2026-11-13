@@ -273,6 +273,39 @@ class _BusinessCardItem extends StatelessWidget {
             ),
           ),
           const Gap(10),
+          Tooltip(
+            message: 'Abrir Punto de Venta (POS)',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                DashboardSession.setActiveBusiness(business);
+                DashboardSession.navigateToBusinessRoute(context, Routes.addSale, business);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.kPrimaryColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 15),
+                    Gap(5),
+                    Text(
+                      'POS',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const Gap(8),
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(

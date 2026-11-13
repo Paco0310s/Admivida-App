@@ -1,3 +1,4 @@
+import 'package:admivida/business/features/products/models/inventory_movement_model.dart';
 import 'package:admivida/business/features/products/models/product_model.dart';
 import 'package:admivida/business/features/products/models/products_list_state.dart';
 import 'package:admivida/business/features/products/products_service.dart';
@@ -57,25 +58,47 @@ final isBusinessAdminProvider = FutureProvider.autoDispose.family<bool, String>(
 class ProductsList extends _$ProductsList {
   static const int _pageSize = 10;
   String _searchQuery = '';
+  String? _selectedCategoryId;
+  bool? _isActiveFilter;
+  String? _stockStatusFilter;
 
   /// Initial fetch triggered for the specified businessId.
   @override
   Future<ProductsListState> build(String businessId) async {
     _searchQuery = '';
+    _selectedCategoryId = null;
+    _isActiveFilter = null;
+    _stockStatusFilter = null;
     return _fetchPage(page: 1, currentProducts: [], search: _searchQuery);
   }
 
   /// Internal method to request products for a specific page.
   Future<ProductsListState> _fetchPage({required int page, required List<ProductModel> currentProducts, String? search}) async {
     final normalizedSearch = search ?? _searchQuery;
-    final result = await ProductsService.getTenantProducts(page: page, limit: _pageSize, businessId: businessId, search: normalizedSearch);
+    final result = await ProductsService.getTenantProducts(
+      page: page,
+      limit: _pageSize,
+      businessId: businessId,
+      search: normalizedSearch,
+      categoryId: _selectedCategoryId,
+      isActive: _isActiveFilter,
+      stockStatus: _stockStatusFilter,
+    );
 
     return result.when((failure) => throw failure, (pageModel) {
       final newProducts = pageModel.data;
       final meta = pageModel.meta;
       final hasMorePages = meta != null && meta.currentPage < meta.totalPages;
 
-      return ProductsListState(products: [...currentProducts, ...newProducts], page: page, hasMore: hasMorePages, isLoadingMore: false);
+      return ProductsListState(
+        products: [...currentProducts, ...newProducts],
+        page: page,
+        hasMore: hasMorePages,
+        isLoadingMore: false,
+        selectedCategoryId: _selectedCategoryId,
+        isActiveFilter: _isActiveFilter,
+        stockStatusFilter: _stockStatusFilter,
+      );
     });
   }
 
@@ -107,18 +130,45 @@ class ProductsList extends _$ProductsList {
     await future;
   }
 
-  Future<void> setSearchQuery(String search) async {
-    final normalizedSearch = search.trim();
-    _searchQuery = normalizedSearch;
-
+  Future<void> _reloadFirstPage() async {
     state = const AsyncLoading();
 
     try {
-      final initialState = await _fetchPage(page: 1, currentProducts: [], search: normalizedSearch);
+      final initialState = await _fetchPage(page: 1, currentProducts: [], search: _searchQuery);
       state = AsyncValue.data(initialState);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
+  }
+
+  Future<void> setSearchQuery(String search) async {
+    _searchQuery = search.trim();
+    await _reloadFirstPage();
+  }
+
+  Future<void> setCategoryFilter(String? categoryId) async {
+    if (_selectedCategoryId == categoryId) return;
+    _selectedCategoryId = categoryId;
+    await _reloadFirstPage();
+  }
+
+  Future<void> setIsActiveFilter(bool? isActive) async {
+    if (_isActiveFilter == isActive) return;
+    _isActiveFilter = isActive;
+    await _reloadFirstPage();
+  }
+
+  Future<void> setStockStatusFilter(String? stockStatus) async {
+    if (_stockStatusFilter == stockStatus) return;
+    _stockStatusFilter = stockStatus;
+    await _reloadFirstPage();
+  }
+
+  Future<void> clearFilters() async {
+    _selectedCategoryId = null;
+    _isActiveFilter = null;
+    _stockStatusFilter = null;
+    await _reloadFirstPage();
   }
 
   void updateProductStockLocal(String productId, String variantId, double newStock) {
@@ -166,21 +216,39 @@ class StockAdjustment extends _$StockAdjustment {
     required String variantId,
     required double currentStock,
     required double adjustment,
+    String? reason,
+    String? notes,
   }) async {
     final newStock = currentStock + adjustment;
     if (newStock < 0) return;
 
     state = const AsyncValue.loading();
 
-    final result = await ProductsService.updateStock(businessId, variantId, newStock);
+    final result = await ProductsService.updateStock(
+      businessId,
+      variantId,
+      newStock,
+      reason: reason,
+      notes: notes,
+    );
 
     result.when((failure) => state = AsyncValue.error(failure, StackTrace.current), (success) {
       state = const AsyncValue.data(null);
 
       ref.read(productsListProvider(businessId).notifier).updateProductStockLocal(productId, variantId, newStock);
+      ref.invalidate(productMovementsProvider((businessId: businessId, productId: productId)));
     });
   }
 }
+
+final productMovementsProvider = FutureProvider.autoDispose
+    .family<List<InventoryMovementModel>, ({String businessId, String productId})>((ref, params) async {
+      final result = await ProductsService.getProductMovements(
+        businessId: params.businessId,
+        productId: params.productId,
+      );
+      return result.when((failure) => throw failure, (items) => items);
+    });
 
 @riverpod
 Future<ProductModel> productDetail(Ref ref, {required String businessId, required String productId}) async {
