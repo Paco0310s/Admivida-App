@@ -12,8 +12,8 @@ class AppConfig {
       : 'http://localhost:9000/admivida-bucket';
 
   // App version code & codename
-  static const int appVersionCode = 5;
-  static const String appVersionName = '0.7.5';
+  static const int appVersionCode = 6;
+  static const String appVersionName = '0.8.0';
   static const String appVersionCodename = 'Beta';
 
   // Windows auto-update (almacenado en MinIO S3)

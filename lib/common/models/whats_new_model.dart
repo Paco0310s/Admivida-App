@@ -228,34 +228,46 @@ class WhatsNewModel {
 
   /// Novedades empaquetadas por defecto para la versión actual en caso de no haber conexión
   static WhatsNewModel fallback() => const WhatsNewModel(
-        versionCode: 5,
-        versionName: '0.7.5 (Beta)',
+        versionCode: 6,
+        versionName: '0.8.0 (Beta)',
         releaseNotes:
-            'Cortes de caja por turno y cuenta, reportes financieros con rentabilidad neta real, valorización de inventario con alertas y modo sin conexión mejorado.',
+            'Pagos mixtos y ventas en espera en el POS, comprobantes PDF tamaño Carta listos para compartir por WhatsApp, fiados y abonos, cortes de caja X/Z con modo ciego, modo sin conexión, Kardex de inventario e interfaz renovada.',
         items: [
           WhatsNewItem(
-            title: 'Cortes de Caja y Control de Turnos',
+            title: 'Punto de Venta Ágil y Pagos Mixtos',
             description:
-                'Abre y cierra turnos vinculados a cada caja del negocio, registra entradas o retiros manuales y audita diferencias de efectivo al instante.',
+                'Cobra combinando múltiples métodos de pago y cuentas en una misma venta, guarda carritos en espera, asigna precios especiales y selecciona clientes rápidamente.',
             iconName: 'pos',
           ),
           WhatsNewItem(
-            title: 'Reportes y Rentabilidad Real',
+            title: 'Comprobantes PDF Carta y WhatsApp',
             description:
-                'Conoce tus ventas de contado vs. crédito, utilidad neta después de comisiones, saldos por cuenta operativa, top productos y rendimiento por vendedor.',
+                'Genera notas de venta, recibos de abono y cortes de caja en PDF tamaño Carta para compartir directamente por WhatsApp o imprimir en hoja normal.',
+            iconName: 'ticket',
+          ),
+          WhatsNewItem(
+            title: 'Control de Fiados, Créditos y Abonos',
+            description:
+                'Configura límites de crédito por cliente, consulta adeudos pendientes, registra abonos parciales con cálculo exacto y emite comprobantes al instante.',
+            iconName: 'wallet',
+          ),
+          WhatsNewItem(
+            title: 'Cortes de Caja X/Z, Modo Ciego y Offline',
+            description:
+                'Opera turnos por caja con cortes X/Z y modo ciego, además de registrar ventas sin internet en una cola local segura con sincronización automática.',
+            iconName: 'shield',
+          ),
+          WhatsNewItem(
+            title: 'Kardex de Inventario y Reportes Avanzados',
+            description:
+                'Consulta cada movimiento y ajuste de stock en el detalle del producto, revisa rentabilidad neta real, valorización de inventario y finanzas personales.',
             iconName: 'analytics',
           ),
           WhatsNewItem(
-            title: 'Valor de Inventario y Alertas',
+            title: 'Catálogo Visual, Escáner y Diseño Renovado',
             description:
-                'Consulta la inversión total en stock, ganancia proyectada y alertas directas de productos agotados, con stock bajo o sin costo registrado.',
-            iconName: 'inventory',
-          ),
-          WhatsNewItem(
-            title: 'Modo Offline y Escáner POS Mejorado',
-            description:
-                'Inicio inteligente con respaldo sin conexión, renovación silenciosa de sesión y escaneo rápido por código de barras o SKU.',
-            iconName: 'shield',
+                'Navegación mejorada en escritorio y móvil, filtros por rango de fechas, vista visual de variantes y lectura rápida de códigos de barras o SKU.',
+            iconName: 'barcode',
           ),
         ],
       );

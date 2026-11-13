@@ -1,30 +1,44 @@
 {
-  "versionCode": 5,
-  "versionName": "0.7.5 (Beta)",
-  "releaseNotes": "Cortes de caja por turno y cuenta, reportes financieros con rentabilidad neta real, valorización de inventario con alertas y modo sin conexión mejorado.",
+  "versionCode": 6,
+  "versionName": "0.8.0 (Beta)",
+  "releaseNotes": "Pagos mixtos y ventas en espera en el POS, comprobantes PDF tamaño Carta listos para compartir por WhatsApp, fiados y abonos, cortes de caja X/Z con modo ciego, modo sin conexión, Kardex de inventario e interfaz renovada.",
   "whatsNew": [
     {
-      "title": "Cortes de Caja y Control de Turnos",
-      "description": "Abre y cierra turnos vinculados a cada caja del negocio, registra entradas o retiros manuales y audita diferencias de efectivo al instante.",
+      "title": "Punto de Venta Ágil y Pagos Mixtos",
+      "description": "Cobra combinando múltiples métodos de pago y cuentas en una misma venta, guarda carritos en espera, asigna precios especiales y selecciona clientes rápidamente.",
       "icon": "pos"
     },
     {
-      "title": "Reportes y Rentabilidad Real",
-      "description": "Conoce tus ventas de contado vs. crédito, utilidad neta después de comisiones, saldos por cuenta operativa, top productos y rendimiento por vendedor.",
+      "title": "Comprobantes PDF Carta y WhatsApp",
+      "description": "Genera notas de venta, recibos de abono y cortes de caja en PDF tamaño Carta para compartir directamente por WhatsApp o imprimir en hoja normal.",
+      "icon": "ticket"
+    },
+    {
+      "title": "Control de Fiados, Créditos y Abonos",
+      "description": "Configura límites de crédito por cliente, consulta adeudos pendientes, registra abonos parciales con cálculo exacto y emite comprobantes al instante.",
+      "icon": "wallet"
+    },
+    {
+      "title": "Cortes de Caja X/Z, Modo Ciego y Offline",
+      "description": "Opera turnos por caja con cortes X/Z y modo ciego, además de registrar ventas sin internet en una cola local segura con sincronización automática.",
+      "icon": "shield"
+    },
+    {
+      "title": "Kardex de Inventario y Reportes Avanzados",
+      "description": "Consulta cada movimiento y ajuste de stock en el detalle del producto, revisa rentabilidad neta real, valorización de inventario y finanzas personales.",
       "icon": "analytics"
     },
     {
-      "title": "Valor de Inventario y Alertas",
-      "description": "Consulta la inversión total en stock, ganancia proyectada y alertas directas de productos agotados, con stock bajo o sin costo registrado.",
-      "icon": "inventory"
-    },
-    {
-      "title": "Modo Offline y Escáner POS Mejorado",
-      "description": "Inicio inteligente con respaldo sin conexión, renovación silenciosa de sesión y escaneo rápido por código de barras o SKU.",
-      "icon": "shield"
+      "title": "Catálogo Visual, Escáner y Diseño Renovado",
+      "description": "Navegación mejorada en escritorio y móvil, filtros por rango de fechas, vista visual de variantes y lectura rápida de códigos de barras o SKU.",
+      "icon": "barcode"
     }
   ],
   "history": [
+    {
+      "versionName": "0.7.5 (Beta)",
+      "releaseNotes": "• Cortes de caja por turno y cuenta operativa.\n• Reportes financieros con rentabilidad neta real.\n• Valorización de inventario con alertas y modo sin conexión."
+    },
     {
       "versionName": "0.7.0 (Beta)",
       "releaseNotes": "• Bóveda y caja operativa predeterminada.\n• Finanzas personales independientes.\n• Sesiones multi-dispositivo simultáneas."
