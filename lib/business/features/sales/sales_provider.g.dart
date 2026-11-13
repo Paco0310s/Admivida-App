@@ -50,7 +50,7 @@ final class SalesListProvider
   }
 }
 
-String _$salesListHash() => r'7dc1b7f46e8242438fe9c9f79af15d9484046298';
+String _$salesListHash() => r'7e97d85e7a2e35ef08327b3667e4e0047eb6a76f';
 
 final class SalesListFamily extends $Family
     with

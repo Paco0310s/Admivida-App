@@ -50,7 +50,7 @@ final class ProductsListProvider
   }
 }
 
-String _$productsListHash() => r'e99ab29eb3a985ff360d11a5884f17841ed44429';
+String _$productsListHash() => r'5b0992de975da08305d8c7a2f0a4f7c2fd2ca996';
 
 final class ProductsListFamily extends $Family
     with
@@ -123,7 +123,7 @@ final class StockAdjustmentProvider
   StockAdjustment create() => StockAdjustment();
 }
 
-String _$stockAdjustmentHash() => r'a8dcd381049c07b1be8f8bea8787d91c206bef77';
+String _$stockAdjustmentHash() => r'cf9ade33718fa32a1ecbf686e9729f5b7e77ebae';
 
 abstract class _$StockAdjustment extends $AsyncNotifier<void> {
   FutureOr<void> build();
